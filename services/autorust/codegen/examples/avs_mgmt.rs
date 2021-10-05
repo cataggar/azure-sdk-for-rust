@@ -44,10 +44,16 @@ fn main() -> Result<()> {
         output_folder: "../../../avs/src/fct/mock_api/src/v2021_06_01",
     });
 
+    // configs.push(MainConfig {
+    //     api_version: "2021-12-01",
+    //     input_file: "../../../azure-rest-api-specs-pr/specification/vmware/resource-manager/Microsoft.AVS/stable/2021-12-01/vmware.json",
+    //     output_folder: "../../../avs/src/fct/mock_api/src/v2021_12_01",
+    // });
+
     configs.push(MainConfig {
-        api_version: "2021-12-01",
-        input_file: "../../../azure-rest-api-specs-pr/specification/vmware/resource-manager/Microsoft.AVS/stable/2021-12-01/vmware.json",
-        output_folder: "../../../avs/src/fct/mock_api/src/v2021_12_01",
+        api_version: "2022-05-01",
+        input_file: "../../../azure-rest-api-specs-pr/specification/vmware/resource-manager/Microsoft.AVS/stable/2022-05-01/vmware.json",
+        output_folder: "../../../avs/src/fct/mock_api/src/v2022_05_01",
     });
 
     for config in configs {
