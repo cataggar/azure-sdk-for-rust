@@ -1,4 +1,4 @@
-use crate::status_codes::{get_response_type_ident, get_status_code_ident};
+use crate::status_codes::{get_response_type_ident, get_status_code_ident_camel_case};
 use crate::{
     codegen::{
         create_generated_by_header, get_type_name_for_schema, get_type_name_for_schema_ref, is_array, parse_params, AsReference, Error,
@@ -273,7 +273,7 @@ fn create_function(
         match status_code {
             autorust_openapi::StatusCode::Code(_) => {
                 let tp = create_response_type(rsp)?;
-                let status_code_name = get_status_code_ident(status_code)?;
+                let status_code_name = get_status_code_ident_camel_case(status_code)?;
                 let response_type_name = get_response_type_name(status_code)?;
                 if is_single_response {
                     match tp {
@@ -380,7 +380,7 @@ fn create_function(
 
     let first_response = responses.0.first().ok_or_else(|| Error::OperationMissingResponses)?;
     let status_code = &StatusCode::Code(first_response.status_code.ok_or_else(|| Error::StatusCodeRequired)?);
-    let status_code_name = get_status_code_ident(status_code)?;
+    let status_code_name = get_status_code_ident_camel_case(status_code)?;
     let response_type = get_response_type_ident(status_code)?;
     let first_responder = match (&first_example, &first_response.body_type_name) {
         (Some(first_example), Some(_body)) => {
@@ -528,7 +528,7 @@ fn create_responder(name: &TokenStream, responses: &OperationRespones) -> Result
     for response in &responses.0 {
         let status_code = &response.status_code;
         let status_code = &StatusCode::Code(status_code.ok_or_else(|| Error::StatusCodeRequired)?);
-        let status_code_name = get_status_code_ident(status_code)?;
+        let status_code_name = get_status_code_ident_camel_case(status_code)?;
         let response_type = get_response_type_ident(status_code)?;
         match &response.body_type_name {
             Some(body) => {
