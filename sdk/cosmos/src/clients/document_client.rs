@@ -67,7 +67,7 @@ impl DocumentClient {
         &self,
         ctx: Context,
         options: GetDocumentOptions<'_>,
-    ) -> Result<GetDocumentResponse<T>, crate::Error>
+    ) -> crate::Result<GetDocumentResponse<T>>
     where
         T: DeserializeOwned,
     {
@@ -80,8 +80,6 @@ impl DocumentClient {
             .cosmos_client()
             .pipeline()
             .send(&mut pipeline_context, &mut request)
-            .await?
-            .validate(http::StatusCode::OK)
             .await?;
 
         GetDocumentResponse::try_from(response).await

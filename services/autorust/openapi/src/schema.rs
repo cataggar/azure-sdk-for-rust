@@ -53,6 +53,7 @@ pub struct Response {
     pub x_ms_error_response: Option<bool>,
 }
 
+#[allow(clippy::large_enum_variant)]
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(untagged)]
 pub enum AdditionalProperties {
@@ -118,13 +119,14 @@ pub struct SchemaCommon {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub multiple_of: Option<f64>,
 
-    /// additional metadata for enums
-    /// https://github.com/Azure/autorest/blob/master/docs/extensions/readme.md#x-ms-enum
     #[serde(rename = "x-ms-enum", skip_serializing_if = "Option::is_none")]
     pub x_ms_enum: Option<MsEnum>,
 
     #[serde(rename = "x-ms-client-name", skip_serializing_if = "Option::is_none")]
     pub x_ms_client_name: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub xml: Option<MsXml>,
 }
 
 /// https://github.com/OAI/OpenAPI-Specification/blob/master/versions/2.0.md#schemaObject
