@@ -103,8 +103,8 @@ pub enum Error {
     MissingApiVersion,
     #[error("operation {0} is missing an x-ms-examples")]
     OperationMissingExample(String),
-    #[error("operation is missing responses")]
-    OperationMissingResponses,
+    #[error("operation is missing responses {0:?}")]
+    OperationMissingResponses(Option<String>),
     #[error("creating path for example {0}")]
     ExamplePath(#[source] crate::path::Error),
     #[error("example path not utf8")]

@@ -380,7 +380,12 @@ fn create_function(
     }
     let route = quote! { #verb (#(#verb_parts),*) };
 
-    let first_response = responses.0.first().ok_or_else(|| Error::OperationMissingResponses)?;
+    let terminal_responses = responses.terminal_responses();
+    let first_response = responses.0.first().ok_or_else(|| Error::OperationMissingResponses(operation.id.clone()))?;
+    // make sure it is a terminal response
+    let first_response = terminal_responses.first()
+        // .ok_or_else(|| Error::OperationMissingResponses(operation.id.clone()))?;
+        .unwrap_or(&first_response);
     let status_code = &StatusCode::Code(first_response.status_code.ok_or_else(|| Error::StatusCodeRequired)?);
     let status_code_name = get_status_code_ident_camel_case(status_code)?;
     let response_type = get_response_type_ident(status_code)?;
@@ -499,9 +504,29 @@ struct OperationExamples(pub Vec<OperationExample>);
 struct OperationResponse {
     status_code: Option<u16>,
     body_type_name: Option<TokenStream>,
+    is_long_running: bool,
 }
 
 struct OperationRespones(pub Vec<OperationResponse>);
+
+impl OperationRespones {
+    // In long-running operations (LROs) or asynchronous operations,
+    // 201 & 202 responses are not terminal responses.
+    // https://docs.microsoft.com/en-us/azure/azure-resource-manager/management/async-operations
+    pub fn terminal_responses(&self) -> Vec<&OperationResponse> {
+        self.0.iter().filter(|rsp|
+            if rsp.is_long_running {
+                match rsp.status_code {
+                    Some(201) => false,
+                    Some(202) => false,
+                    _ => true,
+                }
+            } else {
+                true
+            }
+        ).collect()
+    }
+}
 
 fn get_operation_responses(operation: &WebOperation) -> Result<OperationRespones, Error> {
     let mut responses = Vec::new();
@@ -517,6 +542,7 @@ fn get_operation_responses(operation: &WebOperation) -> Result<OperationRespones
         responses.push(OperationResponse {
             status_code,
             body_type_name,
+            is_long_running: operation.is_long_running,
         });
     }
     Ok(OperationRespones(responses))
