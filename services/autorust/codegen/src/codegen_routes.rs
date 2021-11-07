@@ -1,6 +1,6 @@
-use crate::WebOperation;
 use crate::spec::WebVerb;
 use crate::status_codes::{get_response_type_ident, get_status_code_ident_camel_case};
+use crate::WebOperation;
 use crate::{
     codegen::{
         create_generated_by_header, get_type_name_for_schema, get_type_name_for_schema_ref, is_array, parse_params, AsReference, Error,
@@ -182,11 +182,7 @@ impl OperationParameters {
     }
 }
 
-fn create_function(
-    cg: &CodeGen,
-    doc_file: &Path,
-    operation: &WebOperation,
-) -> Result<TokenStream, Error> {
+fn create_function(cg: &CodeGen, doc_file: &Path, operation: &WebOperation) -> Result<TokenStream, Error> {
     let function_name = operation.rust_function_name();
     let fname = ident(&function_name).map_err(Error::FunctionName)?;
 
@@ -381,9 +377,13 @@ fn create_function(
     let route = quote! { #verb (#(#verb_parts),*) };
 
     let terminal_responses = responses.terminal_responses();
-    let first_response = responses.0.first().ok_or_else(|| Error::OperationMissingResponses(operation.id.clone()))?;
+    let first_response = responses
+        .0
+        .first()
+        .ok_or_else(|| Error::OperationMissingResponses(operation.id.clone()))?;
     // make sure it is a terminal response
-    let first_response = terminal_responses.first()
+    let first_response = terminal_responses
+        .first()
         // .ok_or_else(|| Error::OperationMissingResponses(operation.id.clone()))?;
         .unwrap_or(&first_response);
     let status_code = &StatusCode::Code(first_response.status_code.ok_or_else(|| Error::StatusCodeRequired)?);
@@ -514,17 +514,20 @@ impl OperationRespones {
     // 201 & 202 responses are not terminal responses.
     // https://docs.microsoft.com/en-us/azure/azure-resource-manager/management/async-operations
     pub fn terminal_responses(&self) -> Vec<&OperationResponse> {
-        self.0.iter().filter(|rsp|
-            if rsp.is_long_running {
-                match rsp.status_code {
-                    Some(201) => false,
-                    Some(202) => false,
-                    _ => true,
+        self.0
+            .iter()
+            .filter(|rsp| {
+                if rsp.is_long_running {
+                    match rsp.status_code {
+                        Some(201) => false,
+                        Some(202) => false,
+                        _ => true,
+                    }
+                } else {
+                    true
                 }
-            } else {
-                true
-            }
-        ).collect()
+            })
+            .collect()
     }
 }
 
