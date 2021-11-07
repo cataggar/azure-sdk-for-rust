@@ -379,6 +379,7 @@ pub struct WebOperation {
     pub parameters: Vec<ReferenceOr<Parameter>>,
     pub responses: IndexMap<StatusCode, Response>,
     pub examples: MsExamples,
+    pub is_long_running: bool,
 }
 
 impl WebOperation {
@@ -490,6 +491,7 @@ pub fn path_operations(path: &str, item: &PathItem) -> Vec<WebOperation> {
                 parameters,
                 responses: op.responses.clone(),
                 examples: op.x_ms_examples.clone(),
+                is_long_running: op.x_ms_long_running_operation.unwrap_or_default(),
             })
         }
         None => None,
@@ -578,6 +580,7 @@ mod tests {
             parameters: Vec::new(),
             responses: IndexMap::new(),
             examples: IndexMap::new(),
+            is_long_running: false,
         };
         assert_eq!(Some("private_clouds".to_owned()), operation.rust_module_name());
         assert_eq!("create_or_update", operation.rust_function_name());
@@ -592,6 +595,7 @@ mod tests {
             parameters: Vec::new(),
             responses: IndexMap::new(),
             examples: IndexMap::new(),
+            is_long_running: false,
         };
         assert_eq!(None, operation.rust_module_name());
         assert_eq!("get_horse", operation.rust_function_name());
@@ -606,6 +610,7 @@ mod tests {
             parameters: Vec::new(),
             responses: IndexMap::new(),
             examples: IndexMap::new(),
+            is_long_running: false,
         };
         assert_eq!(None, operation.rust_module_name());
         assert_eq!("perform_connectivity_check", operation.rust_function_name());
