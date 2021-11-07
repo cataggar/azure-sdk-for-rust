@@ -1,4 +1,6 @@
+use crate::spec::WebVerb;
 use crate::status_codes::{get_response_type_ident, get_status_code_ident_camel_case};
+use crate::WebOperation;
 use crate::{
     codegen::{
         create_generated_by_header, get_type_name_for_schema, get_type_name_for_schema_ref, is_array, parse_params, AsReference, Error,
@@ -7,7 +9,7 @@ use crate::{
     identifier::ident,
     path, spec,
     status_codes::{get_error_responses, get_response_type_name, get_status_code_name, get_success_responses, has_default_response},
-    CodeGen, OperationVerb,
+    CodeGen,
 };
 use autorust_openapi::{ParameterType, ReferenceOr, Response, StatusCode};
 use heck::CamelCase;
@@ -46,12 +48,13 @@ pub fn create_routes(cg: &CodeGen) -> Result<TokenStream, Error> {
         // only operations from listed input files
         // println!("doc_file {:?}", doc_file);
         if cg.spec.is_input_file(&doc_file) {
-            let paths = cg.spec.resolve_path_map(doc_file, &doc.paths)?;
+            let paths = cg.spec.resolve_path_map(doc_file, doc.paths())?;
             for (path, item) in &paths {
-                for op in spec::path_item_operations(item) {
-                    let (module_name, function_name) = op.function_name(path);
+                for op in spec::path_operations(path, item) {
+                    let module_name = op.rust_module_name();
+                    let function_name = op.rust_function_name();
                     add_route(&mut routes, module_name.as_deref(), function_name.as_ref())?;
-                    let function = create_function(cg, doc_file, path, &op, &function_name)?;
+                    let function = create_function(cg, doc_file, &op)?;
                     if modules.contains_key(&module_name) {}
                     match modules.get_mut(&module_name) {
                         Some(module) => {
@@ -139,8 +142,8 @@ impl OperationParameter {
 }
 
 impl OperationParameters {
-    pub fn create(cg: &CodeGen, doc_file: &Path, operation: &OperationVerb) -> Result<OperationParameters, Error> {
-        let parameters = cg.spec.resolve_parameters(doc_file, &operation.operation().parameters)?;
+    pub fn create(cg: &CodeGen, doc_file: &Path, operation: &WebOperation) -> Result<OperationParameters, Error> {
+        let parameters = cg.spec.resolve_parameters(doc_file, &operation.parameters)?;
         let mut v = Vec::new();
         for param in &parameters {
             let name = param.name.to_owned();
@@ -179,42 +182,34 @@ impl OperationParameters {
     }
 }
 
-fn create_function(
-    cg: &CodeGen,
-    doc_file: &Path,
-    path: &str,
-    operation_verb: &OperationVerb,
-    function_name: &str,
-) -> Result<TokenStream, Error> {
-    let fname = ident(function_name).map_err(Error::FunctionName)?;
+fn create_function(cg: &CodeGen, doc_file: &Path, operation: &WebOperation) -> Result<TokenStream, Error> {
+    let function_name = operation.rust_function_name();
+    let fname = ident(&function_name).map_err(Error::FunctionName)?;
 
-    let params = parse_params(path);
+    let params = parse_params(&operation.path);
     // println!("path params {:#?}", params);
-    let params: Result<Vec<_>, Error> = params
-        .iter()
-        .map(|s| Ok(ident(&s.to_snake_case()).map_err(Error::ParamName)?))
-        .collect();
+    let params: Result<Vec<_>, Error> = params.iter().map(|s| ident(&s.to_snake_case()).map_err(Error::ParamName)).collect();
     let params = params?;
     let _url_str_args = quote! { #(#params),* };
 
-    let parameters = OperationParameters::create(cg, doc_file, &operation_verb)?;
+    let parameters = OperationParameters::create(cg, doc_file, operation)?;
 
     let fparams = create_function_params(&parameters)?;
 
     let examples_name = ident(&format!("{}_examples", function_name.to_snake_case())).map_err(Error::FunctionName)?;
-    let examples = get_operation_examples(operation_verb);
+    let examples = get_operation_examples(operation);
     // TODO make configurable
-    let base_path = doc_file.clone();
+    let base_path = doc_file;
     let examples_mod = create_examples_mod(base_path, &examples_name, &examples)?;
     let first_example = examples.0.first();
 
-    let responses = &operation_verb.operation().responses;
+    let responses = &operation.responses;
     let success_responses = get_success_responses(responses);
     let error_responses = get_error_responses(responses);
     let is_single_response = success_responses.len() == 1;
     let has_default_response = has_default_response(responses);
 
-    let responses = get_operation_responses(&operation_verb)?;
+    let responses = get_operation_responses(operation)?;
     let responder_name = ident(&format!("{}Response", function_name.to_camel_case())).map_err(Error::FunctionName)?;
     let responder = create_responder(&responder_name, &responses)?;
 
@@ -347,30 +342,27 @@ fn create_function(
         }
     }
 
-    let verb = match operation_verb {
-        OperationVerb::Get(_) => quote! { get },
-        OperationVerb::Post(_) => quote! { post },
-        OperationVerb::Put(_) => quote! { put },
-        OperationVerb::Patch(_) => quote! { patch },
-        OperationVerb::Delete(_) => quote! { delete },
-        OperationVerb::Options(_) => quote! { options },
-        OperationVerb::Head(_) => quote! { head },
+    let verb = match operation.verb {
+        WebVerb::Get => quote! { get },
+        WebVerb::Post => quote! { post },
+        WebVerb::Put => quote! { put },
+        WebVerb::Patch => quote! { patch },
+        WebVerb::Delete => quote! { delete },
+        WebVerb::Options => quote! { options },
+        WebVerb::Head => quote! { head },
     };
 
-    let api_version = cg.api_version().ok_or_else(|| Error::MissingApiVersion)?;
-    let route_path = route_path(path);
+    let api_version = cg.spec.api_version().ok_or(Error::MissingApiVersion)?;
+    let route_path = route_path(&operation.path);
     let mut verb_parts = Vec::new();
     let path = format!("{}?api-version={}", route_path, api_version);
     verb_parts.push(quote! { #path });
-    match parameters.get_body() {
-        Some(param) => {
-            let data = format!("<{}>", param.snake_case_name());
-            verb_parts.push(quote! { data = #data });
-        }
-        None => {}
+    if let Some(param) = parameters.get_body() {
+        let data = format!("<{}>", param.snake_case_name());
+        verb_parts.push(quote! { data = #data });
     }
     // Use operationId as the route name
-    match &operation_verb.operation().operation_id {
+    match &operation.id {
         Some(operation_id) => {
             verb_parts.push(quote! { name = #operation_id });
         }
@@ -378,8 +370,17 @@ fn create_function(
     }
     let route = quote! { #verb (#(#verb_parts),*) };
 
-    let first_response = responses.0.first().ok_or_else(|| Error::OperationMissingResponses)?;
-    let status_code = &StatusCode::Code(first_response.status_code.ok_or_else(|| Error::StatusCodeRequired)?);
+    let terminal_responses = responses.terminal_responses();
+    let first_response = responses
+        .0
+        .first()
+        .ok_or_else(|| Error::OperationMissingResponses(operation.id.clone()))?;
+    // make sure it is a terminal response
+    let first_response = terminal_responses
+        .first()
+        // .ok_or_else(|| Error::OperationMissingResponses(operation.id.clone()))?;
+        .unwrap_or(&first_response);
+    let status_code = &StatusCode::Code(first_response.status_code.ok_or(Error::StatusCodeRequired)?);
     let status_code_name = get_status_code_ident_camel_case(status_code)?;
     let response_type = get_response_type_ident(status_code)?;
     let first_responder = match (&first_example, &first_response.body_type_name) {
@@ -402,7 +403,7 @@ fn create_function(
             Ok(#first_responder)
         }
     };
-    Ok(TokenStream::from(func))
+    Ok(func)
 }
 
 fn create_examples_mod(base_path: &Path, name: &TokenStream, examples: &OperationExamples) -> Result<TokenStream, Error> {
@@ -411,7 +412,7 @@ fn create_examples_mod(base_path: &Path, name: &TokenStream, examples: &Operatio
         let name = ident(&example.const_name()).map_err(Error::ExamplesName)?;
         let trim = "../../../azure-rest-api-specs-pr/specification/";
         let file = path::join(&base_path.to_str().unwrap()[trim.len()..], &example.file).map_err(Error::ExamplePath)?;
-        let file = file.to_str().ok_or_else(|| Error::ExamplePathNotUtf8)?;
+        let file = file.to_str().ok_or(Error::ExamplePathNotUtf8)?;
         let file = file.replace("\\", "/");
         values.extend(quote! {
             pub const #name: &str = #file;
@@ -473,10 +474,9 @@ impl OperationExample {
     }
 }
 
-fn get_operation_examples(operation: &OperationVerb) -> OperationExamples {
-    let operation = operation.operation();
+fn get_operation_examples(operation: &WebOperation) -> OperationExamples {
     let mut examples = Vec::new();
-    for (name, example) in &operation.x_ms_examples {
+    for (name, example) in &operation.examples {
         match example {
             ReferenceOr::Reference { reference, .. } => match &reference.file {
                 Some(file) => {
@@ -498,12 +498,30 @@ struct OperationExamples(pub Vec<OperationExample>);
 struct OperationResponse {
     status_code: Option<u16>,
     body_type_name: Option<TokenStream>,
+    is_long_running: bool,
 }
 
 struct OperationRespones(pub Vec<OperationResponse>);
 
-fn get_operation_responses(operation: &OperationVerb) -> Result<OperationRespones, Error> {
-    let operation = operation.operation();
+impl OperationRespones {
+    // In long-running operations (LROs) or asynchronous operations,
+    // 201 & 202 responses are not terminal responses.
+    // https://docs.microsoft.com/en-us/azure/azure-resource-manager/management/async-operations
+    pub fn terminal_responses(&self) -> Vec<&OperationResponse> {
+        self.0
+            .iter()
+            .filter(|rsp| {
+                if rsp.is_long_running {
+                    !matches!(rsp.status_code, Some(201) | Some(202))
+                } else {
+                    true
+                }
+            })
+            .collect()
+    }
+}
+
+fn get_operation_responses(operation: &WebOperation) -> Result<OperationRespones, Error> {
     let mut responses = Vec::new();
     for (status_code, response) in get_success_responses(&operation.responses) {
         let body_type_name = response
@@ -517,6 +535,7 @@ fn get_operation_responses(operation: &OperationVerb) -> Result<OperationRespone
         responses.push(OperationResponse {
             status_code,
             body_type_name,
+            is_long_running: operation.is_long_running,
         });
     }
     Ok(OperationRespones(responses))

@@ -21,7 +21,7 @@ impl From<Box<dyn SeekableStream>> for Body {
     }
 }
 
-const FIELDS: &'static [&'static str] = &["uri", "method", "headers", "body"];
+const FIELDS: &[&str] = &["uri", "method", "headers", "body"];
 
 /// A pipeline request.
 ///
@@ -51,7 +51,7 @@ impl Serialize for Request {
     where
         S: Serializer,
     {
-        let mut hm = std::collections::HashMap::new();
+        let mut hm = std::collections::BTreeMap::new();
         for (h, v) in self.headers().iter() {
             if h.as_str().to_lowercase() == "authorization" {
                 hm.insert(h.to_string(), "<<STRIPPED>>");
@@ -61,7 +61,14 @@ impl Serialize for Request {
         }
 
         let mut state = serializer.serialize_struct("Request", 4)?;
-        state.serialize_field(FIELDS[0], &self.uri.to_string())?;
+        state.serialize_field(
+            FIELDS[0],
+            &self
+                .uri
+                .path_and_query()
+                .map(|p| p.to_string())
+                .unwrap_or_else(String::new),
+        )?;
         state.serialize_field(FIELDS[1], &self.method.to_string())?;
         state.serialize_field(FIELDS[2], &hm)?;
         state.serialize_field(
