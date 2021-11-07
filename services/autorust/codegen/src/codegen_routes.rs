@@ -188,21 +188,18 @@ fn create_function(cg: &CodeGen, doc_file: &Path, operation: &WebOperation) -> R
 
     let params = parse_params(&operation.path);
     // println!("path params {:#?}", params);
-    let params: Result<Vec<_>, Error> = params
-        .iter()
-        .map(|s| Ok(ident(&s.to_snake_case()).map_err(Error::ParamName)?))
-        .collect();
+    let params: Result<Vec<_>, Error> = params.iter().map(|s| ident(&s.to_snake_case()).map_err(Error::ParamName)).collect();
     let params = params?;
     let _url_str_args = quote! { #(#params),* };
 
-    let parameters = OperationParameters::create(cg, doc_file, &operation)?;
+    let parameters = OperationParameters::create(cg, doc_file, operation)?;
 
     let fparams = create_function_params(&parameters)?;
 
     let examples_name = ident(&format!("{}_examples", function_name.to_snake_case())).map_err(Error::FunctionName)?;
     let examples = get_operation_examples(operation);
     // TODO make configurable
-    let base_path = doc_file.clone();
+    let base_path = doc_file;
     let examples_mod = create_examples_mod(base_path, &examples_name, &examples)?;
     let first_example = examples.0.first();
 
@@ -212,7 +209,7 @@ fn create_function(cg: &CodeGen, doc_file: &Path, operation: &WebOperation) -> R
     let is_single_response = success_responses.len() == 1;
     let has_default_response = has_default_response(responses);
 
-    let responses = get_operation_responses(&operation)?;
+    let responses = get_operation_responses(operation)?;
     let responder_name = ident(&format!("{}Response", function_name.to_camel_case())).map_err(Error::FunctionName)?;
     let responder = create_responder(&responder_name, &responses)?;
 
@@ -355,17 +352,14 @@ fn create_function(cg: &CodeGen, doc_file: &Path, operation: &WebOperation) -> R
         WebVerb::Head => quote! { head },
     };
 
-    let api_version = cg.spec.api_version().ok_or_else(|| Error::MissingApiVersion)?;
+    let api_version = cg.spec.api_version().ok_or(Error::MissingApiVersion)?;
     let route_path = route_path(&operation.path);
     let mut verb_parts = Vec::new();
     let path = format!("{}?api-version={}", route_path, api_version);
     verb_parts.push(quote! { #path });
-    match parameters.get_body() {
-        Some(param) => {
-            let data = format!("<{}>", param.snake_case_name());
-            verb_parts.push(quote! { data = #data });
-        }
-        None => {}
+    if let Some(param) = parameters.get_body() {
+        let data = format!("<{}>", param.snake_case_name());
+        verb_parts.push(quote! { data = #data });
     }
     // Use operationId as the route name
     match &operation.id {
@@ -386,7 +380,7 @@ fn create_function(cg: &CodeGen, doc_file: &Path, operation: &WebOperation) -> R
         .first()
         // .ok_or_else(|| Error::OperationMissingResponses(operation.id.clone()))?;
         .unwrap_or(&first_response);
-    let status_code = &StatusCode::Code(first_response.status_code.ok_or_else(|| Error::StatusCodeRequired)?);
+    let status_code = &StatusCode::Code(first_response.status_code.ok_or(Error::StatusCodeRequired)?);
     let status_code_name = get_status_code_ident_camel_case(status_code)?;
     let response_type = get_response_type_ident(status_code)?;
     let first_responder = match (&first_example, &first_response.body_type_name) {
@@ -409,7 +403,7 @@ fn create_function(cg: &CodeGen, doc_file: &Path, operation: &WebOperation) -> R
             Ok(#first_responder)
         }
     };
-    Ok(TokenStream::from(func))
+    Ok(func)
 }
 
 fn create_examples_mod(base_path: &Path, name: &TokenStream, examples: &OperationExamples) -> Result<TokenStream, Error> {
@@ -418,7 +412,7 @@ fn create_examples_mod(base_path: &Path, name: &TokenStream, examples: &Operatio
         let name = ident(&example.const_name()).map_err(Error::ExamplesName)?;
         let trim = "../../../azure-rest-api-specs-pr/specification/";
         let file = path::join(&base_path.to_str().unwrap()[trim.len()..], &example.file).map_err(Error::ExamplePath)?;
-        let file = file.to_str().ok_or_else(|| Error::ExamplePathNotUtf8)?;
+        let file = file.to_str().ok_or(Error::ExamplePathNotUtf8)?;
         let file = file.replace("\\", "/");
         values.extend(quote! {
             pub const #name: &str = #file;
@@ -518,11 +512,7 @@ impl OperationRespones {
             .iter()
             .filter(|rsp| {
                 if rsp.is_long_running {
-                    match rsp.status_code {
-                        Some(201) => false,
-                        Some(202) => false,
-                        _ => true,
-                    }
+                    !matches!(rsp.status_code, Some(201) | Some(202))
                 } else {
                     true
                 }
