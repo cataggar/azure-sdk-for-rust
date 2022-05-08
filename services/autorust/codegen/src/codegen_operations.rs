@@ -13,7 +13,7 @@ use heck::ToPascalCase;
 use heck::ToSnakeCase;
 use indexmap::IndexMap;
 use proc_macro2::TokenStream;
-use quote::quote;
+use quote::{quote, ToTokens};
 use std::collections::{BTreeSet, HashSet};
 
 fn error_variant(operation: &WebOperationGen) -> Result<TokenStream, Error> {
@@ -286,6 +286,49 @@ fn create_function_name(verb: &WebVerb, path: &str) -> String {
     path.join("_")
 }
 
+struct RequestCode {
+    auth: AuthCode,
+    verb: WebVerb,
+}
+
+impl ToTokens for RequestCode {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        let auth = &self.auth;
+        let verb = verb_to_tokens(&self.verb);
+        tokens.extend(quote! {
+            #auth
+            req_builder = req_builder.method(#verb);
+        })
+    }
+}
+
+// Only bearer token authentication is supported right now.
+struct AuthCode {}
+impl ToTokens for AuthCode {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        tokens.extend(quote! {
+            let credential = this.client.token_credential();
+            let token_response = credential
+                .get_token(&this.client.scopes().join(" "))
+                .await
+                .map_err(Error::GetToken)?;
+            req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
+        })
+    }
+}
+
+fn verb_to_tokens(verb: &WebVerb) -> TokenStream {
+    match verb {
+        WebVerb::Get => quote! { http::Method::GET },
+        WebVerb::Post => quote! { http::Method::POST },
+        WebVerb::Put => quote! { http::Method::PUT },
+        WebVerb::Patch => quote! { http::Method::PATCH },
+        WebVerb::Delete => quote! { http::Method::DELETE },
+        WebVerb::Options => quote! { http::Method::OPTIONS },
+        WebVerb::Head => quote! { http::Method::HEAD },
+    }
+}
+
 // Create code for the web operation
 fn create_operation_code(cg: &CodeGen, operation: &WebOperationGen) -> Result<OperationCode, Error> {
     let params = parse_params(&operation.0.path);
@@ -307,35 +350,13 @@ fn create_operation_code(cg: &CodeGen, operation: &WebOperationGen) -> Result<Op
     let has_param_api_version = param_names.contains("api-version");
     let mut skip = HashSet::new();
     skip.insert("api-version");
-    let parameters: Vec<_> = parameters.clone().into_iter().filter(|p| !skip.contains(p.name())).collect();
+    let parameters: Vec<&WebParameter> = parameters.clone().into_iter().filter(|p| !skip.contains(p.name())).collect();
 
-    let mut ts_request_builder = TokenStream::new();
+    let verb = operation.0.verb.clone();
+    let is_post = verb == WebVerb::Post;
+    let auth = AuthCode {};
 
-    let mut is_post = false;
-    let req_verb = match operation.0.verb {
-        WebVerb::Get => quote! { req_builder = req_builder.method(http::Method::GET); },
-        WebVerb::Post => {
-            is_post = true;
-            quote! { req_builder = req_builder.method(http::Method::POST); }
-        }
-        WebVerb::Put => quote! { req_builder = req_builder.method(http::Method::PUT); },
-        WebVerb::Patch => quote! { req_builder = req_builder.method(http::Method::PATCH); },
-        WebVerb::Delete => quote! { req_builder = req_builder.method(http::Method::DELETE); },
-        WebVerb::Options => quote! { req_builder = req_builder.method(http::Method::OPTIONS); },
-        WebVerb::Head => quote! { req_builder = req_builder.method(http::Method::HEAD); },
-    };
-    ts_request_builder.extend(quote! { #req_verb });
-
-    // auth
-    let auth = quote! {
-        let credential = this.client.token_credential();
-        let token_response = credential
-            .get_token(&this.client.scopes().join(" "))
-            .await
-            .map_err(Error::GetToken)?;
-        req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
-    };
-    ts_request_builder.extend(quote! {#auth});
+    let mut ts_request_builder = TokenStream::new(); // TODO change to type
 
     // api-version param
     if has_param_api_version {
@@ -730,6 +751,7 @@ fn create_operation_code(cg: &CodeGen, operation: &WebOperationGen) -> Result<Op
         }
     };
 
+    let request_code = RequestCode { verb, auth };
     let fut = if let Some(pageable) = &operation.0.pageable {
         // TODO: Pageable requires the values to be part of the response schema,
         // however, some schemas do this via the header x-ms-continuation rather than
@@ -777,8 +799,7 @@ fn create_operation_code(cg: &CodeGen, operation: &WebOperationGen) -> Result<Op
                                     url = url.join(&token.into_raw()).map_err(Error::ParseUrl)?;
                                     #stream_api_version
                                     req_builder = req_builder.uri(url.as_str());
-                                    #req_verb
-                                    #auth
+                                    #request_code
                                     let req_body = azure_core::EMPTY_BODY;
                                     let req = req_builder.body(req_body).map_err(Error::BuildRequest)?;
                                     this.client.send(req).await.map_err(Error::SendRequest)?
