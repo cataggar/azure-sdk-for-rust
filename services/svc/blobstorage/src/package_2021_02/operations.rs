@@ -415,13 +415,6 @@ pub mod service {
                         let url_str = &format!("{}/?restype=service&comp=properties", this.client.endpoint(),);
                         let mut url = url::Url::parse(url_str).map_err(Error::ParseUrl)?;
                         let mut req_builder = http::request::Builder::new();
-                        req_builder = req_builder.method(http::Method::GET);
-                        let credential = this.client.token_credential();
-                        let token_response = credential
-                            .get_token(&this.client.scopes().join(" "))
-                            .await
-                            .map_err(Error::GetToken)?;
-                        req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         let restype = &this.restype;
                         url.query_pairs_mut().append_pair("restype", restype);
                         let comp = &this.comp;
@@ -511,13 +504,6 @@ pub mod service {
                         let url_str = &format!("{}/?restype=service&comp=properties", this.client.endpoint(),);
                         let mut url = url::Url::parse(url_str).map_err(Error::ParseUrl)?;
                         let mut req_builder = http::request::Builder::new();
-                        req_builder = req_builder.method(http::Method::PUT);
-                        let credential = this.client.token_credential();
-                        let token_response = credential
-                            .get_token(&this.client.scopes().join(" "))
-                            .await
-                            .map_err(Error::GetToken)?;
-                        req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         let restype = &this.restype;
                         url.query_pairs_mut().append_pair("restype", restype);
                         let comp = &this.comp;
@@ -602,13 +588,6 @@ pub mod service {
                         let url_str = &format!("{}/?restype=service&comp=stats", this.client.endpoint(),);
                         let mut url = url::Url::parse(url_str).map_err(Error::ParseUrl)?;
                         let mut req_builder = http::request::Builder::new();
-                        req_builder = req_builder.method(http::Method::GET);
-                        let credential = this.client.token_credential();
-                        let token_response = credential
-                            .get_token(&this.client.scopes().join(" "))
-                            .await
-                            .map_err(Error::GetToken)?;
-                        req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         let restype = &this.restype;
                         url.query_pairs_mut().append_pair("restype", restype);
                         let comp = &this.comp;
@@ -721,7 +700,6 @@ pub mod service {
                                 url.set_path("");
                                 url = url.join(&token.into_raw()).map_err(Error::ParseUrl)?;
                                 req_builder = req_builder.uri(url.as_str());
-                                req_builder = req_builder.method(http::Method::GET);
                                 let credential = this.client.token_credential();
                                 let token_response = credential
                                     .get_token(&this.client.scopes().join(" "))
@@ -729,19 +707,12 @@ pub mod service {
                                     .map_err(Error::GetToken)?;
                                 req_builder =
                                     req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
+                                req_builder = req_builder.method(http::Method::GET);
                                 let req_body = azure_core::EMPTY_BODY;
                                 let req = req_builder.body(req_body).map_err(Error::BuildRequest)?;
                                 this.client.send(req).await.map_err(Error::SendRequest)?
                             }
                             None => {
-                                req_builder = req_builder.method(http::Method::GET);
-                                let credential = this.client.token_credential();
-                                let token_response = credential
-                                    .get_token(&this.client.scopes().join(" "))
-                                    .await
-                                    .map_err(Error::GetToken)?;
-                                req_builder =
-                                    req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                                 let comp = &this.comp;
                                 url.query_pairs_mut().append_pair("comp", comp);
                                 if let Some(prefix) = &this.prefix {
@@ -841,13 +812,6 @@ pub mod service {
                         let url_str = &format!("{}/?restype=service&comp=userdelegationkey", this.client.endpoint(),);
                         let mut url = url::Url::parse(url_str).map_err(Error::ParseUrl)?;
                         let mut req_builder = http::request::Builder::new();
-                        req_builder = req_builder.method(http::Method::POST);
-                        let credential = this.client.token_credential();
-                        let token_response = credential
-                            .get_token(&this.client.scopes().join(" "))
-                            .await
-                            .map_err(Error::GetToken)?;
-                        req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         let restype = &this.restype;
                         url.query_pairs_mut().append_pair("restype", restype);
                         let comp = &this.comp;
@@ -927,13 +891,6 @@ pub mod service {
                         let url_str = &format!("{}/?restype=account&comp=properties", this.client.endpoint(),);
                         let mut url = url::Url::parse(url_str).map_err(Error::ParseUrl)?;
                         let mut req_builder = http::request::Builder::new();
-                        req_builder = req_builder.method(http::Method::GET);
-                        let credential = this.client.token_credential();
-                        let token_response = credential
-                            .get_token(&this.client.scopes().join(" "))
-                            .await
-                            .map_err(Error::GetToken)?;
-                        req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         let restype = &this.restype;
                         url.query_pairs_mut().append_pair("restype", restype);
                         let comp = &this.comp;
@@ -1013,13 +970,6 @@ pub mod service {
                         let url_str = &format!("{}/?comp=batch", this.client.endpoint(),);
                         let mut url = url::Url::parse(url_str).map_err(Error::ParseUrl)?;
                         let mut req_builder = http::request::Builder::new();
-                        req_builder = req_builder.method(http::Method::POST);
-                        let credential = this.client.token_credential();
-                        let token_response = credential
-                            .get_token(&this.client.scopes().join(" "))
-                            .await
-                            .map_err(Error::GetToken)?;
-                        req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         let comp = &this.comp;
                         url.query_pairs_mut().append_pair("comp", comp);
                         let req_body = azure_core::to_json(&this.body).map_err(Error::Serialize)?;
@@ -1122,13 +1072,6 @@ pub mod service {
                         let url_str = &format!("{}/?comp=blobs", this.client.endpoint(),);
                         let mut url = url::Url::parse(url_str).map_err(Error::ParseUrl)?;
                         let mut req_builder = http::request::Builder::new();
-                        req_builder = req_builder.method(http::Method::GET);
-                        let credential = this.client.token_credential();
-                        let token_response = credential
-                            .get_token(&this.client.scopes().join(" "))
-                            .await
-                            .map_err(Error::GetToken)?;
-                        req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         let comp = &this.comp;
                         url.query_pairs_mut().append_pair("comp", comp);
                         if let Some(timeout) = &this.timeout {
@@ -1585,13 +1528,6 @@ pub mod container {
                         let url_str = &format!("{}/{}?restype=container", this.client.endpoint(), &this.container_name);
                         let mut url = url::Url::parse(url_str).map_err(Error::ParseUrl)?;
                         let mut req_builder = http::request::Builder::new();
-                        req_builder = req_builder.method(http::Method::GET);
-                        let credential = this.client.token_credential();
-                        let token_response = credential
-                            .get_token(&this.client.scopes().join(" "))
-                            .await
-                            .map_err(Error::GetToken)?;
-                        req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         let restype = &this.restype;
                         url.query_pairs_mut().append_pair("restype", restype);
                         if let Some(timeout) = &this.timeout {
@@ -1696,13 +1632,6 @@ pub mod container {
                         let url_str = &format!("{}/{}?restype=container", this.client.endpoint(), &this.container_name);
                         let mut url = url::Url::parse(url_str).map_err(Error::ParseUrl)?;
                         let mut req_builder = http::request::Builder::new();
-                        req_builder = req_builder.method(http::Method::PUT);
-                        let credential = this.client.token_credential();
-                        let token_response = credential
-                            .get_token(&this.client.scopes().join(" "))
-                            .await
-                            .map_err(Error::GetToken)?;
-                        req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         let restype = &this.restype;
                         url.query_pairs_mut().append_pair("restype", restype);
                         if let Some(timeout) = &this.timeout {
@@ -1814,13 +1743,6 @@ pub mod container {
                         let url_str = &format!("{}/{}?restype=container", this.client.endpoint(), &this.container_name);
                         let mut url = url::Url::parse(url_str).map_err(Error::ParseUrl)?;
                         let mut req_builder = http::request::Builder::new();
-                        req_builder = req_builder.method(http::Method::DELETE);
-                        let credential = this.client.token_credential();
-                        let token_response = credential
-                            .get_token(&this.client.scopes().join(" "))
-                            .await
-                            .map_err(Error::GetToken)?;
-                        req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         let restype = &this.restype;
                         url.query_pairs_mut().append_pair("restype", restype);
                         if let Some(timeout) = &this.timeout {
@@ -1931,13 +1853,6 @@ pub mod container {
                         );
                         let mut url = url::Url::parse(url_str).map_err(Error::ParseUrl)?;
                         let mut req_builder = http::request::Builder::new();
-                        req_builder = req_builder.method(http::Method::PUT);
-                        let credential = this.client.token_credential();
-                        let token_response = credential
-                            .get_token(&this.client.scopes().join(" "))
-                            .await
-                            .map_err(Error::GetToken)?;
-                        req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         let restype = &this.restype;
                         url.query_pairs_mut().append_pair("restype", restype);
                         let comp = &this.comp;
@@ -2036,13 +1951,6 @@ pub mod container {
                         let url_str = &format!("{}/{}?restype=container&comp=acl", this.client.endpoint(), &this.container_name);
                         let mut url = url::Url::parse(url_str).map_err(Error::ParseUrl)?;
                         let mut req_builder = http::request::Builder::new();
-                        req_builder = req_builder.method(http::Method::GET);
-                        let credential = this.client.token_credential();
-                        let token_response = credential
-                            .get_token(&this.client.scopes().join(" "))
-                            .await
-                            .map_err(Error::GetToken)?;
-                        req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         let restype = &this.restype;
                         url.query_pairs_mut().append_pair("restype", restype);
                         let comp = &this.comp;
@@ -2160,13 +2068,6 @@ pub mod container {
                         let url_str = &format!("{}/{}?restype=container&comp=acl", this.client.endpoint(), &this.container_name);
                         let mut url = url::Url::parse(url_str).map_err(Error::ParseUrl)?;
                         let mut req_builder = http::request::Builder::new();
-                        req_builder = req_builder.method(http::Method::PUT);
-                        let credential = this.client.token_credential();
-                        let token_response = credential
-                            .get_token(&this.client.scopes().join(" "))
-                            .await
-                            .map_err(Error::GetToken)?;
-                        req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         let restype = &this.restype;
                         url.query_pairs_mut().append_pair("restype", restype);
                         let comp = &this.comp;
@@ -2282,13 +2183,6 @@ pub mod container {
                         );
                         let mut url = url::Url::parse(url_str).map_err(Error::ParseUrl)?;
                         let mut req_builder = http::request::Builder::new();
-                        req_builder = req_builder.method(http::Method::PUT);
-                        let credential = this.client.token_credential();
-                        let token_response = credential
-                            .get_token(&this.client.scopes().join(" "))
-                            .await
-                            .map_err(Error::GetToken)?;
-                        req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         let restype = &this.restype;
                         url.query_pairs_mut().append_pair("restype", restype);
                         let comp = &this.comp;
@@ -2385,13 +2279,6 @@ pub mod container {
                         let url_str = &format!("{}/{}?restype=container&comp=rename", this.client.endpoint(), &this.container_name);
                         let mut url = url::Url::parse(url_str).map_err(Error::ParseUrl)?;
                         let mut req_builder = http::request::Builder::new();
-                        req_builder = req_builder.method(http::Method::PUT);
-                        let credential = this.client.token_credential();
-                        let token_response = credential
-                            .get_token(&this.client.scopes().join(" "))
-                            .await
-                            .map_err(Error::GetToken)?;
-                        req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         let restype = &this.restype;
                         url.query_pairs_mut().append_pair("restype", restype);
                         let comp = &this.comp;
@@ -2483,13 +2370,6 @@ pub mod container {
                         let url_str = &format!("{}/{}?restype=container&comp=batch", this.client.endpoint(), &this.container_name);
                         let mut url = url::Url::parse(url_str).map_err(Error::ParseUrl)?;
                         let mut req_builder = http::request::Builder::new();
-                        req_builder = req_builder.method(http::Method::POST);
-                        let credential = this.client.token_credential();
-                        let token_response = credential
-                            .get_token(&this.client.scopes().join(" "))
-                            .await
-                            .map_err(Error::GetToken)?;
-                        req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         let restype = &this.restype;
                         url.query_pairs_mut().append_pair("restype", restype);
                         let comp = &this.comp;
@@ -2606,13 +2486,6 @@ pub mod container {
                         );
                         let mut url = url::Url::parse(url_str).map_err(Error::ParseUrl)?;
                         let mut req_builder = http::request::Builder::new();
-                        req_builder = req_builder.method(http::Method::PUT);
-                        let credential = this.client.token_credential();
-                        let token_response = credential
-                            .get_token(&this.client.scopes().join(" "))
-                            .await
-                            .map_err(Error::GetToken)?;
-                        req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         let comp = &this.comp;
                         url.query_pairs_mut().append_pair("comp", comp);
                         let restype = &this.restype;
@@ -2726,13 +2599,6 @@ pub mod container {
                         );
                         let mut url = url::Url::parse(url_str).map_err(Error::ParseUrl)?;
                         let mut req_builder = http::request::Builder::new();
-                        req_builder = req_builder.method(http::Method::PUT);
-                        let credential = this.client.token_credential();
-                        let token_response = credential
-                            .get_token(&this.client.scopes().join(" "))
-                            .await
-                            .map_err(Error::GetToken)?;
-                        req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         let comp = &this.comp;
                         url.query_pairs_mut().append_pair("comp", comp);
                         let restype = &this.restype;
@@ -2841,13 +2707,6 @@ pub mod container {
                         );
                         let mut url = url::Url::parse(url_str).map_err(Error::ParseUrl)?;
                         let mut req_builder = http::request::Builder::new();
-                        req_builder = req_builder.method(http::Method::PUT);
-                        let credential = this.client.token_credential();
-                        let token_response = credential
-                            .get_token(&this.client.scopes().join(" "))
-                            .await
-                            .map_err(Error::GetToken)?;
-                        req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         let comp = &this.comp;
                         url.query_pairs_mut().append_pair("comp", comp);
                         let restype = &this.restype;
@@ -2960,13 +2819,6 @@ pub mod container {
                         );
                         let mut url = url::Url::parse(url_str).map_err(Error::ParseUrl)?;
                         let mut req_builder = http::request::Builder::new();
-                        req_builder = req_builder.method(http::Method::PUT);
-                        let credential = this.client.token_credential();
-                        let token_response = credential
-                            .get_token(&this.client.scopes().join(" "))
-                            .await
-                            .map_err(Error::GetToken)?;
-                        req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         let comp = &this.comp;
                         url.query_pairs_mut().append_pair("comp", comp);
                         let restype = &this.restype;
@@ -3078,13 +2930,6 @@ pub mod container {
                         );
                         let mut url = url::Url::parse(url_str).map_err(Error::ParseUrl)?;
                         let mut req_builder = http::request::Builder::new();
-                        req_builder = req_builder.method(http::Method::PUT);
-                        let credential = this.client.token_credential();
-                        let token_response = credential
-                            .get_token(&this.client.scopes().join(" "))
-                            .await
-                            .map_err(Error::GetToken)?;
-                        req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         let comp = &this.comp;
                         url.query_pairs_mut().append_pair("comp", comp);
                         let restype = &this.restype;
@@ -3207,7 +3052,6 @@ pub mod container {
                                 url.set_path("");
                                 url = url.join(&token.into_raw()).map_err(Error::ParseUrl)?;
                                 req_builder = req_builder.uri(url.as_str());
-                                req_builder = req_builder.method(http::Method::GET);
                                 let credential = this.client.token_credential();
                                 let token_response = credential
                                     .get_token(&this.client.scopes().join(" "))
@@ -3215,19 +3059,12 @@ pub mod container {
                                     .map_err(Error::GetToken)?;
                                 req_builder =
                                     req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
+                                req_builder = req_builder.method(http::Method::GET);
                                 let req_body = azure_core::EMPTY_BODY;
                                 let req = req_builder.body(req_body).map_err(Error::BuildRequest)?;
                                 this.client.send(req).await.map_err(Error::SendRequest)?
                             }
                             None => {
-                                req_builder = req_builder.method(http::Method::GET);
-                                let credential = this.client.token_credential();
-                                let token_response = credential
-                                    .get_token(&this.client.scopes().join(" "))
-                                    .await
-                                    .map_err(Error::GetToken)?;
-                                req_builder =
-                                    req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                                 let restype = &this.restype;
                                 url.query_pairs_mut().append_pair("restype", restype);
                                 let comp = &this.comp;
@@ -3359,7 +3196,6 @@ pub mod container {
                                 url.set_path("");
                                 url = url.join(&token.into_raw()).map_err(Error::ParseUrl)?;
                                 req_builder = req_builder.uri(url.as_str());
-                                req_builder = req_builder.method(http::Method::GET);
                                 let credential = this.client.token_credential();
                                 let token_response = credential
                                     .get_token(&this.client.scopes().join(" "))
@@ -3367,19 +3203,12 @@ pub mod container {
                                     .map_err(Error::GetToken)?;
                                 req_builder =
                                     req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
+                                req_builder = req_builder.method(http::Method::GET);
                                 let req_body = azure_core::EMPTY_BODY;
                                 let req = req_builder.body(req_body).map_err(Error::BuildRequest)?;
                                 this.client.send(req).await.map_err(Error::SendRequest)?
                             }
                             None => {
-                                req_builder = req_builder.method(http::Method::GET);
-                                let credential = this.client.token_credential();
-                                let token_response = credential
-                                    .get_token(&this.client.scopes().join(" "))
-                                    .await
-                                    .map_err(Error::GetToken)?;
-                                req_builder =
-                                    req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                                 let restype = &this.restype;
                                 url.query_pairs_mut().append_pair("restype", restype);
                                 let comp = &this.comp;
@@ -3477,13 +3306,6 @@ pub mod container {
                         );
                         let mut url = url::Url::parse(url_str).map_err(Error::ParseUrl)?;
                         let mut req_builder = http::request::Builder::new();
-                        req_builder = req_builder.method(http::Method::GET);
-                        let credential = this.client.token_credential();
-                        let token_response = credential
-                            .get_token(&this.client.scopes().join(" "))
-                            .await
-                            .map_err(Error::GetToken)?;
-                        req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         let restype = &this.restype;
                         url.query_pairs_mut().append_pair("restype", restype);
                         let comp = &this.comp;
@@ -4239,13 +4061,6 @@ pub mod blob {
                         let url_str = &format!("{}/{}/{}", this.client.endpoint(), &this.container_name, &this.blob);
                         let mut url = url::Url::parse(url_str).map_err(Error::ParseUrl)?;
                         let mut req_builder = http::request::Builder::new();
-                        req_builder = req_builder.method(http::Method::GET);
-                        let credential = this.client.token_credential();
-                        let token_response = credential
-                            .get_token(&this.client.scopes().join(" "))
-                            .await
-                            .map_err(Error::GetToken)?;
-                        req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         if let Some(snapshot) = &this.snapshot {
                             url.query_pairs_mut().append_pair("snapshot", snapshot);
                         }
@@ -4428,13 +4243,6 @@ pub mod blob {
                         let url_str = &format!("{}/{}/{}", this.client.endpoint(), &this.container_name, &this.blob);
                         let mut url = url::Url::parse(url_str).map_err(Error::ParseUrl)?;
                         let mut req_builder = http::request::Builder::new();
-                        req_builder = req_builder.method(http::Method::DELETE);
-                        let credential = this.client.token_credential();
-                        let token_response = credential
-                            .get_token(&this.client.scopes().join(" "))
-                            .await
-                            .map_err(Error::GetToken)?;
-                        req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         if let Some(snapshot) = &this.snapshot {
                             url.query_pairs_mut().append_pair("snapshot", snapshot);
                         }
@@ -4599,13 +4407,6 @@ pub mod blob {
                         let url_str = &format!("{}/{}/{}", this.client.endpoint(), &this.container_name, &this.blob);
                         let mut url = url::Url::parse(url_str).map_err(Error::ParseUrl)?;
                         let mut req_builder = http::request::Builder::new();
-                        req_builder = req_builder.method(http::Method::HEAD);
-                        let credential = this.client.token_credential();
-                        let token_response = credential
-                            .get_token(&this.client.scopes().join(" "))
-                            .await
-                            .map_err(Error::GetToken)?;
-                        req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         if let Some(snapshot) = &this.snapshot {
                             url.query_pairs_mut().append_pair("snapshot", snapshot);
                         }
@@ -4719,13 +4520,6 @@ pub mod blob {
                         let url_str = &format!("{}/{}/{}?comp=undelete", this.client.endpoint(), &this.container_name, &this.blob);
                         let mut url = url::Url::parse(url_str).map_err(Error::ParseUrl)?;
                         let mut req_builder = http::request::Builder::new();
-                        req_builder = req_builder.method(http::Method::PUT);
-                        let credential = this.client.token_credential();
-                        let token_response = credential
-                            .get_token(&this.client.scopes().join(" "))
-                            .await
-                            .map_err(Error::GetToken)?;
-                        req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         let comp = &this.comp;
                         url.query_pairs_mut().append_pair("comp", comp);
                         if let Some(timeout) = &this.timeout {
@@ -4814,13 +4608,6 @@ pub mod blob {
                         let url_str = &format!("{}/{}/{}?comp=expiry", this.client.endpoint(), &this.container_name, &this.blob);
                         let mut url = url::Url::parse(url_str).map_err(Error::ParseUrl)?;
                         let mut req_builder = http::request::Builder::new();
-                        req_builder = req_builder.method(http::Method::PUT);
-                        let credential = this.client.token_credential();
-                        let token_response = credential
-                            .get_token(&this.client.scopes().join(" "))
-                            .await
-                            .map_err(Error::GetToken)?;
-                        req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         let comp = &this.comp;
                         url.query_pairs_mut().append_pair("comp", comp);
                         if let Some(timeout) = &this.timeout {
@@ -4972,13 +4759,6 @@ pub mod blob {
                         );
                         let mut url = url::Url::parse(url_str).map_err(Error::ParseUrl)?;
                         let mut req_builder = http::request::Builder::new();
-                        req_builder = req_builder.method(http::Method::PUT);
-                        let credential = this.client.token_credential();
-                        let token_response = credential
-                            .get_token(&this.client.scopes().join(" "))
-                            .await
-                            .map_err(Error::GetToken)?;
-                        req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         let comp = &this.comp;
                         url.query_pairs_mut().append_pair("comp", comp);
                         if let Some(timeout) = &this.timeout {
@@ -5117,13 +4897,6 @@ pub mod blob {
                         );
                         let mut url = url::Url::parse(url_str).map_err(Error::ParseUrl)?;
                         let mut req_builder = http::request::Builder::new();
-                        req_builder = req_builder.method(http::Method::PUT);
-                        let credential = this.client.token_credential();
-                        let token_response = credential
-                            .get_token(&this.client.scopes().join(" "))
-                            .await
-                            .map_err(Error::GetToken)?;
-                        req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         let comp = &this.comp;
                         url.query_pairs_mut().append_pair("comp", comp);
                         if let Some(timeout) = &this.timeout {
@@ -5220,13 +4993,6 @@ pub mod blob {
                         );
                         let mut url = url::Url::parse(url_str).map_err(Error::ParseUrl)?;
                         let mut req_builder = http::request::Builder::new();
-                        req_builder = req_builder.method(http::Method::DELETE);
-                        let credential = this.client.token_credential();
-                        let token_response = credential
-                            .get_token(&this.client.scopes().join(" "))
-                            .await
-                            .map_err(Error::GetToken)?;
-                        req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         let comp = &this.comp;
                         url.query_pairs_mut().append_pair("comp", comp);
                         if let Some(timeout) = &this.timeout {
@@ -5310,13 +5076,6 @@ pub mod blob {
                         let url_str = &format!("{}/{}/{}?comp=legalhold", this.client.endpoint(), &this.container_name, &this.blob);
                         let mut url = url::Url::parse(url_str).map_err(Error::ParseUrl)?;
                         let mut req_builder = http::request::Builder::new();
-                        req_builder = req_builder.method(http::Method::PUT);
-                        let credential = this.client.token_credential();
-                        let token_response = credential
-                            .get_token(&this.client.scopes().join(" "))
-                            .await
-                            .map_err(Error::GetToken)?;
-                        req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         let comp = &this.comp;
                         url.query_pairs_mut().append_pair("comp", comp);
                         if let Some(timeout) = &this.timeout {
@@ -5455,13 +5214,6 @@ pub mod blob {
                         let url_str = &format!("{}/{}/{}?comp=metadata", this.client.endpoint(), &this.container_name, &this.blob);
                         let mut url = url::Url::parse(url_str).map_err(Error::ParseUrl)?;
                         let mut req_builder = http::request::Builder::new();
-                        req_builder = req_builder.method(http::Method::PUT);
-                        let credential = this.client.token_credential();
-                        let token_response = credential
-                            .get_token(&this.client.scopes().join(" "))
-                            .await
-                            .map_err(Error::GetToken)?;
-                        req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         let comp = &this.comp;
                         url.query_pairs_mut().append_pair("comp", comp);
                         if let Some(timeout) = &this.timeout {
@@ -5618,13 +5370,6 @@ pub mod blob {
                         );
                         let mut url = url::Url::parse(url_str).map_err(Error::ParseUrl)?;
                         let mut req_builder = http::request::Builder::new();
-                        req_builder = req_builder.method(http::Method::PUT);
-                        let credential = this.client.token_credential();
-                        let token_response = credential
-                            .get_token(&this.client.scopes().join(" "))
-                            .await
-                            .map_err(Error::GetToken)?;
-                        req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         let comp = &this.comp;
                         url.query_pairs_mut().append_pair("comp", comp);
                         req_builder = req_builder.header("x-ms-lease-action", &this.x_ms_lease_action);
@@ -5761,13 +5506,6 @@ pub mod blob {
                         );
                         let mut url = url::Url::parse(url_str).map_err(Error::ParseUrl)?;
                         let mut req_builder = http::request::Builder::new();
-                        req_builder = req_builder.method(http::Method::PUT);
-                        let credential = this.client.token_credential();
-                        let token_response = credential
-                            .get_token(&this.client.scopes().join(" "))
-                            .await
-                            .map_err(Error::GetToken)?;
-                        req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         let comp = &this.comp;
                         url.query_pairs_mut().append_pair("comp", comp);
                         req_builder = req_builder.header("x-ms-lease-action", &this.x_ms_lease_action);
@@ -5899,13 +5637,6 @@ pub mod blob {
                         );
                         let mut url = url::Url::parse(url_str).map_err(Error::ParseUrl)?;
                         let mut req_builder = http::request::Builder::new();
-                        req_builder = req_builder.method(http::Method::PUT);
-                        let credential = this.client.token_credential();
-                        let token_response = credential
-                            .get_token(&this.client.scopes().join(" "))
-                            .await
-                            .map_err(Error::GetToken)?;
-                        req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         let comp = &this.comp;
                         url.query_pairs_mut().append_pair("comp", comp);
                         req_builder = req_builder.header("x-ms-lease-action", &this.x_ms_lease_action);
@@ -6038,13 +5769,6 @@ pub mod blob {
                         );
                         let mut url = url::Url::parse(url_str).map_err(Error::ParseUrl)?;
                         let mut req_builder = http::request::Builder::new();
-                        req_builder = req_builder.method(http::Method::PUT);
-                        let credential = this.client.token_credential();
-                        let token_response = credential
-                            .get_token(&this.client.scopes().join(" "))
-                            .await
-                            .map_err(Error::GetToken)?;
-                        req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         let comp = &this.comp;
                         url.query_pairs_mut().append_pair("comp", comp);
                         req_builder = req_builder.header("x-ms-lease-action", &this.x_ms_lease_action);
@@ -6181,13 +5905,6 @@ pub mod blob {
                         );
                         let mut url = url::Url::parse(url_str).map_err(Error::ParseUrl)?;
                         let mut req_builder = http::request::Builder::new();
-                        req_builder = req_builder.method(http::Method::PUT);
-                        let credential = this.client.token_credential();
-                        let token_response = credential
-                            .get_token(&this.client.scopes().join(" "))
-                            .await
-                            .map_err(Error::GetToken)?;
-                        req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         let comp = &this.comp;
                         url.query_pairs_mut().append_pair("comp", comp);
                         req_builder = req_builder.header("x-ms-lease-action", &this.x_ms_lease_action);
@@ -6344,13 +6061,6 @@ pub mod blob {
                         let url_str = &format!("{}/{}/{}?comp=snapshot", this.client.endpoint(), &this.container_name, &this.blob);
                         let mut url = url::Url::parse(url_str).map_err(Error::ParseUrl)?;
                         let mut req_builder = http::request::Builder::new();
-                        req_builder = req_builder.method(http::Method::PUT);
-                        let credential = this.client.token_credential();
-                        let token_response = credential
-                            .get_token(&this.client.scopes().join(" "))
-                            .await
-                            .map_err(Error::GetToken)?;
-                        req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         let comp = &this.comp;
                         url.query_pairs_mut().append_pair("comp", comp);
                         if let Some(timeout) = &this.timeout {
@@ -6561,13 +6271,6 @@ pub mod blob {
                         let url_str = &format!("{}/{}/{}?comp=copy", this.client.endpoint(), &this.container_name, &this.blob);
                         let mut url = url::Url::parse(url_str).map_err(Error::ParseUrl)?;
                         let mut req_builder = http::request::Builder::new();
-                        req_builder = req_builder.method(http::Method::PUT);
-                        let credential = this.client.token_credential();
-                        let token_response = credential
-                            .get_token(&this.client.scopes().join(" "))
-                            .await
-                            .map_err(Error::GetToken)?;
-                        req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         if let Some(timeout) = &this.timeout {
                             url.query_pairs_mut().append_pair("timeout", &timeout.to_string());
                         }
@@ -6802,13 +6505,6 @@ pub mod blob {
                         let url_str = &format!("{}/{}/{}?comp=copy&sync", this.client.endpoint(), &this.container_name, &this.blob);
                         let mut url = url::Url::parse(url_str).map_err(Error::ParseUrl)?;
                         let mut req_builder = http::request::Builder::new();
-                        req_builder = req_builder.method(http::Method::PUT);
-                        let credential = this.client.token_credential();
-                        let token_response = credential
-                            .get_token(&this.client.scopes().join(" "))
-                            .await
-                            .map_err(Error::GetToken)?;
-                        req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         req_builder = req_builder.header("x-ms-requires-sync", &this.x_ms_requires_sync);
                         if let Some(timeout) = &this.timeout {
                             url.query_pairs_mut().append_pair("timeout", &timeout.to_string());
@@ -6960,13 +6656,6 @@ pub mod blob {
                         );
                         let mut url = url::Url::parse(url_str).map_err(Error::ParseUrl)?;
                         let mut req_builder = http::request::Builder::new();
-                        req_builder = req_builder.method(http::Method::PUT);
-                        let credential = this.client.token_credential();
-                        let token_response = credential
-                            .get_token(&this.client.scopes().join(" "))
-                            .await
-                            .map_err(Error::GetToken)?;
-                        req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         let comp = &this.comp;
                         url.query_pairs_mut().append_pair("comp", comp);
                         req_builder = req_builder.header("x-ms-copy-action", &this.x_ms_copy_action);
@@ -7085,13 +6774,6 @@ pub mod blob {
                         let url_str = &format!("{}/{}/{}?comp=tier", this.client.endpoint(), &this.container_name, &this.blob);
                         let mut url = url::Url::parse(url_str).map_err(Error::ParseUrl)?;
                         let mut req_builder = http::request::Builder::new();
-                        req_builder = req_builder.method(http::Method::PUT);
-                        let credential = this.client.token_credential();
-                        let token_response = credential
-                            .get_token(&this.client.scopes().join(" "))
-                            .await
-                            .map_err(Error::GetToken)?;
-                        req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         let comp = &this.comp;
                         url.query_pairs_mut().append_pair("comp", comp);
                         if let Some(snapshot) = &this.snapshot {
@@ -7187,13 +6869,6 @@ pub mod blob {
                         );
                         let mut url = url::Url::parse(url_str).map_err(Error::ParseUrl)?;
                         let mut req_builder = http::request::Builder::new();
-                        req_builder = req_builder.method(http::Method::GET);
-                        let credential = this.client.token_credential();
-                        let token_response = credential
-                            .get_token(&this.client.scopes().join(" "))
-                            .await
-                            .map_err(Error::GetToken)?;
-                        req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         let restype = &this.restype;
                         url.query_pairs_mut().append_pair("restype", restype);
                         let comp = &this.comp;
@@ -7331,13 +7006,6 @@ pub mod blob {
                         let url_str = &format!("{}/{}/{}?comp=query", this.client.endpoint(), &this.container_name, &this.blob);
                         let mut url = url::Url::parse(url_str).map_err(Error::ParseUrl)?;
                         let mut req_builder = http::request::Builder::new();
-                        req_builder = req_builder.method(http::Method::POST);
-                        let credential = this.client.token_credential();
-                        let token_response = credential
-                            .get_token(&this.client.scopes().join(" "))
-                            .await
-                            .map_err(Error::GetToken)?;
-                        req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         let comp = &this.comp;
                         url.query_pairs_mut().append_pair("comp", comp);
                         let req_body = if let Some(query_request) = &this.query_request {
@@ -7486,13 +7154,6 @@ pub mod blob {
                         let url_str = &format!("{}/{}/{}?comp=tags", this.client.endpoint(), &this.container_name, &this.blob);
                         let mut url = url::Url::parse(url_str).map_err(Error::ParseUrl)?;
                         let mut req_builder = http::request::Builder::new();
-                        req_builder = req_builder.method(http::Method::GET);
-                        let credential = this.client.token_credential();
-                        let token_response = credential
-                            .get_token(&this.client.scopes().join(" "))
-                            .await
-                            .map_err(Error::GetToken)?;
-                        req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         let comp = &this.comp;
                         url.query_pairs_mut().append_pair("comp", comp);
                         if let Some(timeout) = &this.timeout {
@@ -7622,13 +7283,6 @@ pub mod blob {
                         let url_str = &format!("{}/{}/{}?comp=tags", this.client.endpoint(), &this.container_name, &this.blob);
                         let mut url = url::Url::parse(url_str).map_err(Error::ParseUrl)?;
                         let mut req_builder = http::request::Builder::new();
-                        req_builder = req_builder.method(http::Method::PUT);
-                        let credential = this.client.token_credential();
-                        let token_response = credential
-                            .get_token(&this.client.scopes().join(" "))
-                            .await
-                            .map_err(Error::GetToken)?;
-                        req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         let comp = &this.comp;
                         url.query_pairs_mut().append_pair("comp", comp);
                         req_builder = req_builder.header("x-ms-version", &this.x_ms_version);
@@ -8154,13 +7808,6 @@ pub mod page_blob {
                         let url_str = &format!("{}/{}/{}?PageBlob", this.client.endpoint(), &this.container_name, &this.blob);
                         let mut url = url::Url::parse(url_str).map_err(Error::ParseUrl)?;
                         let mut req_builder = http::request::Builder::new();
-                        req_builder = req_builder.method(http::Method::PUT);
-                        let credential = this.client.token_credential();
-                        let token_response = credential
-                            .get_token(&this.client.scopes().join(" "))
-                            .await
-                            .map_err(Error::GetToken)?;
-                        req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         req_builder = req_builder.header("x-ms-blob-type", &this.x_ms_blob_type);
                         if let Some(timeout) = &this.timeout {
                             url.query_pairs_mut().append_pair("timeout", &timeout.to_string());
@@ -8401,13 +8048,6 @@ pub mod page_blob {
                         );
                         let mut url = url::Url::parse(url_str).map_err(Error::ParseUrl)?;
                         let mut req_builder = http::request::Builder::new();
-                        req_builder = req_builder.method(http::Method::PUT);
-                        let credential = this.client.token_credential();
-                        let token_response = credential
-                            .get_token(&this.client.scopes().join(" "))
-                            .await
-                            .map_err(Error::GetToken)?;
-                        req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         let comp = &this.comp;
                         url.query_pairs_mut().append_pair("comp", comp);
                         req_builder = req_builder.header("x-ms-page-write", &this.x_ms_page_write);
@@ -8613,13 +8253,6 @@ pub mod page_blob {
                         let url_str = &format!("{}/{}/{}?comp=page&clear", this.client.endpoint(), &this.container_name, &this.blob);
                         let mut url = url::Url::parse(url_str).map_err(Error::ParseUrl)?;
                         let mut req_builder = http::request::Builder::new();
-                        req_builder = req_builder.method(http::Method::PUT);
-                        let credential = this.client.token_credential();
-                        let token_response = credential
-                            .get_token(&this.client.scopes().join(" "))
-                            .await
-                            .map_err(Error::GetToken)?;
-                        req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         let comp = &this.comp;
                         url.query_pairs_mut().append_pair("comp", comp);
                         req_builder = req_builder.header("x-ms-page-write", &this.x_ms_page_write);
@@ -8856,13 +8489,6 @@ pub mod page_blob {
                         );
                         let mut url = url::Url::parse(url_str).map_err(Error::ParseUrl)?;
                         let mut req_builder = http::request::Builder::new();
-                        req_builder = req_builder.method(http::Method::PUT);
-                        let credential = this.client.token_credential();
-                        let token_response = credential
-                            .get_token(&this.client.scopes().join(" "))
-                            .await
-                            .map_err(Error::GetToken)?;
-                        req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         let comp = &this.comp;
                         url.query_pairs_mut().append_pair("comp", comp);
                         req_builder = req_builder.header("x-ms-page-write", &this.x_ms_page_write);
@@ -9065,7 +8691,6 @@ pub mod page_blob {
                                 url.set_path("");
                                 url = url.join(&token.into_raw()).map_err(Error::ParseUrl)?;
                                 req_builder = req_builder.uri(url.as_str());
-                                req_builder = req_builder.method(http::Method::GET);
                                 let credential = this.client.token_credential();
                                 let token_response = credential
                                     .get_token(&this.client.scopes().join(" "))
@@ -9073,19 +8698,12 @@ pub mod page_blob {
                                     .map_err(Error::GetToken)?;
                                 req_builder =
                                     req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
+                                req_builder = req_builder.method(http::Method::GET);
                                 let req_body = azure_core::EMPTY_BODY;
                                 let req = req_builder.body(req_body).map_err(Error::BuildRequest)?;
                                 this.client.send(req).await.map_err(Error::SendRequest)?
                             }
                             None => {
-                                req_builder = req_builder.method(http::Method::GET);
-                                let credential = this.client.token_credential();
-                                let token_response = credential
-                                    .get_token(&this.client.scopes().join(" "))
-                                    .await
-                                    .map_err(Error::GetToken)?;
-                                req_builder =
-                                    req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                                 let comp = &this.comp;
                                 url.query_pairs_mut().append_pair("comp", comp);
                                 if let Some(snapshot) = &this.snapshot {
@@ -9276,7 +8894,6 @@ pub mod page_blob {
                                 url.set_path("");
                                 url = url.join(&token.into_raw()).map_err(Error::ParseUrl)?;
                                 req_builder = req_builder.uri(url.as_str());
-                                req_builder = req_builder.method(http::Method::GET);
                                 let credential = this.client.token_credential();
                                 let token_response = credential
                                     .get_token(&this.client.scopes().join(" "))
@@ -9284,19 +8901,12 @@ pub mod page_blob {
                                     .map_err(Error::GetToken)?;
                                 req_builder =
                                     req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
+                                req_builder = req_builder.method(http::Method::GET);
                                 let req_body = azure_core::EMPTY_BODY;
                                 let req = req_builder.body(req_body).map_err(Error::BuildRequest)?;
                                 this.client.send(req).await.map_err(Error::SendRequest)?
                             }
                             None => {
-                                req_builder = req_builder.method(http::Method::GET);
-                                let credential = this.client.token_credential();
-                                let token_response = credential
-                                    .get_token(&this.client.scopes().join(" "))
-                                    .await
-                                    .map_err(Error::GetToken)?;
-                                req_builder =
-                                    req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                                 let comp = &this.comp;
                                 url.query_pairs_mut().append_pair("comp", comp);
                                 if let Some(snapshot) = &this.snapshot {
@@ -9479,13 +9089,6 @@ pub mod page_blob {
                         );
                         let mut url = url::Url::parse(url_str).map_err(Error::ParseUrl)?;
                         let mut req_builder = http::request::Builder::new();
-                        req_builder = req_builder.method(http::Method::PUT);
-                        let credential = this.client.token_credential();
-                        let token_response = credential
-                            .get_token(&this.client.scopes().join(" "))
-                            .await
-                            .map_err(Error::GetToken)?;
-                        req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         let comp = &this.comp;
                         url.query_pairs_mut().append_pair("comp", comp);
                         if let Some(timeout) = &this.timeout {
@@ -9640,13 +9243,6 @@ pub mod page_blob {
                         );
                         let mut url = url::Url::parse(url_str).map_err(Error::ParseUrl)?;
                         let mut req_builder = http::request::Builder::new();
-                        req_builder = req_builder.method(http::Method::PUT);
-                        let credential = this.client.token_credential();
-                        let token_response = credential
-                            .get_token(&this.client.scopes().join(" "))
-                            .await
-                            .map_err(Error::GetToken)?;
-                        req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         let comp = &this.comp;
                         url.query_pairs_mut().append_pair("comp", comp);
                         if let Some(timeout) = &this.timeout {
@@ -9782,13 +9378,6 @@ pub mod page_blob {
                         );
                         let mut url = url::Url::parse(url_str).map_err(Error::ParseUrl)?;
                         let mut req_builder = http::request::Builder::new();
-                        req_builder = req_builder.method(http::Method::PUT);
-                        let credential = this.client.token_credential();
-                        let token_response = credential
-                            .get_token(&this.client.scopes().join(" "))
-                            .await
-                            .map_err(Error::GetToken)?;
-                        req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         let comp = &this.comp;
                         url.query_pairs_mut().append_pair("comp", comp);
                         if let Some(timeout) = &this.timeout {
@@ -10139,13 +9728,6 @@ pub mod append_blob {
                         let url_str = &format!("{}/{}/{}?AppendBlob", this.client.endpoint(), &this.container_name, &this.blob);
                         let mut url = url::Url::parse(url_str).map_err(Error::ParseUrl)?;
                         let mut req_builder = http::request::Builder::new();
-                        req_builder = req_builder.method(http::Method::PUT);
-                        let credential = this.client.token_credential();
-                        let token_response = credential
-                            .get_token(&this.client.scopes().join(" "))
-                            .await
-                            .map_err(Error::GetToken)?;
-                        req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         req_builder = req_builder.header("x-ms-blob-type", &this.x_ms_blob_type);
                         if let Some(timeout) = &this.timeout {
                             url.query_pairs_mut().append_pair("timeout", &timeout.to_string());
@@ -10368,13 +9950,6 @@ pub mod append_blob {
                         );
                         let mut url = url::Url::parse(url_str).map_err(Error::ParseUrl)?;
                         let mut req_builder = http::request::Builder::new();
-                        req_builder = req_builder.method(http::Method::PUT);
-                        let credential = this.client.token_credential();
-                        let token_response = credential
-                            .get_token(&this.client.scopes().join(" "))
-                            .await
-                            .map_err(Error::GetToken)?;
-                        req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         let comp = &this.comp;
                         url.query_pairs_mut().append_pair("comp", comp);
                         req_builder = req_builder.header("content-type", "application/json");
@@ -10613,13 +10188,6 @@ pub mod append_blob {
                         );
                         let mut url = url::Url::parse(url_str).map_err(Error::ParseUrl)?;
                         let mut req_builder = http::request::Builder::new();
-                        req_builder = req_builder.method(http::Method::PUT);
-                        let credential = this.client.token_credential();
-                        let token_response = credential
-                            .get_token(&this.client.scopes().join(" "))
-                            .await
-                            .map_err(Error::GetToken)?;
-                        req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         let comp = &this.comp;
                         url.query_pairs_mut().append_pair("comp", comp);
                         req_builder = req_builder.header("x-ms-copy-source", &this.x_ms_copy_source);
@@ -10797,13 +10365,6 @@ pub mod append_blob {
                         let url_str = &format!("{}/{}/{}?comp=seal", this.client.endpoint(), &this.container_name, &this.blob);
                         let mut url = url::Url::parse(url_str).map_err(Error::ParseUrl)?;
                         let mut req_builder = http::request::Builder::new();
-                        req_builder = req_builder.method(http::Method::PUT);
-                        let credential = this.client.token_credential();
-                        let token_response = credential
-                            .get_token(&this.client.scopes().join(" "))
-                            .await
-                            .map_err(Error::GetToken)?;
-                        req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         let comp = &this.comp;
                         url.query_pairs_mut().append_pair("comp", comp);
                         if let Some(timeout) = &this.timeout {
@@ -11251,13 +10812,6 @@ pub mod block_blob {
                         let url_str = &format!("{}/{}/{}?BlockBlob", this.client.endpoint(), &this.container_name, &this.blob);
                         let mut url = url::Url::parse(url_str).map_err(Error::ParseUrl)?;
                         let mut req_builder = http::request::Builder::new();
-                        req_builder = req_builder.method(http::Method::PUT);
-                        let credential = this.client.token_credential();
-                        let token_response = credential
-                            .get_token(&this.client.scopes().join(" "))
-                            .await
-                            .map_err(Error::GetToken)?;
-                        req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         req_builder = req_builder.header("x-ms-blob-type", &this.x_ms_blob_type);
                         req_builder = req_builder.header("content-type", "application/json");
                         let req_body = azure_core::to_json(&this.body).map_err(Error::Serialize)?;
@@ -11557,13 +11111,6 @@ pub mod block_blob {
                         );
                         let mut url = url::Url::parse(url_str).map_err(Error::ParseUrl)?;
                         let mut req_builder = http::request::Builder::new();
-                        req_builder = req_builder.method(http::Method::PUT);
-                        let credential = this.client.token_credential();
-                        let token_response = credential
-                            .get_token(&this.client.scopes().join(" "))
-                            .await
-                            .map_err(Error::GetToken)?;
-                        req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         req_builder = req_builder.header("x-ms-blob-type", &this.x_ms_blob_type);
                         if let Some(timeout) = &this.timeout {
                             url.query_pairs_mut().append_pair("timeout", &timeout.to_string());
@@ -11770,13 +11317,6 @@ pub mod block_blob {
                         let url_str = &format!("{}/{}/{}?comp=block", this.client.endpoint(), &this.container_name, &this.blob);
                         let mut url = url::Url::parse(url_str).map_err(Error::ParseUrl)?;
                         let mut req_builder = http::request::Builder::new();
-                        req_builder = req_builder.method(http::Method::PUT);
-                        let credential = this.client.token_credential();
-                        let token_response = credential
-                            .get_token(&this.client.scopes().join(" "))
-                            .await
-                            .map_err(Error::GetToken)?;
-                        req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         let comp = &this.comp;
                         url.query_pairs_mut().append_pair("comp", comp);
                         let blockid = &this.blockid;
@@ -11957,13 +11497,6 @@ pub mod block_blob {
                         );
                         let mut url = url::Url::parse(url_str).map_err(Error::ParseUrl)?;
                         let mut req_builder = http::request::Builder::new();
-                        req_builder = req_builder.method(http::Method::PUT);
-                        let credential = this.client.token_credential();
-                        let token_response = credential
-                            .get_token(&this.client.scopes().join(" "))
-                            .await
-                            .map_err(Error::GetToken)?;
-                        req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         let comp = &this.comp;
                         url.query_pairs_mut().append_pair("comp", comp);
                         let blockid = &this.blockid;
@@ -12105,13 +11638,6 @@ pub mod block_blob {
                         let url_str = &format!("{}/{}/{}?comp=blocklist", this.client.endpoint(), &this.container_name, &this.blob);
                         let mut url = url::Url::parse(url_str).map_err(Error::ParseUrl)?;
                         let mut req_builder = http::request::Builder::new();
-                        req_builder = req_builder.method(http::Method::GET);
-                        let credential = this.client.token_credential();
-                        let token_response = credential
-                            .get_token(&this.client.scopes().join(" "))
-                            .await
-                            .map_err(Error::GetToken)?;
-                        req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         let comp = &this.comp;
                         url.query_pairs_mut().append_pair("comp", comp);
                         if let Some(snapshot) = &this.snapshot {
@@ -12331,13 +11857,6 @@ pub mod block_blob {
                         let url_str = &format!("{}/{}/{}?comp=blocklist", this.client.endpoint(), &this.container_name, &this.blob);
                         let mut url = url::Url::parse(url_str).map_err(Error::ParseUrl)?;
                         let mut req_builder = http::request::Builder::new();
-                        req_builder = req_builder.method(http::Method::PUT);
-                        let credential = this.client.token_credential();
-                        let token_response = credential
-                            .get_token(&this.client.scopes().join(" "))
-                            .await
-                            .map_err(Error::GetToken)?;
-                        req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         let comp = &this.comp;
                         url.query_pairs_mut().append_pair("comp", comp);
                         if let Some(timeout) = &this.timeout {
