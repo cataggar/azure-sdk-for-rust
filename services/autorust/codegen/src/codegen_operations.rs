@@ -12,11 +12,11 @@ use autorust_openapi::{CollectionFormat, ParameterType, Response};
 use heck::ToPascalCase;
 use heck::ToSnakeCase;
 use indexmap::IndexMap;
-use proc_macro2::TokenStream;
+use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
 use std::collections::{BTreeSet, HashSet};
 
-fn error_variant(operation: &WebOperationGen) -> Result<TokenStream, Error> {
+fn error_variant(operation: &WebOperationGen) -> Result<Ident, Error> {
     let function = operation.rust_function_name().to_pascal_case();
     if let Some(module) = operation.rust_module_name() {
         let module = module.to_pascal_case();
@@ -269,7 +269,7 @@ impl WebOperationGen {
         }
     }
 
-    pub fn function_name(&self) -> Result<TokenStream, Error> {
+    pub fn function_name(&self) -> Result<Ident, Error> {
         ident(&self.rust_function_name()).map_err(Error::FunctionName)
     }
 
@@ -1002,7 +1002,7 @@ fn create_builder_setters_code(parameters: &[&WebParameter]) -> Result<TokenStre
             let value = if param.type_is_ref()? {
                 quote! { #name.into() }
             } else {
-                name.clone()
+                name.to_token_stream()
             };
             setters.extend(quote! {
                 pub fn #name(mut self, #name: #tp) -> Self {
@@ -1015,7 +1015,7 @@ fn create_builder_setters_code(parameters: &[&WebParameter]) -> Result<TokenStre
     Ok(setters)
 }
 
-fn get_param_name(param: &WebParameter) -> Result<TokenStream, Error> {
+fn get_param_name(param: &WebParameter) -> Result<Ident, Error> {
     param.name().to_snake_case_ident().map_err(Error::ParamName)
 }
 

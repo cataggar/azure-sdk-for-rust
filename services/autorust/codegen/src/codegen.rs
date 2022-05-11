@@ -8,7 +8,7 @@ use camino::Utf8PathBuf;
 use heck::ToPascalCase;
 use once_cell::sync::Lazy;
 use proc_macro2::TokenStream;
-use quote::quote;
+use quote::{quote, ToTokens};
 use regex::Regex;
 
 /// code generation context
@@ -150,7 +150,7 @@ pub fn type_name_gen(type_name: &TypeName, as_ref: bool, qualify_models: bool) -
             let idt = if qualify_models {
                 quote! { models::#idt }
             } else {
-                idt
+                idt.into_token_stream()
             };
             match as_ref {
                 true => quote! { impl Into<#idt> },

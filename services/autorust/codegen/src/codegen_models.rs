@@ -7,8 +7,8 @@ use crate::{
 use autorust_openapi::{DataType, MsPageable, Reference, ReferenceOr, Schema};
 use camino::{Utf8Path, Utf8PathBuf};
 use indexmap::IndexMap;
-use proc_macro2::TokenStream;
-use quote::quote;
+use proc_macro2::{Ident, TokenStream};
+use quote::{quote, ToTokens};
 use serde_json::Value;
 use spec::{get_schema_schema_references, openapi, RefKey};
 use std::collections::{HashMap, HashSet};
@@ -366,7 +366,7 @@ pub fn create_models(cg: &CodeGen) -> Result<TokenStream, Error> {
     Ok(file)
 }
 
-fn create_basic_type_alias(property_name: &str, property: &SchemaGen) -> Result<(TokenStream, TokenStream), Error> {
+fn create_basic_type_alias(property_name: &str, property: &SchemaGen) -> Result<(Ident, TokenStream), Error> {
     let id = property_name.to_camel_case_ident().map_err(Error::StructName)?;
     let value = type_name_gen(&property.type_name()?, false, false)?;
     Ok((id, value))
@@ -516,7 +516,13 @@ fn create_struct(cg: &CodeGen, schema: &SchemaGen, struct_name: &str, pageable: 
         let TypeCode {
             mut type_name,
             code: field_code,
-        } = create_struct_field_code(cg, &ns, &property.schema, property_name, lowercase_workaround)?;
+        } = create_struct_field_code(
+            cg,
+            &ns.clone().into_token_stream(),
+            &property.schema,
+            property_name,
+            lowercase_workaround,
+        )?;
         mod_code.extend(field_code);
         // uncomment the next two lines to help identify entries that need boxed
         // let prop_nm_str = format!("{} , {} , {}", prop_nm.file_path, prop_nm.schema_name, property_name);
@@ -536,7 +542,7 @@ fn create_struct(cg: &CodeGen, schema: &SchemaGen, struct_name: &str, pageable: 
         }
 
         let mut serde_attrs: Vec<TokenStream> = Vec::new();
-        if field_name.to_string() != property_name {
+        if field_name != property_name {
             serde_attrs.push(quote! { rename = #property_name });
         }
         if !is_required {
@@ -721,7 +727,7 @@ fn create_struct_field_code(
         Some(ref_key) => {
             let tp = ref_key.name.to_camel_case_ident().map_err(Error::PropertyName)?;
             Ok(TypeCode {
-                type_name: tp,
+                type_name: tp.into_token_stream(),
                 code: TokenStream::new(),
             })
         }
