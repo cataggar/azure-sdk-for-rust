@@ -296,8 +296,8 @@ impl ToTokens for RequestCode {
         let auth = &self.auth;
         let verb = verb_to_tokens(&self.verb);
         tokens.extend(quote! {
-            #auth
             req_builder = req_builder.method(#verb);
+            #auth
         })
     }
 }
@@ -355,8 +355,10 @@ fn create_operation_code(cg: &CodeGen, operation: &WebOperationGen) -> Result<Op
     let verb = operation.0.verb.clone();
     let is_post = verb == WebVerb::Post;
     let auth = AuthCode {};
+    let request_code = RequestCode { verb, auth };
 
     let mut ts_request_builder = TokenStream::new(); // TODO change to type
+    ts_request_builder.extend(request_code.to_token_stream());
 
     // api-version param
     if has_param_api_version {
@@ -751,7 +753,6 @@ fn create_operation_code(cg: &CodeGen, operation: &WebOperationGen) -> Result<Op
         }
     };
 
-    let request_code = RequestCode { verb, auth };
     let fut = if let Some(pageable) = &operation.0.pageable {
         // TODO: Pageable requires the values to be part of the response schema,
         // however, some schemas do this via the header x-ms-continuation rather than
