@@ -1,3 +1,5 @@
+use std::convert::TryFrom;
+
 use crate::{
     identifier::ident,
     spec::{self, RefKey, TypeName},
@@ -7,9 +9,14 @@ use camino::Utf8Path;
 use camino::Utf8PathBuf;
 use heck::ToPascalCase;
 use once_cell::sync::Lazy;
-use proc_macro2::TokenStream;
+use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
 use regex::Regex;
+use syn::{
+    punctuated::Punctuated,
+    token::{Gt, Lt},
+    AngleBracketedGenericArguments, GenericArgument, Path, PathArguments, PathSegment, TypePath,
+};
 
 /// code generation context
 pub struct CodeGen<'a> {
@@ -122,6 +129,8 @@ pub enum Error {
     NoRefKey,
     #[error("RefKey not found {0:?}", ref_key)]
     RefKeyNotFound { ref_key: RefKey },
+    #[error(transparent)]
+    Identifier(#[from] crate::identifier::Error),
 }
 
 pub fn is_vec(ts: &TokenStream) -> bool {
@@ -199,6 +208,106 @@ pub fn parse_params(path: &str) -> Vec<String> {
     PARAM_RE.captures_iter(path).into_iter().map(|c| c[1].to_string()).collect()
 }
 
+#[derive(Clone)]
+pub struct TypePathCode {
+    type_path: TypePath,
+    is_option: bool,
+    is_vec: bool,
+}
+impl From<TypePath> for TypePathCode {
+    fn from(type_path: TypePath) -> Self {
+        Self {
+            type_path,
+            is_option: false,
+            is_vec: false,
+        }
+    }
+}
+impl TryFrom<&str> for TypePathCode {
+    type Error = Error;
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Ok(Self::from(str_to_type_path(value)?))
+    }
+}
+
+fn segments_to_type_path(segments: Vec<PathSegment>) -> TypePath {
+    let mut punctuated = Punctuated::new();
+    for segment in segments {
+        punctuated.push(segment);
+    }
+    let path = Path {
+        segments: punctuated,
+        leading_colon: None,
+    };
+    TypePath { path, qself: None }
+}
+
+fn idents_to_type_path(idents: Vec<Ident>) -> TypePath {
+    segments_to_type_path(idents.into_iter().map(PathSegment::from).collect())
+}
+
+fn str_to_type_path(tp: &str) -> Result<TypePath, Error> {
+    let idents: Vec<Ident> = tp.split("::").map(|part| ident(part.trim())).collect::<Result<_, _>>()?;
+    Ok(idents_to_type_path(idents))
+}
+
+fn tp_vec() -> TypePath {
+    str_to_type_path("Vec").unwrap() // compatible with current code
+                                     // str_to_type_path("std::vec::Vec").unwrap() // probably switch to fully qualified later
+}
+
+fn tp_option() -> TypePath {
+    str_to_type_path("Option").unwrap() // compatible with current code
+                                        // str_to_type_path("std::option::Option").unwrap() // probably switch to fully qualified later
+}
+
+impl TypePathCode {
+    pub fn with_is_option(mut self, is_option: bool) -> Self {
+        self.is_option = is_option;
+        if is_option {
+            self.is_vec = false;
+        }
+        self
+    }
+    pub fn with_is_vec(mut self, is_vec: bool) -> Self {
+        self.is_vec = is_vec;
+        if is_vec {
+            self.is_option = false;
+        }
+        self
+    }
+    fn to_type_path(&self) -> TypePath {
+        let wrap_tp = if self.is_vec {
+            Some(tp_vec())
+        } else if self.is_option {
+            Some(tp_option())
+        } else {
+            None
+        };
+        if let Some(mut wrap_tp) = wrap_tp {
+            let arg = GenericArgument::Type(self.type_path.clone().into());
+            let mut args = Punctuated::new();
+            args.push(arg);
+            let arguments = PathArguments::AngleBracketed(AngleBracketedGenericArguments {
+                args,
+                colon2_token: None,
+                lt_token: Lt::default(),
+                gt_token: Gt::default(),
+            });
+            if let Some(v) = wrap_tp.path.segments.last_mut() {
+                v.arguments = arguments
+            }
+            return wrap_tp;
+        }
+        self.type_path.clone()
+    }
+}
+impl ToString for TypePathCode {
+    fn to_string(&self) -> String {
+        self.clone().to_type_path().into_token_stream().to_string()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -209,6 +318,25 @@ mod tests {
             parse_params("/storage/{storage-account-name}/sas/{sas-definition-name}"),
             vec!["storage-account-name".to_owned(), "sas-definition-name".to_owned()]
         );
+        Ok(())
+    }
+
+    #[test]
+    fn test_type_path_code() -> Result<(), Error> {
+        let goat = TypePathCode::try_from("farm::Goat")?;
+        assert_eq!("farm :: Goat", goat.to_string());
+        let goat = goat.with_is_vec(true);
+        assert_eq!("Vec < farm :: Goat >", goat.to_string());
+        let goat = goat.with_is_option(true);
+        assert_eq!("Option < farm :: Goat >", goat.to_string());
+        Ok(())
+    }
+
+    #[test]
+    fn test_tp_vec() -> Result<(), Error> {
+        let tp = tp_vec();
+        assert_eq!(3, tp.path.segments.len());
+        assert_eq!("std :: vec :: Vec", tp.into_token_stream().to_string());
         Ok(())
     }
 }
