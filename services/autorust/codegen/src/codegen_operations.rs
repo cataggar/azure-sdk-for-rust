@@ -1,8 +1,7 @@
 use crate::{
-    codegen::{add_option, create_generated_by_header, Error},
+    codegen::{create_generated_by_header, Error, TypePathCode},
     codegen::{parse_params, type_name_gen, PARAM_RE},
-    identifier::ident,
-    identifier::SnakeCaseIdent,
+    identifier::{parse_ident, SnakeCaseIdent},
     spec::{get_type_name_for_schema_ref, WebOperation, WebParameter, WebVerb},
     status_codes::{get_error_responses, get_response_type_name, get_success_responses, has_default_response},
     status_codes::{get_response_type_ident, get_status_code_ident},
@@ -20,16 +19,16 @@ fn error_variant(operation: &WebOperationGen) -> Result<Ident, Error> {
     let function = operation.rust_function_name().to_pascal_case();
     if let Some(module) = operation.rust_module_name() {
         let module = module.to_pascal_case();
-        ident(&format!("{}_{}", module, function)).map_err(Error::EnumVariantName)
+        parse_ident(&format!("{}_{}", module, function)).map_err(Error::EnumVariantName)
     } else {
-        ident(&function).map_err(Error::ModuleName)
+        parse_ident(&function).map_err(Error::ModuleName)
     }
 }
 
 fn error_fqn(operation: &WebOperationGen) -> Result<TokenStream, Error> {
-    let function = ident(&operation.rust_function_name()).map_err(Error::FunctionName)?;
+    let function = parse_ident(&operation.rust_function_name()).map_err(Error::FunctionName)?;
     if let Some(module) = operation.rust_module_name() {
-        let module = ident(&module).map_err(Error::ModuleName)?;
+        let module = parse_ident(&module).map_err(Error::ModuleName)?;
         Ok(quote! { #module::#function::Error })
     } else {
         Ok(quote! { #function::Error })
@@ -209,7 +208,7 @@ pub fn create_operations(cg: &CodeGen) -> Result<TokenStream, Error> {
         } = operation_code;
         match module_name {
             Some(module_name) => {
-                let name = ident(&module_name).map_err(Error::ModuleName)?;
+                let name = parse_ident(&module_name).map_err(Error::ModuleName)?;
                 file.extend(quote! {
                     pub mod #name {
                         use super::models;
@@ -270,7 +269,7 @@ impl WebOperationGen {
     }
 
     pub fn function_name(&self) -> Result<Ident, Error> {
-        ident(&self.rust_function_name()).map_err(Error::FunctionName)
+        parse_ident(&self.rust_function_name()).map_err(Error::FunctionName)
     }
 
     fn api_version(&self) -> &str {
@@ -534,7 +533,9 @@ fn create_operation_code(cg: &CodeGen, operation: &WebOperationGen) -> Result<Op
 
     let mut response_enum = TokenStream::new();
     if is_single_response {
-        let tp = create_response_type(&success_responses[0])?.unwrap_or(quote! { () });
+        let tp = create_response_type(&success_responses[0])?
+            .map(TypePathCode::into_token_stream)
+            .unwrap_or(quote! { () });
         response_enum.extend(quote! {
             type Response = #tp;
         });
@@ -594,7 +595,7 @@ fn create_operation_code(cg: &CodeGen, operation: &WebOperationGen) -> Result<Op
                 DefaultResponse { status_code: http::StatusCode, #tp },
             });
         } else {
-            let response_type = ident(response_type).map_err(Error::ResponseTypeName)?;
+            let response_type = parse_ident(response_type).map_err(Error::ResponseTypeName)?;
             error_responses_ts.extend(quote! {
                 #[error("Error response #response_type")]
                 #response_type { #tp },
@@ -612,7 +613,7 @@ fn create_operation_code(cg: &CodeGen, operation: &WebOperationGen) -> Result<Op
     for (status_code, rsp) in &success_responses {
         match status_code {
             autorust_openapi::StatusCode::Code(_) => {
-                let tp = create_response_type(rsp)?;
+                let tp = create_response_type(rsp)?.map(TypePathCode::into_token_stream);
                 let rsp_value = create_rsp_value(tp.as_ref());
                 let status_code_name = get_status_code_ident(status_code)?;
                 let response_type_name = get_response_type_ident(status_code)?;
@@ -663,7 +664,7 @@ fn create_operation_code(cg: &CodeGen, operation: &WebOperationGen) -> Result<Op
     for (status_code, rsp) in &error_responses {
         match status_code {
             autorust_openapi::StatusCode::Code(_) => {
-                let tp = create_response_type(rsp)?;
+                let tp = create_response_type(rsp)?.map(TypePathCode::into_token_stream);
                 let rsp_value = create_rsp_value(tp.as_ref());
                 let status_code_name = get_status_code_ident(status_code)?;
                 let response_type_name = get_response_type_ident(status_code)?;
@@ -695,7 +696,7 @@ fn create_operation_code(cg: &CodeGen, operation: &WebOperationGen) -> Result<Op
             match status_code {
                 autorust_openapi::StatusCode::Code(_) => {}
                 autorust_openapi::StatusCode::Default => {
-                    let tp = create_response_type(rsp)?;
+                    let tp = create_response_type(rsp)?.map(TypePathCode::into_token_stream);
                     let rsp_value = create_rsp_value(tp.as_ref());
                     match tp {
                         Some(_tp) => {
@@ -1020,15 +1021,14 @@ fn get_param_name(param: &WebParameter) -> Result<Ident, Error> {
     param.name().to_snake_case_ident().map_err(Error::ParamName)
 }
 
-fn get_param_type(param: &WebParameter, as_ref: bool, may_be_option: bool) -> Result<TokenStream, Error> {
+fn get_param_type(param: &WebParameter, add_into: bool, may_be_option: bool) -> Result<TypePathCode, Error> {
     let is_required = param.required();
     let is_array = param.is_array();
     let is_option = may_be_option && !(is_required || is_array);
-    let tp = type_name_gen(&param.type_name()?, as_ref, true)?;
-    Ok(add_option(is_option, tp))
+    Ok(type_name_gen(&param.type_name()?, add_into, true)?.with_is_option(is_option))
 }
 
-pub fn create_response_type(rsp: &Response) -> Result<Option<TokenStream>, Error> {
+pub fn create_response_type(rsp: &Response) -> Result<Option<TypePathCode>, Error> {
     if let Some(schema) = &rsp.schema {
         Ok(Some(type_name_gen(&get_type_name_for_schema_ref(schema)?, false, true)?))
     } else {

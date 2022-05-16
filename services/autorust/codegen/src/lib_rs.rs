@@ -1,4 +1,4 @@
-use crate::{codegen::create_generated_by_header, config_parser::Tag, identifier::ident, write_file};
+use crate::{codegen::create_generated_by_header, config_parser::Tag, identifier::parse_ident, write_file};
 use camino::Utf8Path;
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
@@ -31,7 +31,7 @@ fn create_body(tags: &[&Tag]) -> Result<BodyCode> {
         .iter()
         .map(|tag| {
             let feature_name = tag.rust_feature_name();
-            let mod_name = ident(&tag.rust_mod_name()).map_err(|source| Error::ModName {
+            let mod_name = parse_ident(&tag.rust_mod_name()).map_err(|source| Error::ModName {
                 source,
                 feature: feature_name.to_owned(),
             })?;

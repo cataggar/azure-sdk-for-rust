@@ -3,7 +3,7 @@ use proc_macro2::Ident;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
-    #[error("Error parsing ident {} {}", text, source)]
+    #[error("Error parsing Ident {}", text)]
     ParseIdent { source: syn::Error, text: String },
 }
 
@@ -13,7 +13,7 @@ pub trait ToIdent: ToOwned {
 
 impl ToIdent for str {
     fn to_ident(&self) -> Result<Ident, Error> {
-        ident(self)
+        parse_ident(self)
     }
 }
 
@@ -66,8 +66,8 @@ pub fn id(text: &str) -> String {
     txt
 }
 
-pub fn ident(text: &str) -> Result<Ident, Error> {
-    syn::parse_str::<syn::Ident>(&id(text)).map_err(|source| Error::ParseIdent {
+pub fn parse_ident(text: &str) -> Result<Ident, Error> {
+    syn::parse_str::<Ident>(&id(text)).map_err(|source| Error::ParseIdent {
         source,
         text: text.to_owned(),
     })
