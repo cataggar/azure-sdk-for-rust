@@ -14,8 +14,9 @@ use quote::{quote, ToTokens};
 use regex::Regex;
 use syn::{
     punctuated::Punctuated,
-    token::{Gt, Lt},
-    AngleBracketedGenericArguments, GenericArgument, Path, PathArguments, PathSegment, TypePath,
+    token::{Gt, Impl, Lt},
+    AngleBracketedGenericArguments, GenericArgument, Path, PathArguments, PathSegment, TraitBound, TraitBoundModifier, Type, TypeImplTrait,
+    TypeParamBound, TypePath,
 };
 
 /// code generation context
@@ -203,9 +204,6 @@ pub struct TypePathCode {
 }
 
 impl TypePathCode {
-    pub fn is_option(&self) -> bool {
-        self.is_option
-    }
     pub fn is_vec(&self) -> bool {
         self.is_vec
     }
@@ -235,12 +233,13 @@ impl TypePathCode {
         self.add_box = add_box;
         self
     }
-    fn to_type_path(&self) -> TypePath {
-        let mut tp = if self.should_force_obj {
+    fn to_type(&self) -> Type {
+        let tp = if self.should_force_obj {
             tp_json_value()
         } else {
             self.type_path.clone()
         };
+        let mut tp = Type::from(tp);
         let wrap_tp = if self.is_vec {
             Some(tp_vec())
         } else if self.is_option {
@@ -252,7 +251,22 @@ impl TypePathCode {
             tp = generic_type(wrap_tp, tp);
         }
         if self.add_into {
-            tp = generic_type(tp_into(), tp);
+            if let Type::Path(path) = generic_type(tp_into(), tp.clone()) {
+                // prefix with "impl "
+                let bound = TraitBound {
+                    path: path.path,
+                    paren_token: None,
+                    modifier: TraitBoundModifier::None,
+                    lifetimes: None,
+                };
+                let bound = TypeParamBound::Trait(bound);
+                let mut bounds = Punctuated::new();
+                bounds.push(bound);
+                tp = Type::ImplTrait(TypeImplTrait {
+                    bounds,
+                    impl_token: Impl::default(),
+                });
+            }
         }
         if self.add_box {
             tp = generic_type(tp_box(), tp);
@@ -260,19 +274,19 @@ impl TypePathCode {
         tp
     }
     pub fn to_string(&self) -> String {
-        self.to_type_path().into_token_stream().to_string()
+        self.to_type().into_token_stream().to_string()
     }
 }
 
 impl ToTokens for TypePathCode {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        self.to_type_path().to_tokens(tokens);
+        self.to_type().to_tokens(tokens);
     }
 }
 
 /// Creates a generic type
 /// Passing to (std::i32, std::option::Option) with result in std::option::Option<std::i32>
-fn generic_type(mut wrap_tp: TypePath, tp: TypePath) -> TypePath {
+fn generic_type(mut wrap_tp: TypePath, tp: Type) -> Type {
     let arg = GenericArgument::Type(tp.into());
     let mut args = Punctuated::new();
     args.push(arg);
@@ -285,7 +299,7 @@ fn generic_type(mut wrap_tp: TypePath, tp: TypePath) -> TypePath {
     if let Some(v) = wrap_tp.path.segments.last_mut() {
         v.arguments = arguments
     }
-    wrap_tp
+    Type::from(wrap_tp)
 }
 
 impl From<TypePath> for TypePathCode {
@@ -400,10 +414,6 @@ fn tp_bool() -> TypePath {
     parse_type_path("bool").unwrap()
 }
 
-// pub fn tp_unit() -> TypePath {
-//     parse_type_path("()").unwrap()
-// }
-
 fn tp_string() -> TypePath {
     parse_type_path("String").unwrap() // std::string::String
 }
@@ -414,7 +424,7 @@ fn tp_box() -> TypePath {
 
 impl ToString for TypePathCode {
     fn to_string(&self) -> String {
-        self.clone().to_type_path().into_token_stream().to_string()
+        self.clone().to_type().into_token_stream().to_string()
     }
 }
 
@@ -453,6 +463,13 @@ mod tests {
     fn test_tp_into() -> Result<(), Error> {
         let tp = tp_into();
         assert_eq!("Into", tp.into_token_stream().to_string());
+        Ok(())
+    }
+
+    #[test]
+    fn test_with_add_into() -> Result<(), Error> {
+        let goat = TypePathCode::try_from("farm::Goat")?.with_add_into(true);
+        assert_eq!("impl Into < farm :: Goat >", goat.to_string());
         Ok(())
     }
 }
