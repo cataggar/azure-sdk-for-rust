@@ -10058,7 +10058,7 @@ pub mod script_executions {
                 resource_group_name: resource_group_name.into(),
                 private_cloud_name: private_cloud_name.into(),
                 script_execution_name: script_execution_name.into(),
-                script_output_stream_type: None,
+                script_output_stream_type: Vec::new(),
             }
         }
     }
@@ -10466,11 +10466,11 @@ pub mod script_executions {
             pub(crate) resource_group_name: String,
             pub(crate) private_cloud_name: String,
             pub(crate) script_execution_name: String,
-            pub(crate) script_output_stream_type: Option<Vec<String>>,
+            pub(crate) script_output_stream_type: Vec<String>,
         }
         impl Builder {
-            pub fn script_output_stream_type(mut self, script_output_stream_type: impl Into<Vec<String>>) -> Self {
-                self.script_output_stream_type = Some(script_output_stream_type.into());
+            pub fn script_output_stream_type(mut self, script_output_stream_type: Vec<String>) -> Self {
+                self.script_output_stream_type = script_output_stream_type;
                 self
             }
             pub fn into_future(self) -> futures::future::BoxFuture<'static, std::result::Result<Response, Error>> {

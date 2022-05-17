@@ -156,7 +156,7 @@ pub mod digital_twin_models {
         pub fn add(&self) -> add::Builder {
             add::Builder {
                 client: self.0.clone(),
-                models: None,
+                models: Vec::new(),
             }
         }
         pub fn get_by_id(&self, id: impl Into<String>) -> get_by_id::Builder {
@@ -166,11 +166,11 @@ pub mod digital_twin_models {
                 include_model_definition: None,
             }
         }
-        pub fn update(&self, id: impl Into<String>, update_model: impl Into<Vec<serde_json::Value>>) -> update::Builder {
+        pub fn update(&self, id: impl Into<String>, update_model: Vec<serde_json::Value>) -> update::Builder {
             update::Builder {
                 client: self.0.clone(),
                 id: id.into(),
-                update_model: update_model.into(),
+                update_model,
             }
         }
         pub fn delete(&self, id: impl Into<String>) -> delete::Builder {
@@ -332,11 +332,11 @@ pub mod digital_twin_models {
         #[derive(Clone)]
         pub struct Builder {
             pub(crate) client: super::super::Client,
-            pub(crate) models: Option<Vec<serde_json::Value>>,
+            pub(crate) models: Vec<serde_json::Value>,
         }
         impl Builder {
-            pub fn models(mut self, models: impl Into<Vec<serde_json::Value>>) -> Self {
-                self.models = Some(models.into());
+            pub fn models(mut self, models: Vec<serde_json::Value>) -> Self {
+                self.models = models;
                 self
             }
             pub fn into_future(self) -> futures::future::BoxFuture<'static, std::result::Result<Response, Error>> {
@@ -711,11 +711,11 @@ pub mod digital_twins {
                 if_none_match: None,
             }
         }
-        pub fn update(&self, id: impl Into<String>, patch_document: impl Into<Vec<serde_json::Value>>) -> update::Builder {
+        pub fn update(&self, id: impl Into<String>, patch_document: Vec<serde_json::Value>) -> update::Builder {
             update::Builder {
                 client: self.0.clone(),
                 id: id.into(),
-                patch_document: patch_document.into(),
+                patch_document,
                 if_match: None,
             }
         }
@@ -747,7 +747,7 @@ pub mod digital_twins {
                 client: self.0.clone(),
                 id: id.into(),
                 relationship_id: relationship_id.into(),
-                patch_document: None,
+                patch_document: Vec::new(),
                 if_match: None,
             }
         }
@@ -814,7 +814,7 @@ pub mod digital_twins {
                 client: self.0.clone(),
                 id: id.into(),
                 component_path: component_path.into(),
-                patch_document: None,
+                patch_document: Vec::new(),
                 if_match: None,
             }
         }
@@ -1345,12 +1345,12 @@ pub mod digital_twins {
             pub(crate) client: super::super::Client,
             pub(crate) id: String,
             pub(crate) relationship_id: String,
-            pub(crate) patch_document: Option<Vec<serde_json::Value>>,
+            pub(crate) patch_document: Vec<serde_json::Value>,
             pub(crate) if_match: Option<String>,
         }
         impl Builder {
-            pub fn patch_document(mut self, patch_document: impl Into<Vec<serde_json::Value>>) -> Self {
-                self.patch_document = Some(patch_document.into());
+            pub fn patch_document(mut self, patch_document: Vec<serde_json::Value>) -> Self {
+                self.patch_document = patch_document;
                 self
             }
             pub fn if_match(mut self, if_match: impl Into<String>) -> Self {
@@ -1974,12 +1974,12 @@ pub mod digital_twins {
             pub(crate) client: super::super::Client,
             pub(crate) id: String,
             pub(crate) component_path: String,
-            pub(crate) patch_document: Option<Vec<serde_json::Value>>,
+            pub(crate) patch_document: Vec<serde_json::Value>,
             pub(crate) if_match: Option<String>,
         }
         impl Builder {
-            pub fn patch_document(mut self, patch_document: impl Into<Vec<serde_json::Value>>) -> Self {
-                self.patch_document = Some(patch_document.into());
+            pub fn patch_document(mut self, patch_document: Vec<serde_json::Value>) -> Self {
+                self.patch_document = patch_document;
                 self
             }
             pub fn if_match(mut self, if_match: impl Into<String>) -> Self {

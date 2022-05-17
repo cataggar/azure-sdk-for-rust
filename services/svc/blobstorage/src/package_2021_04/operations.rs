@@ -133,6 +133,8 @@ pub enum Error {
     #[error(transparent)]
     Container_SubmitBatch(#[from] container::submit_batch::Error),
     #[error(transparent)]
+    Container_FilterBlobs(#[from] container::filter_blobs::Error),
+    #[error(transparent)]
     Container_AcquireLease(#[from] container::acquire_lease::Error),
     #[error(transparent)]
     Container_ReleaseLease(#[from] container::release_lease::Error),
@@ -1354,6 +1356,26 @@ pub mod container {
                 x_ms_client_request_id: None,
             }
         }
+        pub fn filter_blobs(
+            &self,
+            container_name: impl Into<String>,
+            restype: impl Into<String>,
+            comp: impl Into<String>,
+            x_ms_version: impl Into<String>,
+        ) -> filter_blobs::Builder {
+            filter_blobs::Builder {
+                client: self.0.clone(),
+                container_name: container_name.into(),
+                restype: restype.into(),
+                comp: comp.into(),
+                x_ms_version: x_ms_version.into(),
+                timeout: None,
+                x_ms_client_request_id: None,
+                where_: None,
+                marker: None,
+                maxresults: None,
+            }
+        }
         pub fn acquire_lease(
             &self,
             container_name: impl Into<String>,
@@ -2512,6 +2534,126 @@ pub mod container {
                             http::StatusCode::ACCEPTED => {
                                 let rsp_body = azure_core::collect_pinned_stream(rsp_stream).await.map_err(Error::ResponseBytes)?;
                                 let rsp_value: serde_json::Value =
+                                    serde_json::from_slice(&rsp_body).map_err(|source| Error::Deserialize(source, rsp_body.clone()))?;
+                                Ok(rsp_value)
+                            }
+                            status_code => {
+                                let rsp_body = azure_core::collect_pinned_stream(rsp_stream).await.map_err(Error::ResponseBytes)?;
+                                let rsp_value: models::StorageError =
+                                    serde_json::from_slice(&rsp_body).map_err(|source| Error::Deserialize(source, rsp_body.clone()))?;
+                                Err(Error::DefaultResponse {
+                                    status_code,
+                                    value: rsp_value,
+                                })
+                            }
+                        }
+                    }
+                })
+            }
+        }
+    }
+    pub mod filter_blobs {
+        use super::models;
+        type Response = models::FilterBlobSegment;
+        #[derive(Debug, thiserror :: Error)]
+        pub enum Error {
+            #[error("HTTP status code {}", status_code)]
+            DefaultResponse {
+                status_code: http::StatusCode,
+                value: models::StorageError,
+            },
+            #[error("Failed to parse request URL")]
+            ParseUrl(#[source] url::ParseError),
+            #[error("Failed to build request")]
+            BuildRequest(#[source] http::Error),
+            #[error("Failed to serialize request body")]
+            Serialize(#[source] serde_json::Error),
+            #[error("Failed to get access token")]
+            GetToken(#[source] azure_core::Error),
+            #[error("Failed to execute request")]
+            SendRequest(#[source] azure_core::error::Error),
+            #[error("Failed to get response bytes")]
+            ResponseBytes(#[source] azure_core::error::Error),
+            #[error("Failed to deserialize response, body: {1:?}")]
+            Deserialize(#[source] serde_json::Error, bytes::Bytes),
+        }
+        #[derive(Clone)]
+        pub struct Builder {
+            pub(crate) client: super::super::Client,
+            pub(crate) container_name: String,
+            pub(crate) restype: String,
+            pub(crate) comp: String,
+            pub(crate) x_ms_version: String,
+            pub(crate) timeout: Option<i64>,
+            pub(crate) x_ms_client_request_id: Option<String>,
+            pub(crate) where_: Option<String>,
+            pub(crate) marker: Option<String>,
+            pub(crate) maxresults: Option<i64>,
+        }
+        impl Builder {
+            pub fn timeout(mut self, timeout: i64) -> Self {
+                self.timeout = Some(timeout);
+                self
+            }
+            pub fn x_ms_client_request_id(mut self, x_ms_client_request_id: impl Into<String>) -> Self {
+                self.x_ms_client_request_id = Some(x_ms_client_request_id.into());
+                self
+            }
+            pub fn where_(mut self, where_: impl Into<String>) -> Self {
+                self.where_ = Some(where_.into());
+                self
+            }
+            pub fn marker(mut self, marker: impl Into<String>) -> Self {
+                self.marker = Some(marker.into());
+                self
+            }
+            pub fn maxresults(mut self, maxresults: i64) -> Self {
+                self.maxresults = Some(maxresults);
+                self
+            }
+            pub fn into_future(self) -> futures::future::BoxFuture<'static, std::result::Result<Response, Error>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url_str = &format!("{}/{}?restype=container&comp=blobs", this.client.endpoint(), &this.container_name);
+                        let mut url = url::Url::parse(url_str).map_err(Error::ParseUrl)?;
+                        let mut req_builder = http::request::Builder::new();
+                        req_builder = req_builder.method(http::Method::GET);
+                        let credential = this.client.token_credential();
+                        let token_response = credential
+                            .get_token(&this.client.scopes().join(" "))
+                            .await
+                            .map_err(Error::GetToken)?;
+                        req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
+                        let restype = &this.restype;
+                        url.query_pairs_mut().append_pair("restype", restype);
+                        let comp = &this.comp;
+                        url.query_pairs_mut().append_pair("comp", comp);
+                        if let Some(timeout) = &this.timeout {
+                            url.query_pairs_mut().append_pair("timeout", &timeout.to_string());
+                        }
+                        req_builder = req_builder.header("x-ms-version", &this.x_ms_version);
+                        if let Some(x_ms_client_request_id) = &this.x_ms_client_request_id {
+                            req_builder = req_builder.header("x-ms-client-request-id", x_ms_client_request_id);
+                        }
+                        if let Some(where_) = &this.where_ {
+                            url.query_pairs_mut().append_pair("where", where_);
+                        }
+                        if let Some(marker) = &this.marker {
+                            url.query_pairs_mut().append_pair("marker", marker);
+                        }
+                        if let Some(maxresults) = &this.maxresults {
+                            url.query_pairs_mut().append_pair("maxresults", &maxresults.to_string());
+                        }
+                        let req_body = azure_core::EMPTY_BODY;
+                        req_builder = req_builder.uri(url.as_str());
+                        let req = req_builder.body(req_body).map_err(Error::BuildRequest)?;
+                        let rsp = this.client.send(req).await.map_err(Error::SendRequest)?;
+                        let (rsp_status, rsp_headers, rsp_stream) = rsp.deconstruct();
+                        match rsp_status {
+                            http::StatusCode::OK => {
+                                let rsp_body = azure_core::collect_pinned_stream(rsp_stream).await.map_err(Error::ResponseBytes)?;
+                                let rsp_value: models::FilterBlobSegment =
                                     serde_json::from_slice(&rsp_body).map_err(|source| Error::Deserialize(source, rsp_body.clone()))?;
                                 Ok(rsp_value)
                             }
@@ -3977,6 +4119,7 @@ pub mod blob {
                 x_ms_legal_hold: None,
                 x_ms_copy_source_authorization: None,
                 x_ms_encryption_scope: None,
+                x_ms_copy_source_tag_option: None,
             }
         }
         pub fn abort_copy_from_url(
@@ -6709,6 +6852,7 @@ pub mod blob {
             pub(crate) x_ms_legal_hold: Option<bool>,
             pub(crate) x_ms_copy_source_authorization: Option<String>,
             pub(crate) x_ms_encryption_scope: Option<String>,
+            pub(crate) x_ms_copy_source_tag_option: Option<String>,
         }
         impl Builder {
             pub fn timeout(mut self, timeout: i64) -> Self {
@@ -6795,6 +6939,10 @@ pub mod blob {
                 self.x_ms_encryption_scope = Some(x_ms_encryption_scope.into());
                 self
             }
+            pub fn x_ms_copy_source_tag_option(mut self, x_ms_copy_source_tag_option: impl Into<String>) -> Self {
+                self.x_ms_copy_source_tag_option = Some(x_ms_copy_source_tag_option.into());
+                self
+            }
             pub fn into_future(self) -> futures::future::BoxFuture<'static, std::result::Result<Response, Error>> {
                 Box::pin({
                     let this = self.clone();
@@ -6874,6 +7022,9 @@ pub mod blob {
                         }
                         if let Some(x_ms_encryption_scope) = &this.x_ms_encryption_scope {
                             req_builder = req_builder.header("x-ms-encryption-scope", x_ms_encryption_scope);
+                        }
+                        if let Some(x_ms_copy_source_tag_option) = &this.x_ms_copy_source_tag_option {
+                            req_builder = req_builder.header("x-ms-copy-source-tag-option", x_ms_copy_source_tag_option);
                         }
                         let req_body = azure_core::EMPTY_BODY;
                         req_builder = req_builder.uri(url.as_str());
@@ -10949,6 +11100,7 @@ pub mod block_blob {
                 x_ms_tags: None,
                 x_ms_copy_source_blob_properties: None,
                 x_ms_copy_source_authorization: None,
+                x_ms_copy_source_tag_option: None,
             }
         }
         pub fn stage_block(
@@ -11423,6 +11575,7 @@ pub mod block_blob {
             pub(crate) x_ms_tags: Option<String>,
             pub(crate) x_ms_copy_source_blob_properties: Option<bool>,
             pub(crate) x_ms_copy_source_authorization: Option<String>,
+            pub(crate) x_ms_copy_source_tag_option: Option<String>,
         }
         impl Builder {
             pub fn timeout(mut self, timeout: i64) -> Self {
@@ -11545,6 +11698,10 @@ pub mod block_blob {
                 self.x_ms_copy_source_authorization = Some(x_ms_copy_source_authorization.into());
                 self
             }
+            pub fn x_ms_copy_source_tag_option(mut self, x_ms_copy_source_tag_option: impl Into<String>) -> Self {
+                self.x_ms_copy_source_tag_option = Some(x_ms_copy_source_tag_option.into());
+                self
+            }
             pub fn into_future(self) -> futures::future::BoxFuture<'static, std::result::Result<Response, Error>> {
                 Box::pin({
                     let this = self.clone();
@@ -11658,6 +11815,9 @@ pub mod block_blob {
                         }
                         if let Some(x_ms_copy_source_authorization) = &this.x_ms_copy_source_authorization {
                             req_builder = req_builder.header("x-ms-copy-source-authorization", x_ms_copy_source_authorization);
+                        }
+                        if let Some(x_ms_copy_source_tag_option) = &this.x_ms_copy_source_tag_option {
+                            req_builder = req_builder.header("x-ms-copy-source-tag-option", x_ms_copy_source_tag_option);
                         }
                         let req_body = azure_core::EMPTY_BODY;
                         req_builder = req_builder.uri(url.as_str());

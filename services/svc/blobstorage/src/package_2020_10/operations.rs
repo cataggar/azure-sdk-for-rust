@@ -3976,7 +3976,6 @@ pub mod blob {
                 x_ms_immutability_policy_mode: None,
                 x_ms_legal_hold: None,
                 x_ms_copy_source_authorization: None,
-                x_ms_encryption_scope: None,
             }
         }
         pub fn abort_copy_from_url(
@@ -6708,7 +6707,6 @@ pub mod blob {
             pub(crate) x_ms_immutability_policy_mode: Option<String>,
             pub(crate) x_ms_legal_hold: Option<bool>,
             pub(crate) x_ms_copy_source_authorization: Option<String>,
-            pub(crate) x_ms_encryption_scope: Option<String>,
         }
         impl Builder {
             pub fn timeout(mut self, timeout: i64) -> Self {
@@ -6791,10 +6789,6 @@ pub mod blob {
                 self.x_ms_copy_source_authorization = Some(x_ms_copy_source_authorization.into());
                 self
             }
-            pub fn x_ms_encryption_scope(mut self, x_ms_encryption_scope: impl Into<String>) -> Self {
-                self.x_ms_encryption_scope = Some(x_ms_encryption_scope.into());
-                self
-            }
             pub fn into_future(self) -> futures::future::BoxFuture<'static, std::result::Result<Response, Error>> {
                 Box::pin({
                     let this = self.clone();
@@ -6871,9 +6865,6 @@ pub mod blob {
                         }
                         if let Some(x_ms_copy_source_authorization) = &this.x_ms_copy_source_authorization {
                             req_builder = req_builder.header("x-ms-copy-source-authorization", x_ms_copy_source_authorization);
-                        }
-                        if let Some(x_ms_encryption_scope) = &this.x_ms_encryption_scope {
-                            req_builder = req_builder.header("x-ms-encryption-scope", x_ms_encryption_scope);
                         }
                         let req_body = azure_core::EMPTY_BODY;
                         req_builder = req_builder.uri(url.as_str());
