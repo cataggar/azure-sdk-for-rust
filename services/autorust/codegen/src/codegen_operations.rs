@@ -907,13 +907,8 @@ fn create_function_params_code(parameters: &[&WebParameter]) -> Result<TokenStre
     let mut params: Vec<TokenStream> = Vec::new();
     for param in parameters.iter().filter(|p| p.required()) {
         let name = get_param_name(param)?;
-        if param.is_array() {
-            let tp = get_param_type(param, false, false)?;
-            params.push(quote! { #name: #tp });
-        } else {
-            let tp = get_param_type(param, true, false)?;
-            params.push(quote! { #name: #tp });
-        }
+        let tp = get_param_type(param)?.with_add_into(true);
+        params.push(quote! { #name: #tp });
     }
     let slf = quote! { &self };
     params.insert(0, slf);
@@ -971,12 +966,12 @@ fn create_builder_struct_code(parameters: &[&WebParameter], in_group: bool) -> R
     }
     for param in parameters.iter().filter(|p| p.required()) {
         let name = get_param_name(param)?;
-        let tp = get_param_type(param, false, true)?;
+        let tp = get_param_type(param)?;
         params.push(quote! { pub(crate) #name: #tp });
     }
     for param in parameters.iter().filter(|p| !p.required()) {
         let name = get_param_name(param)?;
-        let tp = get_param_type(param, false, true)?;
+        let tp = get_param_type(param)?;
         params.push(quote! { pub(crate) #name: #tp });
     }
     Ok(quote! {
@@ -991,28 +986,18 @@ fn create_builder_setters_code(parameters: &[&WebParameter]) -> Result<TokenStre
     let mut setters = TokenStream::new();
     for param in parameters.iter().filter(|p| !p.required()) {
         let name = &get_param_name(param)?;
-        if param.is_array() {
-            let tp = get_param_type(param, false, false)?;
-            setters.extend(quote! {
-                pub fn #name(mut self, #name: #tp) -> Self {
-                    self.#name = #name;
-                    self
-                }
-            });
+        let tp = get_param_type(param)?.with_add_into(true);
+        let value = if param.type_is_ref()? {
+            quote! { #name.into() }
         } else {
-            let tp = get_param_type(param, true, false)?;
-            let value = if param.type_is_ref()? {
-                quote! { #name.into() }
-            } else {
-                name.to_token_stream()
-            };
-            setters.extend(quote! {
-                pub fn #name(mut self, #name: #tp) -> Self {
-                    self.#name = Some(#value);
-                    self
-                }
-            });
-        }
+            name.to_token_stream()
+        };
+        setters.extend(quote! {
+            pub fn #name(mut self, #name: #tp) -> Self {
+                self.#name = Some(#value);
+                self
+            }
+        });
     }
     Ok(setters)
 }
@@ -1021,16 +1006,17 @@ fn get_param_name(param: &WebParameter) -> Result<Ident, Error> {
     param.name().to_snake_case_ident().map_err(Error::ParamName)
 }
 
-fn get_param_type(param: &WebParameter, add_into: bool, may_be_option: bool) -> Result<TypePathCode, Error> {
+fn get_param_type(param: &WebParameter) -> Result<TypePathCode, Error> {
     let is_required = param.required();
     let is_array = param.is_array();
-    let is_option = may_be_option && !(is_required || is_array);
-    Ok(type_name_gen(&param.type_name()?, add_into, true)?.with_is_option(is_option))
+    Ok(type_name_gen(&param.type_name()?, true)?
+        .with_is_option(!is_required)
+        .with_is_vec(is_array))
 }
 
 pub fn create_response_type(rsp: &Response) -> Result<Option<TypePathCode>, Error> {
     if let Some(schema) = &rsp.schema {
-        Ok(Some(type_name_gen(&get_type_name_for_schema_ref(schema)?, false, true)?))
+        Ok(Some(type_name_gen(&get_type_name_for_schema_ref(schema)?, true)?))
     } else {
         Ok(None)
     }

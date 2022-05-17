@@ -305,7 +305,7 @@ pub fn create_models(cg: &CodeGen) -> Result<TokenStream, Error> {
         if let Some(pageable) = operation.pageable.as_ref() {
             for response in operation.responses.values() {
                 if let Some(schema) = &response.schema {
-                    let pageable_name = type_name_gen(&get_type_name_for_schema_ref(schema)?, false, false)?.to_string();
+                    let pageable_name = type_name_gen(&get_type_name_for_schema_ref(schema)?, false)?.to_string();
                     // in some cases, the same struct is used multiple times for
                     // responses (such as a get and list for a given object
                     // type).  In these cases, what we see is a next_link_name
@@ -367,7 +367,7 @@ pub fn create_models(cg: &CodeGen) -> Result<TokenStream, Error> {
 
 fn create_basic_type_alias(property_name: &str, property: &SchemaGen) -> Result<(Ident, TypePathCode), Error> {
     let id = property_name.to_camel_case_ident().map_err(Error::StructName)?;
-    let value = type_name_gen(&property.type_name()?, false, false)?;
+    let value = type_name_gen(&property.type_name()?, false)?;
     Ok((id, value))
 }
 
@@ -476,7 +476,7 @@ fn create_enum(
 fn create_vec_alias(schema: &SchemaGen) -> Result<TokenStream, Error> {
     let items = schema.array_items()?;
     let typ = schema.name()?.to_camel_case_ident().map_err(Error::VecAliasName)?;
-    let items_typ = type_name_gen(&get_type_name_for_schema_ref(items)?, false, false)?;
+    let items_typ = type_name_gen(&get_type_name_for_schema_ref(items)?, false)?;
     Ok(quote! { pub type #typ = Vec<#items_typ>; })
 }
 
@@ -765,7 +765,7 @@ fn create_struct_field_code(
                 })
             } else {
                 Ok(FieldCode {
-                    type_name: type_name_gen(&property.type_name()?, false, false)?,
+                    type_name: type_name_gen(&property.type_name()?, false)?,
                     code: None,
                 })
             }
