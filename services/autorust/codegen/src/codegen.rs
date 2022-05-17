@@ -146,21 +146,20 @@ fn id_models() -> Ident {
     parse_ident("models").unwrap()
 }
 
-pub fn type_name_gen(type_name: &TypeName, qualify_models: bool) -> Result<TypePathCode, Error> {
+pub fn type_name_gen(type_name: &TypeName) -> Result<TypePathCode, Error> {
     Ok(match type_name {
         TypeName::Reference(name) => {
             let idt = parse_ident(&name.to_pascal_case()).map_err(Error::TypeNameForSchemaRef)?;
-            let idt = if qualify_models { vec![id_models(), idt] } else { vec![idt] };
-            TypePathCode::from(idt)
+            TypePathCode::from(idt).with_allow_qualify_models(true)
         }
-        TypeName::Array(vec_items_typ) => type_name_gen(vec_items_typ, qualify_models)?.with_is_vec(true),
+        TypeName::Array(vec_items_typ) => type_name_gen(vec_items_typ)?.with_is_vec(true),
         TypeName::Value => TypePathCode::from(tp_json_value()),
         TypeName::Bytes => TypePathCode::from(tp_bytes()),
-        TypeName::Int32 => TypePathCode::from(tp_i32()).with_allow_into(false),
-        TypeName::Int64 => TypePathCode::from(tp_i64()).with_allow_into(false),
-        TypeName::Float32 => TypePathCode::from(tp_f32()).with_allow_into(false),
-        TypeName::Float64 => TypePathCode::from(tp_f64()).with_allow_into(false),
-        TypeName::Boolean => TypePathCode::from(tp_bool()).with_allow_into(false),
+        TypeName::Int32 => TypePathCode::from(tp_i32()).with_allow_add_into(false),
+        TypeName::Int64 => TypePathCode::from(tp_i64()).with_allow_add_into(false),
+        TypeName::Float32 => TypePathCode::from(tp_f32()).with_allow_add_into(false),
+        TypeName::Float64 => TypePathCode::from(tp_f64()).with_allow_add_into(false),
+        TypeName::Boolean => TypePathCode::from(tp_bool()).with_allow_add_into(false),
         TypeName::String => TypePathCode::from(tp_string()),
     })
 }
@@ -187,8 +186,10 @@ pub struct TypePathCode {
     is_option: bool,
     is_vec: bool,
     add_into: bool,
-    allow_into: bool,
+    allow_add_into: bool,
     add_box: bool,
+    qualify_models: bool,
+    allow_qualify_models: bool,
 }
 
 impl TypePathCode {
@@ -211,35 +212,38 @@ impl TypePathCode {
         self.add_into = add_into;
         self
     }
-    fn with_allow_into(mut self, allow_into: bool) -> Self {
-        self.allow_into = allow_into;
+    fn with_allow_add_into(mut self, allow_add_into: bool) -> Self {
+        self.allow_add_into = allow_add_into;
         self
     }
     pub fn with_add_box(mut self, add_box: bool) -> Self {
         self.add_box = add_box;
         self
     }
-    pub fn add_into(&self) -> bool {
-        self.add_into && !self.is_vec && self.allow_into
+    pub fn with_qualify_models(mut self, qualify_models: bool) -> Self {
+        self.qualify_models = qualify_models;
+        self
+    }
+    fn with_allow_qualify_models(mut self, allow_qualify_models: bool) -> Self {
+        self.allow_qualify_models = allow_qualify_models;
+        self
     }
     fn to_type(&self) -> Type {
-        let tp = if self.should_force_obj {
-            tp_json_value()
-        } else {
-            self.type_path.clone()
-        };
-        let mut tp = Type::from(tp);
-        let wrap_tp = if self.is_vec {
-            Some(tp_vec())
-        } else if self.is_option {
-            Some(tp_option())
-        } else {
-            None
-        };
-        if let Some(wrap_tp) = wrap_tp {
-            tp = generic_type(wrap_tp, tp);
+        let mut tp = self.type_path.clone();
+        if self.allow_qualify_models && self.qualify_models {
+            tp.path.segments.insert(0, id_models().into());
         }
-        if self.add_into() {
+        let mut tp = Type::from(tp);
+        if self.is_vec() {
+            tp = generic_type(tp_vec(), tp);
+        }
+        if self.should_force_obj {
+            tp = Type::from(tp_json_value())
+        }
+        if self.is_option {
+            tp = generic_type(tp_option(), tp);
+        }
+        if self.allow_add_into && self.add_into {
             if let Type::Path(path) = generic_type(tp_into(), tp.clone()) {
                 // prefix with "impl "
                 let bound = TraitBound {
@@ -262,7 +266,10 @@ impl TypePathCode {
         }
         tp
     }
-    pub fn to_string(&self) -> String {
+}
+
+impl ToString for TypePathCode {
+    fn to_string(&self) -> String {
         self.to_type().into_token_stream().to_string()
     }
 }
@@ -276,7 +283,7 @@ impl ToTokens for TypePathCode {
 /// Creates a generic type
 /// Passing to (std::i32, std::option::Option) with result in std::option::Option<std::i32>
 fn generic_type(mut wrap_tp: TypePath, tp: Type) -> Type {
-    let arg = GenericArgument::Type(tp.into());
+    let arg = GenericArgument::Type(tp);
     let mut args = Punctuated::new();
     args.push(arg);
     let arguments = PathArguments::AngleBracketed(AngleBracketedGenericArguments {
@@ -299,8 +306,10 @@ impl From<TypePath> for TypePathCode {
             is_option: false,
             is_vec: false,
             add_into: false,
-            allow_into: true,
+            allow_add_into: true,
             add_box: false,
+            qualify_models: false,
+            allow_qualify_models: false,
         }
     }
 }
@@ -410,12 +419,6 @@ fn tp_string() -> TypePath {
 
 fn tp_box() -> TypePath {
     parse_type_path("Box").unwrap() // std::boxed::Box
-}
-
-impl ToString for TypePathCode {
-    fn to_string(&self) -> String {
-        self.clone().to_type().into_token_stream().to_string()
-    }
 }
 
 #[cfg(test)]

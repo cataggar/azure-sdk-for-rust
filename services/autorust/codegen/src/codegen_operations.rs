@@ -986,7 +986,7 @@ fn create_builder_setters_code(parameters: &[&WebParameter]) -> Result<TokenStre
     let mut setters = TokenStream::new();
     for param in parameters.iter().filter(|p| !p.required()) {
         let name = &get_param_name(param)?;
-        let tp = get_param_type(param)?.with_add_into(true);
+        let tp = get_param_type(param)?.with_add_into(true).with_is_option(false);
         let value = if param.type_is_ref()? {
             quote! { #name.into() }
         } else {
@@ -1008,15 +1008,16 @@ fn get_param_name(param: &WebParameter) -> Result<Ident, Error> {
 
 fn get_param_type(param: &WebParameter) -> Result<TypePathCode, Error> {
     let is_required = param.required();
-    let is_array = param.is_array();
-    Ok(type_name_gen(&param.type_name()?, true)?
-        .with_is_option(!is_required)
-        .with_is_vec(is_array))
+    Ok(type_name_gen(&param.type_name()?)?
+        .with_qualify_models(true)
+        .with_is_option(!is_required))
 }
 
 pub fn create_response_type(rsp: &Response) -> Result<Option<TypePathCode>, Error> {
     if let Some(schema) = &rsp.schema {
-        Ok(Some(type_name_gen(&get_type_name_for_schema_ref(schema)?, true)?))
+        Ok(Some(
+            type_name_gen(&get_type_name_for_schema_ref(schema)?)?.with_qualify_models(true),
+        ))
     } else {
         Ok(None)
     }
