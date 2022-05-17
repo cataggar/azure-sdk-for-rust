@@ -152,7 +152,7 @@ pub fn type_name_gen(type_name: &TypeName) -> Result<TypePathCode, Error> {
             let idt = parse_ident(&name.to_pascal_case()).map_err(Error::TypeNameForSchemaRef)?;
             TypePathCode::from(idt).with_allow_qualify_models(true)
         }
-        TypeName::Array(vec_items_typ) => type_name_gen(vec_items_typ)?.with_is_vec(true),
+        TypeName::Array(vec_items_typ) => type_name_gen(vec_items_typ)?.incr_vec_count(),
         TypeName::Value => TypePathCode::from(tp_json_value()),
         TypeName::Bytes => TypePathCode::from(tp_bytes()),
         TypeName::Int32 => TypePathCode::from(tp_i32()).with_allow_add_into(false),
@@ -184,7 +184,7 @@ pub struct TypePathCode {
     type_path: TypePath,
     should_force_obj: bool,
     is_option: bool,
-    is_vec: bool,
+    vec_count: i32,
     add_into: bool,
     allow_add_into: bool,
     add_box: bool,
@@ -194,7 +194,7 @@ pub struct TypePathCode {
 
 impl TypePathCode {
     pub fn is_vec(&self) -> bool {
-        self.is_vec
+        self.vec_count > 0
     }
     pub fn with_should_force_obj(mut self, should_force_obj: bool) -> Self {
         self.should_force_obj = should_force_obj;
@@ -204,8 +204,8 @@ impl TypePathCode {
         self.is_option = is_option;
         self
     }
-    pub fn with_is_vec(mut self, is_vec: bool) -> Self {
-        self.is_vec = is_vec;
+    pub fn incr_vec_count(mut self) -> Self {
+        self.vec_count += 1;
         self
     }
     pub fn with_add_into(mut self, add_into: bool) -> Self {
@@ -240,7 +240,7 @@ impl TypePathCode {
         if self.should_force_obj {
             tp = Type::from(tp_json_value())
         }
-        if self.is_vec() {
+        for _ in 0 .. self.vec_count {
             tp = generic_type(tp_vec(), tp);
         }
         if self.is_option {
@@ -307,7 +307,7 @@ impl From<TypePath> for TypePathCode {
             type_path,
             should_force_obj: false,
             is_option: false,
-            is_vec: false,
+            vec_count: 0,
             add_into: false,
             allow_add_into: true,
             add_box: false,
@@ -439,22 +439,24 @@ mod tests {
 
     #[test]
     fn test_type_path_code() -> Result<(), Error> {
-        let goat = TypePathCode::try_from("farm::Goat")?;
-        assert_eq!("farm :: Goat", goat.to_string());
+        let tp = TypePathCode::try_from("farm::Goat")?;
+        assert_eq!("farm :: Goat", tp.to_string());
         Ok(())
     }
 
     #[test]
     fn test_type_path_code_vec() -> Result<(), Error> {
-        let goat = TypePathCode::try_from("farm::Goat")?.with_is_vec(true);
-        assert_eq!("Vec < farm :: Goat >", goat.to_string());
+        let mut tp = TypePathCode::try_from("farm::Goat")?.incr_vec_count();
+        assert_eq!("Vec < farm :: Goat >", tp.to_string());
+        tp = tp.incr_vec_count();
+        assert_eq!("Vec < Vec < farm :: Goat > >", tp.to_string());
         Ok(())
     }
 
     #[test]
     fn test_type_path_code_option() -> Result<(), Error> {
-        let goat = TypePathCode::try_from("farm::Goat")?.with_is_option(true);
-        assert_eq!("Option < farm :: Goat >", goat.to_string());
+        let tp = TypePathCode::try_from("farm::Goat")?.with_is_option(true);
+        assert_eq!("Option < farm :: Goat >", tp.to_string());
         Ok(())
     }
 
@@ -474,8 +476,8 @@ mod tests {
 
     #[test]
     fn test_with_add_into() -> Result<(), Error> {
-        let goat = TypePathCode::try_from("farm::Goat")?.with_add_into(true);
-        assert_eq!("impl Into < farm :: Goat >", goat.to_string());
+        let tp = TypePathCode::try_from("farm::Goat")?.with_add_into(true);
+        assert_eq!("impl Into < farm :: Goat >", tp.to_string());
         Ok(())
     }
 }
