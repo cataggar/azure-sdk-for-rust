@@ -228,22 +228,25 @@ impl TypePathCode {
         self.allow_qualify_models = allow_qualify_models;
         self
     }
+    pub fn add_into(&self) -> bool {
+        self.allow_add_into && self.add_into
+    }
     fn to_type(&self) -> Type {
         let mut tp = self.type_path.clone();
         if self.allow_qualify_models && self.qualify_models {
             tp.path.segments.insert(0, id_models().into());
         }
         let mut tp = Type::from(tp);
-        if self.is_vec() {
-            tp = generic_type(tp_vec(), tp);
-        }
         if self.should_force_obj {
             tp = Type::from(tp_json_value())
+        }
+        if self.is_vec() {
+            tp = generic_type(tp_vec(), tp);
         }
         if self.is_option {
             tp = generic_type(tp_option(), tp);
         }
-        if self.allow_add_into && self.add_into {
+        if self.add_into() {
             if let Type::Path(path) = generic_type(tp_into(), tp.clone()) {
                 // prefix with "impl "
                 let bound = TraitBound {

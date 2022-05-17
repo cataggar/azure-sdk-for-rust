@@ -971,7 +971,10 @@ fn create_builder_struct_code(parameters: &[&WebParameter], in_group: bool) -> R
     }
     for param in parameters.iter().filter(|p| !p.required()) {
         let name = get_param_name(param)?;
-        let tp = get_param_type(param)?;
+        let mut tp = get_param_type(param)?;
+        if tp.is_vec() {
+            tp = tp.with_is_option(false);
+        }
         params.push(quote! { pub(crate) #name: #tp });
     }
     Ok(quote! {
@@ -986,15 +989,20 @@ fn create_builder_setters_code(parameters: &[&WebParameter]) -> Result<TokenStre
     let mut setters = TokenStream::new();
     for param in parameters.iter().filter(|p| !p.required()) {
         let name = &get_param_name(param)?;
-        let tp = get_param_type(param)?.with_add_into(true).with_is_option(false);
-        let value = if param.type_is_ref()? {
+        let mut tp = get_param_type(param)?.with_is_option(false);
+        let is_vec = tp.is_vec();
+        tp = tp.with_add_into(!is_vec);
+        let mut value = if tp.add_into() {
             quote! { #name.into() }
         } else {
-            name.to_token_stream()
+            quote! { #name }
         };
+        if !is_vec {
+            value = quote! { Some(#value) };
+        }
         setters.extend(quote! {
             pub fn #name(mut self, #name: #tp) -> Self {
-                self.#name = Some(#value);
+                self.#name = #value;
                 self
             }
         });
