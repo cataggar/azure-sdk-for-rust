@@ -194,7 +194,7 @@ pub struct TypeNameCode {
 
 impl TypeNameCode {
     pub fn is_vec(&self) -> bool {
-        self.vec_count > 0
+        self.vec_count > 0 && !self.should_force_obj
     }
     pub fn is_option(&self) -> bool {
         self.is_option
@@ -240,11 +240,11 @@ impl TypeNameCode {
             tp.path.segments.insert(0, id_models().into());
         }
         let mut tp = Type::from(tp);
-        if self.should_force_obj {
-            tp = Type::from(tp_json_value())
-        }
         for _ in 0..self.vec_count {
             tp = generic_type(tp_vec(), tp);
+        }
+        if self.should_force_obj {
+            tp = Type::from(tp_json_value())
         }
         if self.is_option {
             tp = generic_type(tp_option(), tp);
