@@ -1,5 +1,5 @@
 use crate::{
-    codegen::{create_generated_by_header, type_name_gen, Error, TypePathCode},
+    codegen::{create_generated_by_header, type_name_gen, Error, TypeNameCode},
     identifier::{CamelCaseIdent, SnakeCaseIdent},
     spec::{self, get_schema_array_items, get_type_name_for_schema, get_type_name_for_schema_ref, TypeName},
     CodeGen, PropertyName, ResolvedSchema, Spec,
@@ -365,7 +365,7 @@ pub fn create_models(cg: &CodeGen) -> Result<TokenStream, Error> {
     Ok(file)
 }
 
-fn create_basic_type_alias(property_name: &str, property: &SchemaGen) -> Result<(Ident, TypePathCode), Error> {
+fn create_basic_type_alias(property_name: &str, property: &SchemaGen) -> Result<(Ident, TypeNameCode), Error> {
     let id = property_name.to_camel_case_ident().map_err(Error::StructName)?;
     let value = type_name_gen(&property.type_name()?)?;
     Ok((id, value))
@@ -465,7 +465,7 @@ fn create_enum(
         }
         #default_code
     };
-    let type_name = TypePathCode::from(vec![namespace, Some(id)]);
+    let type_name = TypeNameCode::from(vec![namespace, Some(id)]);
 
     Ok(FieldCode {
         type_name,
@@ -709,7 +709,7 @@ fn create_struct(cg: &CodeGen, schema: &SchemaGen, struct_name: &str, pageable: 
 }
 
 struct FieldCode {
-    type_name: TypePathCode,
+    type_name: TypeNameCode,
     code: Option<TypeCode>,
 }
 
@@ -757,7 +757,7 @@ fn create_struct_field_code(
                 create_enum(Some(namespace), property, property_name, lowercase_workaround)
             } else if property.is_local_struct() {
                 let id = property_name.to_camel_case_ident().map_err(Error::PropertyName)?;
-                let type_name = TypePathCode::from(vec![namespace.clone(), id]);
+                let type_name = TypeNameCode::from(vec![namespace.clone(), id]);
                 let code = create_struct(cg, property, property_name, None)?;
                 Ok(FieldCode {
                     type_name,
