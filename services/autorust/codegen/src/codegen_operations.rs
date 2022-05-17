@@ -907,7 +907,9 @@ fn create_function_params_code(parameters: &[&WebParameter]) -> Result<TokenStre
     let mut params: Vec<TokenStream> = Vec::new();
     for param in parameters.iter().filter(|p| p.required()) {
         let name = get_param_name(param)?;
-        let tp = get_param_type(param)?.with_add_into(true);
+        let mut tp = get_param_type(param)?;
+        let is_vec = tp.is_vec();
+        tp = tp.with_add_into(!is_vec);
         params.push(quote! { #name: #tp });
     }
     let slf = quote! { &self };
