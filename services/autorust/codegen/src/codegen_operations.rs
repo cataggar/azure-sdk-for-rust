@@ -370,7 +370,7 @@ fn create_operation_code(cg: &CodeGen, operation: &WebOperationGen) -> Result<Op
     let has_content_type_header = parameters
         .params()
         .iter()
-        .any(|p| p.name.to_token_stream().to_string() == "content_type" && p.kind == ParamKind::Header);
+        .any(|p| p.name.eq_ignore_ascii_case("content-type") && p.kind == ParamKind::Header);
 
     // params
     for param in parameters.params() {
@@ -381,11 +381,11 @@ fn create_operation_code(cg: &CodeGen, operation: &WebOperationGen) -> Result<Op
             collection_format,
             ..
         } = param;
+        let is_vec = param.is_vec();
         match kind {
             ParamKind::Path => {} // handled above
             ParamKind::Query => {
-                let is_array = param.is_vec();
-                let query_body = if is_array {
+                let query_body = if is_vec {
                     match collection_format {
                         CollectionFormat::Multi => Some(
                             if param.is_string(){
@@ -419,7 +419,7 @@ fn create_operation_code(cg: &CodeGen, operation: &WebOperationGen) -> Result<Op
                     })
                 };
                 if let Some(query_body) = query_body {
-                    if !param.is_option() || is_array {
+                    if !param.is_option() || is_vec {
                         ts_request_builder.extend(quote! {
                             let #param_name_var = &this.#param_name_var;
                             #query_body
@@ -434,7 +434,7 @@ fn create_operation_code(cg: &CodeGen, operation: &WebOperationGen) -> Result<Op
                 }
             }
             ParamKind::Header => {
-                if !param.is_option() {
+                if !param.is_option() || is_vec {
                     if param.is_string() {
                         ts_request_builder.extend(quote! {
                             req_builder = req_builder.header(#param_name, &this.#param_name_var);
@@ -468,7 +468,7 @@ fn create_operation_code(cg: &CodeGen, operation: &WebOperationGen) -> Result<Op
                     quote! {}
                 };
 
-                if !param.is_option() {
+                if !param.is_option() || is_vec {
                     ts_request_builder.extend(quote! {
                         #set_content_type
                         let req_body = azure_core::to_json(&this.#param_name_var).map_err(Error::Serialize)?;
