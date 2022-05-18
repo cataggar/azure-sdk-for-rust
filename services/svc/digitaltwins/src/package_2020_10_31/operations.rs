@@ -291,7 +291,7 @@ pub mod digital_twin_models {
                                 }
                                 let dependencies_for = &this.dependencies_for;
                                 for value in &this.dependencies_for {
-                                    url.query_pairs_mut().append_pair("dependenciesFor", &value.to_string());
+                                    url.query_pairs_mut().append_pair("dependenciesFor", value);
                                 }
                                 if let Some(include_model_definition) = &this.include_model_definition {
                                     url.query_pairs_mut()
@@ -396,12 +396,8 @@ pub mod digital_twin_models {
                         if let Some(tracestate) = &this.tracestate {
                             req_builder = req_builder.header("tracestate", tracestate);
                         }
-                        let req_body = if let Some(models) = &this.models {
-                            req_builder = req_builder.header("content-type", "application/json");
-                            azure_core::to_json(models).map_err(Error::Serialize)?
-                        } else {
-                            azure_core::EMPTY_BODY
-                        };
+                        req_builder = req_builder.header("content-type", "application/json");
+                        let req_body = azure_core::to_json(&this.models).map_err(Error::Serialize)?;
                         req_builder = req_builder.uri(url.as_str());
                         let req = req_builder.body(req_body).map_err(Error::BuildRequest)?;
                         let rsp = this.client.send(req).await.map_err(Error::SendRequest)?;

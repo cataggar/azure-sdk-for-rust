@@ -616,7 +616,7 @@ pub mod entity {
                         req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         let guid = &this.guid;
                         for value in &this.guid {
-                            url.query_pairs_mut().append_pair("guid", &value.to_string());
+                            url.query_pairs_mut().append_pair("guid", value);
                         }
                         if let Some(min_ext_info) = &this.min_ext_info {
                             url.query_pairs_mut().append_pair("minExtInfo", &min_ext_info.to_string());
@@ -627,7 +627,7 @@ pub mod entity {
                         }
                         let exclude_relationship_types = &this.exclude_relationship_types;
                         for value in &this.exclude_relationship_types {
-                            url.query_pairs_mut().append_pair("excludeRelationshipTypes", &value.to_string());
+                            url.query_pairs_mut().append_pair("excludeRelationshipTypes", value);
                         }
                         let req_body = azure_core::EMPTY_BODY;
                         req_builder = req_builder.uri(url.as_str());
@@ -776,7 +776,7 @@ pub mod entity {
                         req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         let guid = &this.guid;
                         for value in &this.guid {
-                            url.query_pairs_mut().append_pair("guid", &value.to_string());
+                            url.query_pairs_mut().append_pair("guid", value);
                         }
                         let req_body = azure_core::EMPTY_BODY;
                         req_builder = req_builder.uri(url.as_str());

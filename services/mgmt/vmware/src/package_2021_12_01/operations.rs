@@ -10488,12 +10488,8 @@ pub mod script_executions {
                             .map_err(Error::GetToken)?;
                         req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         url.query_pairs_mut().append_pair("api-version", "2021-12-01");
-                        let req_body = if let Some(script_output_stream_type) = &this.script_output_stream_type {
-                            req_builder = req_builder.header("content-type", "application/json");
-                            azure_core::to_json(script_output_stream_type).map_err(Error::Serialize)?
-                        } else {
-                            azure_core::EMPTY_BODY
-                        };
+                        req_builder = req_builder.header("content-type", "application/json");
+                        let req_body = azure_core::to_json(&this.script_output_stream_type).map_err(Error::Serialize)?;
                         req_builder = req_builder.uri(url.as_str());
                         let req = req_builder.body(req_body).map_err(Error::BuildRequest)?;
                         let rsp = this.client.send(req).await.map_err(Error::SendRequest)?;

@@ -265,7 +265,7 @@ pub mod digital_twin_models {
                                 url.query_pairs_mut().append_pair("api-version", "2020-05-31-preview");
                                 let dependencies_for = &this.dependencies_for;
                                 for value in &this.dependencies_for {
-                                    url.query_pairs_mut().append_pair("dependenciesFor", &value.to_string());
+                                    url.query_pairs_mut().append_pair("dependenciesFor", value);
                                 }
                                 if let Some(include_model_definition) = &this.include_model_definition {
                                     url.query_pairs_mut()
@@ -354,12 +354,8 @@ pub mod digital_twin_models {
                             .map_err(Error::GetToken)?;
                         req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         url.query_pairs_mut().append_pair("api-version", "2020-05-31-preview");
-                        let req_body = if let Some(models) = &this.models {
-                            req_builder = req_builder.header("content-type", "application/json");
-                            azure_core::to_json(models).map_err(Error::Serialize)?
-                        } else {
-                            azure_core::EMPTY_BODY
-                        };
+                        req_builder = req_builder.header("content-type", "application/json");
+                        let req_body = azure_core::to_json(&this.models).map_err(Error::Serialize)?;
                         req_builder = req_builder.uri(url.as_str());
                         let req = req_builder.body(req_body).map_err(Error::BuildRequest)?;
                         let rsp = this.client.send(req).await.map_err(Error::SendRequest)?;
@@ -1377,12 +1373,8 @@ pub mod digital_twins {
                             .map_err(Error::GetToken)?;
                         req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         url.query_pairs_mut().append_pair("api-version", "2020-05-31-preview");
-                        let req_body = if let Some(patch_document) = &this.patch_document {
-                            req_builder = req_builder.header("content-type", "application/json");
-                            azure_core::to_json(patch_document).map_err(Error::Serialize)?
-                        } else {
-                            azure_core::EMPTY_BODY
-                        };
+                        req_builder = req_builder.header("content-type", "application/json");
+                        let req_body = azure_core::to_json(&this.patch_document).map_err(Error::Serialize)?;
                         if let Some(if_match) = &this.if_match {
                             req_builder = req_builder.header("If-Match", if_match);
                         }
@@ -2006,12 +1998,8 @@ pub mod digital_twins {
                             .map_err(Error::GetToken)?;
                         req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         url.query_pairs_mut().append_pair("api-version", "2020-05-31-preview");
-                        let req_body = if let Some(patch_document) = &this.patch_document {
-                            req_builder = req_builder.header("content-type", "application/json");
-                            azure_core::to_json(patch_document).map_err(Error::Serialize)?
-                        } else {
-                            azure_core::EMPTY_BODY
-                        };
+                        req_builder = req_builder.header("content-type", "application/json");
+                        let req_body = azure_core::to_json(&this.patch_document).map_err(Error::Serialize)?;
                         if let Some(if_match) = &this.if_match {
                             req_builder = req_builder.header("If-Match", if_match);
                         }

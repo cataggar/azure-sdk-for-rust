@@ -739,7 +739,7 @@ pub mod entity {
                         req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         let guid = &this.guid;
                         for value in &this.guid {
-                            url.query_pairs_mut().append_pair("guid", &value.to_string());
+                            url.query_pairs_mut().append_pair("guid", value);
                         }
                         if let Some(min_ext_info) = &this.min_ext_info {
                             url.query_pairs_mut().append_pair("minExtInfo", &min_ext_info.to_string());
@@ -750,7 +750,7 @@ pub mod entity {
                         }
                         let exclude_relationship_types = &this.exclude_relationship_types;
                         for value in &this.exclude_relationship_types {
-                            url.query_pairs_mut().append_pair("excludeRelationshipTypes", &value.to_string());
+                            url.query_pairs_mut().append_pair("excludeRelationshipTypes", value);
                         }
                         let req_body = azure_core::EMPTY_BODY;
                         req_builder = req_builder.uri(url.as_str());
@@ -899,7 +899,7 @@ pub mod entity {
                         req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
                         let guid = &this.guid;
                         for value in &this.guid {
-                            url.query_pairs_mut().append_pair("guid", &value.to_string());
+                            url.query_pairs_mut().append_pair("guid", value);
                         }
                         let req_body = azure_core::EMPTY_BODY;
                         req_builder = req_builder.uri(url.as_str());
@@ -2857,12 +2857,8 @@ pub mod entity {
                             .await
                             .map_err(Error::GetToken)?;
                         req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
-                        let req_body = if let Some(body) = &this.body {
-                            req_builder = req_builder.header("content-type", "application/json");
-                            azure_core::to_json(body).map_err(Error::Serialize)?
-                        } else {
-                            azure_core::EMPTY_BODY
-                        };
+                        req_builder = req_builder.header("content-type", "application/json");
+                        let req_body = azure_core::to_json(&this.body).map_err(Error::Serialize)?;
                         req_builder = req_builder.uri(url.as_str());
                         let req = req_builder.body(req_body).map_err(Error::BuildRequest)?;
                         let rsp = this.client.send(req).await.map_err(Error::SendRequest)?;
@@ -2929,12 +2925,8 @@ pub mod entity {
                             .await
                             .map_err(Error::GetToken)?;
                         req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
-                        let req_body = if let Some(body) = &this.body {
-                            req_builder = req_builder.header("content-type", "application/json");
-                            azure_core::to_json(body).map_err(Error::Serialize)?
-                        } else {
-                            azure_core::EMPTY_BODY
-                        };
+                        req_builder = req_builder.header("content-type", "application/json");
+                        let req_body = azure_core::to_json(&this.body).map_err(Error::Serialize)?;
                         req_builder = req_builder.uri(url.as_str());
                         let req = req_builder.body(req_body).map_err(Error::BuildRequest)?;
                         let rsp = this.client.send(req).await.map_err(Error::SendRequest)?;
@@ -3001,12 +2993,8 @@ pub mod entity {
                             .await
                             .map_err(Error::GetToken)?;
                         req_builder = req_builder.header(http::header::AUTHORIZATION, format!("Bearer {}", token_response.token.secret()));
-                        let req_body = if let Some(body) = &this.body {
-                            req_builder = req_builder.header("content-type", "application/json");
-                            azure_core::to_json(body).map_err(Error::Serialize)?
-                        } else {
-                            azure_core::EMPTY_BODY
-                        };
+                        req_builder = req_builder.header("content-type", "application/json");
+                        let req_body = azure_core::to_json(&this.body).map_err(Error::Serialize)?;
                         req_builder = req_builder.uri(url.as_str());
                         let req = req_builder.body(req_body).map_err(Error::BuildRequest)?;
                         let rsp = this.client.send(req).await.map_err(Error::SendRequest)?;
@@ -3085,12 +3073,8 @@ pub mod entity {
                         if let Some(attr_qualified_name) = &this.attr_qualified_name {
                             url.query_pairs_mut().append_pair("attr:qualifiedName", attr_qualified_name);
                         }
-                        let req_body = if let Some(body) = &this.body {
-                            req_builder = req_builder.header("content-type", "application/json");
-                            azure_core::to_json(body).map_err(Error::Serialize)?
-                        } else {
-                            azure_core::EMPTY_BODY
-                        };
+                        req_builder = req_builder.header("content-type", "application/json");
+                        let req_body = azure_core::to_json(&this.body).map_err(Error::Serialize)?;
                         req_builder = req_builder.uri(url.as_str());
                         let req = req_builder.body(req_body).map_err(Error::BuildRequest)?;
                         let rsp = this.client.send(req).await.map_err(Error::SendRequest)?;
@@ -3169,12 +3153,8 @@ pub mod entity {
                         if let Some(attr_qualified_name) = &this.attr_qualified_name {
                             url.query_pairs_mut().append_pair("attr:qualifiedName", attr_qualified_name);
                         }
-                        let req_body = if let Some(body) = &this.body {
-                            req_builder = req_builder.header("content-type", "application/json");
-                            azure_core::to_json(body).map_err(Error::Serialize)?
-                        } else {
-                            azure_core::EMPTY_BODY
-                        };
+                        req_builder = req_builder.header("content-type", "application/json");
+                        let req_body = azure_core::to_json(&this.body).map_err(Error::Serialize)?;
                         req_builder = req_builder.uri(url.as_str());
                         let req = req_builder.body(req_body).map_err(Error::BuildRequest)?;
                         let rsp = this.client.send(req).await.map_err(Error::SendRequest)?;
@@ -3253,12 +3233,8 @@ pub mod entity {
                         if let Some(attr_qualified_name) = &this.attr_qualified_name {
                             url.query_pairs_mut().append_pair("attr:qualifiedName", attr_qualified_name);
                         }
-                        let req_body = if let Some(body) = &this.body {
-                            req_builder = req_builder.header("content-type", "application/json");
-                            azure_core::to_json(body).map_err(Error::Serialize)?
-                        } else {
-                            azure_core::EMPTY_BODY
-                        };
+                        req_builder = req_builder.header("content-type", "application/json");
+                        let req_body = azure_core::to_json(&this.body).map_err(Error::Serialize)?;
                         req_builder = req_builder.uri(url.as_str());
                         let req = req_builder.body(req_body).map_err(Error::BuildRequest)?;
                         let rsp = this.client.send(req).await.map_err(Error::SendRequest)?;
