@@ -1,5 +1,3 @@
-use std::convert::TryFrom;
-
 use crate::{
     identifier::parse_ident,
     spec::{self, RefKey, TypeName},
@@ -12,6 +10,7 @@ use once_cell::sync::Lazy;
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
 use regex::Regex;
+use std::convert::TryFrom;
 use syn::{
     punctuated::Punctuated,
     token::{Gt, Impl, Lt},
@@ -193,6 +192,9 @@ pub struct TypeNameCode {
 }
 
 impl TypeNameCode {
+    pub fn is_string(&self) -> bool {
+        self.type_path.to_token_stream().to_string() == TP_STRING
+    }
     pub fn is_vec(&self) -> bool {
         self.vec_count > 0 && !self.should_force_obj
     }
@@ -419,8 +421,9 @@ fn tp_bool() -> TypePath {
     parse_type_path("bool").unwrap()
 }
 
+const TP_STRING: &str = "String";
 fn tp_string() -> TypePath {
-    parse_type_path("String").unwrap() // std::string::String
+    parse_type_path(TP_STRING).unwrap() // std::string::String
 }
 
 fn tp_box() -> TypePath {
@@ -481,6 +484,13 @@ mod tests {
     fn test_with_add_into() -> Result<(), Error> {
         let tp = TypeNameCode::try_from("farm::Goat")?.with_add_into(true);
         assert_eq!("impl Into < farm :: Goat >", tp.to_string());
+        Ok(())
+    }
+
+    #[test]
+    fn test_tp_string() -> Result<(), Error> {
+        let tp = TypeNameCode::from(tp_string());
+        assert!(tp.is_string());
         Ok(())
     }
 }

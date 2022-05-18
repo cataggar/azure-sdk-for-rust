@@ -331,7 +331,6 @@ fn verb_to_tokens(verb: &WebVerb) -> TokenStream {
 // Create code for the web operation
 fn create_operation_code(cg: &CodeGen, operation: &WebOperationGen) -> Result<OperationCode, Error> {
     let params = parse_params(&operation.0.path);
-    // println!("path params {:#?}", params);
     let params: Result<Vec<_>, Error> = params
         .iter()
         .map(|s| {
@@ -350,6 +349,7 @@ fn create_operation_code(cg: &CodeGen, operation: &WebOperationGen) -> Result<Op
     let mut skip = HashSet::new();
     skip.insert("api-version");
     let parameters: Vec<&WebParameter> = parameters.clone().into_iter().filter(|p| !skip.contains(p.name())).collect();
+    let parameters = create_function_params_code(&parameters)?;
 
     let verb = operation.0.verb.clone();
     let is_post = verb == WebVerb::Post;
@@ -368,20 +368,24 @@ fn create_operation_code(cg: &CodeGen, operation: &WebOperationGen) -> Result<Op
     }
 
     let has_content_type_header = parameters
+        .params()
         .iter()
-        .any(|p| p.name().to_snake_case() == "content_type" && p.type_() == &ParameterType::Header);
+        .any(|p| p.name.to_token_stream().to_string() == "content_type" && p.kind == ParamKind::Header);
 
     // params
-    for param in &parameters {
-        let param_name = param.name();
-        let param_name_var = to_param_name(param)?;
-        let required = param.required();
-        match param.type_() {
-            ParameterType::Path => {} // handled above
-            ParameterType::Query => {
-                let is_array = param.is_array();
+    for param in parameters.params() {
+        let FunctionParam {
+            name: param_name,
+            variable_name: param_name_var,
+            kind,
+            collection_format,
+            ..
+        } = param;
+        match kind {
+            ParamKind::Path => {} // handled above
+            ParamKind::Query => {
+                let is_array = param.is_vec();
                 let query_body = if is_array {
-                    let collection_format = param.collection_format();
                     match collection_format {
                         CollectionFormat::Multi => Some(
                             if param.is_string(){
@@ -415,7 +419,7 @@ fn create_operation_code(cg: &CodeGen, operation: &WebOperationGen) -> Result<Op
                     })
                 };
                 if let Some(query_body) = query_body {
-                    if required || is_array {
+                    if !param.is_option() || is_array {
                         ts_request_builder.extend(quote! {
                             let #param_name_var = &this.#param_name_var;
                             #query_body
@@ -429,9 +433,8 @@ fn create_operation_code(cg: &CodeGen, operation: &WebOperationGen) -> Result<Op
                     }
                 }
             }
-            ParameterType::Header => {
-                // println!("header builder: {:?}", param);
-                if required {
+            ParamKind::Header => {
+                if !param.is_option() {
                     if param.is_string() {
                         ts_request_builder.extend(quote! {
                             req_builder = req_builder.header(#param_name, &this.#param_name_var);
@@ -455,7 +458,7 @@ fn create_operation_code(cg: &CodeGen, operation: &WebOperationGen) -> Result<Op
                     });
                 }
             }
-            ParameterType::Body => {
+            ParamKind::Body => {
                 let set_content_type = if !has_content_type_header {
                     let json_content_type = cg.get_request_content_type_json();
                     quote! {
@@ -465,7 +468,7 @@ fn create_operation_code(cg: &CodeGen, operation: &WebOperationGen) -> Result<Op
                     quote! {}
                 };
 
-                if required {
+                if !param.is_option() {
                     ts_request_builder.extend(quote! {
                         #set_content_type
                         let req_body = azure_core::to_json(&this.#param_name_var).map_err(Error::Serialize)?;
@@ -482,7 +485,7 @@ fn create_operation_code(cg: &CodeGen, operation: &WebOperationGen) -> Result<Op
                     });
                 }
             }
-            ParameterType::FormData => {
+            ParamKind::FormData => {
                 ts_request_builder.extend(quote! {
                     unimplemented!("form data not yet supported");
                 });
@@ -903,21 +906,76 @@ fn format_path(path: &str) -> String {
     PARAM_RE.replace_all(path, "{}").to_string()
 }
 
+#[derive(PartialEq)]
+enum ParamKind {
+    Path,
+    Query,
+    Header,
+    Body,
+    FormData,
+}
+
+impl From<&ParameterType> for ParamKind {
+    fn from(pt: &ParameterType) -> Self {
+        match pt {
+            ParameterType::Path => Self::Path,
+            ParameterType::Query => Self::Query,
+            ParameterType::Header => Self::Header,
+            ParameterType::Body => Self::Body,
+            ParameterType::FormData => Self::FormData,
+        }
+    }
+}
+
 struct FunctionParam {
-    name: Ident,
+    name: String,
+    variable_name: Ident,
     type_name: TypeNameCode,
+    kind: ParamKind,
+    collection_format: CollectionFormat,
+}
+impl FunctionParam {
+    fn is_vec(&self) -> bool {
+        self.type_name.is_vec()
+    }
+    fn is_option(&self) -> bool {
+        self.type_name.is_option()
+    }
+    fn is_string(&self) -> bool {
+        self.type_name.is_string()
+    }
 }
 
 struct FunctionParamsCode {
     params: Vec<FunctionParam>,
-    optional_params: Vec<FunctionParam>,
+}
+impl FunctionParamsCode {
+    fn params(&self) -> Vec<&FunctionParam> {
+        self.params.iter().collect()
+    }
+    fn required_params(&self) -> Vec<&FunctionParam> {
+        self.params.iter().filter(|p| !p.type_name.is_option()).collect()
+    }
+    fn optional_params(&self) -> Vec<&FunctionParam> {
+        self.params.iter().filter(|p| p.type_name.is_option()).collect()
+    }
+    #[allow(dead_code)]
+    fn params_of_kind(&self, kind: &ParamKind) -> Vec<&FunctionParam> {
+        self.params.iter().filter(|p| &p.kind == kind).collect()
+    }
 }
 
 impl ToTokens for FunctionParamsCode {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let mut params: Vec<TokenStream> = Vec::new();
-        for FunctionParam { name, type_name } in &self.params {
-            params.push(quote! { #name: #type_name });
+        for FunctionParam {
+            variable_name, type_name, ..
+        } in self.required_params()
+        {
+            let mut type_name = type_name.clone();
+            let is_vec = type_name.is_vec();
+            type_name = type_name.with_add_into(!is_vec);
+            params.push(quote! { #variable_name: #type_name });
         }
         let slf = quote! { &self };
         params.insert(0, slf);
@@ -927,43 +985,57 @@ impl ToTokens for FunctionParamsCode {
 
 fn create_function_params_code(parameters: &[&WebParameter]) -> Result<FunctionParamsCode, Error> {
     let mut params = Vec::new();
-    let mut optional_params = Vec::new();
     for param in parameters.iter() {
-        let name = to_param_name(param)?;
-        let mut tp = to_param_type_name(param)?;
-        let is_vec = tp.is_vec();
-        tp = tp.with_add_into(!is_vec);
-        if tp.is_option() {
-            optional_params.push(FunctionParam { name, type_name: tp });
-        } else {
-            params.push(FunctionParam { name, type_name: tp });
-        }
+        let name = param.name().to_owned();
+        let variable_name = name.to_snake_case_ident().map_err(Error::ParamName)?;
+        let type_name = type_name_gen(&param.type_name()?)?
+            .with_qualify_models(true)
+            .with_is_option(!param.required());
+        let kind = ParamKind::from(param.type_());
+        let collection_format = param.collection_format().clone();
+        params.push(FunctionParam {
+            name,
+            variable_name,
+            type_name,
+            kind,
+            collection_format,
+        });
     }
-    Ok(FunctionParamsCode { params, optional_params })
+    Ok(FunctionParamsCode { params })
 }
 
-fn create_builder_instance_code(operation: &WebOperationGen, parameters: &[&WebParameter], in_group: bool) -> Result<TokenStream, Error> {
-    let fparams = create_function_params_code(parameters)?;
+fn create_builder_instance_code(
+    operation: &WebOperationGen,
+    parameters: &FunctionParamsCode,
+    in_group: bool,
+) -> Result<TokenStream, Error> {
     let mut params: Vec<TokenStream> = Vec::new();
     if in_group {
         params.push(quote! { client: self.0.clone() });
     } else {
         params.push(quote! { client: self.clone() });
     }
-    for param in fparams.params.iter() {
-        let FunctionParam { name, type_name } = param;
+    for param in parameters.required_params() {
+        let FunctionParam {
+            variable_name, type_name, ..
+        } = param;
+        let mut type_name = type_name.clone();
+        let is_vec = type_name.is_vec();
+        type_name = type_name.with_add_into(!is_vec);
         if type_name.add_into() {
-            params.push(quote! { #name: #name.into() });
+            params.push(quote! { #variable_name: #variable_name.into() });
         } else {
-            params.push(quote! { #name });
+            params.push(quote! { #variable_name });
         }
     }
-    for param in fparams.optional_params.iter() {
-        let FunctionParam { name, type_name } = param;
+    for param in parameters.optional_params() {
+        let FunctionParam {
+            variable_name, type_name, ..
+        } = param;
         if type_name.is_vec() {
-            params.push(quote! { #name: Vec::new() });
+            params.push(quote! { #variable_name: Vec::new() });
         } else {
-            params.push(quote! { #name: None });
+            params.push(quote! { #variable_name: None });
         }
     }
     let summary = if let Some(summary) = &operation.0.summary {
@@ -976,7 +1048,7 @@ fn create_builder_instance_code(operation: &WebOperationGen, parameters: &[&WebP
     let fname = operation.function_name()?;
     Ok(quote! {
         #summary
-        pub fn #fname(#fparams) -> #fname::Builder {
+        pub fn #fname(#parameters) -> #fname::Builder {
             #fname::Builder {
                 #(#params),*
             }
@@ -984,25 +1056,28 @@ fn create_builder_instance_code(operation: &WebOperationGen, parameters: &[&WebP
     })
 }
 
-fn create_builder_struct_code(parameters: &[&WebParameter], in_group: bool) -> Result<TokenStream, Error> {
+fn create_builder_struct_code(parameters: &FunctionParamsCode, in_group: bool) -> Result<TokenStream, Error> {
     let mut params: Vec<TokenStream> = Vec::new();
     if in_group {
         params.push(quote! { pub(crate) client: super::super::Client });
     } else {
         params.push(quote! { pub(crate) client: super::Client });
     }
-    for param in parameters.iter().filter(|p| p.required()) {
-        let name = to_param_name(param)?;
-        let tp = to_param_type_name(param)?;
-        params.push(quote! { pub(crate) #name: #tp });
+    for param in parameters.required_params() {
+        let FunctionParam {
+            variable_name, type_name, ..
+        } = param;
+        params.push(quote! { pub(crate) #variable_name: #type_name });
     }
-    for param in parameters.iter().filter(|p| !p.required()) {
-        let name = to_param_name(param)?;
-        let mut tp = to_param_type_name(param)?;
-        if tp.is_vec() {
-            tp = tp.with_is_option(false);
+    for param in parameters.optional_params() {
+        let FunctionParam {
+            variable_name, type_name, ..
+        } = param;
+        let mut type_name = type_name.clone();
+        if type_name.is_vec() {
+            type_name = type_name.with_is_option(false);
         }
-        params.push(quote! { pub(crate) #name: #tp });
+        params.push(quote! { pub(crate) #variable_name: #type_name });
     }
     Ok(quote! {
         #[derive(Clone)]
@@ -1012,40 +1087,32 @@ fn create_builder_struct_code(parameters: &[&WebParameter], in_group: bool) -> R
     })
 }
 
-fn create_builder_setters_code(parameters: &[&WebParameter]) -> Result<TokenStream, Error> {
+fn create_builder_setters_code(parameters: &FunctionParamsCode) -> Result<TokenStream, Error> {
     let mut setters = TokenStream::new();
-    for param in parameters.iter().filter(|p| !p.required()) {
-        let name = &to_param_name(param)?;
-        let mut tp = to_param_type_name(param)?.with_is_option(false);
-        let is_vec = tp.is_vec();
-        tp = tp.with_add_into(!is_vec);
-        let mut value = if tp.add_into() {
-            quote! { #name.into() }
+    for param in parameters.optional_params() {
+        let FunctionParam {
+            variable_name, type_name, ..
+        } = param;
+        let is_vec = type_name.is_vec();
+        let mut type_name = type_name.clone();
+        type_name = type_name.with_is_option(false);
+        type_name = type_name.with_add_into(!is_vec);
+        let mut value = if type_name.add_into() {
+            quote! { #variable_name.into() }
         } else {
-            quote! { #name }
+            quote! { #variable_name }
         };
         if !is_vec {
             value = quote! { Some(#value) };
         }
         setters.extend(quote! {
-            pub fn #name(mut self, #name: #tp) -> Self {
-                self.#name = #value;
+            pub fn #variable_name(mut self, #variable_name: #type_name) -> Self {
+                self.#variable_name = #value;
                 self
             }
         });
     }
     Ok(setters)
-}
-
-fn to_param_name(param: &WebParameter) -> Result<Ident, Error> {
-    param.name().to_snake_case_ident().map_err(Error::ParamName)
-}
-
-fn to_param_type_name(param: &WebParameter) -> Result<TypeNameCode, Error> {
-    let is_required = param.required();
-    Ok(type_name_gen(&param.type_name()?)?
-        .with_qualify_models(true)
-        .with_is_option(!is_required))
 }
 
 pub fn create_response_type(rsp: &Response) -> Result<Option<TypeNameCode>, Error> {
