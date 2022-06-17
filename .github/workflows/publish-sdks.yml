@@ -10,15 +10,6 @@ env:
 
 jobs:
 
-  azure_core:
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: publish
-        run: |
-          cargo publish -p azure_core
-
   azure_data_cosmos:
     if: always()
     runs-on: ubuntu-latest
@@ -36,51 +27,6 @@ jobs:
       - name: publish
         run: |
           cargo publish -p azure_data_tables
-
-  azure_identity:
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: publish
-        run: |
-          cargo publish -p azure_identity
-
-  azure_iot_hub:
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: publish
-        run: |
-          cargo publish -p azure_iot_hub
-
-  azure_messaging_eventgrid:
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: publish
-        run: |
-          cargo publish -p azure_messaging_eventgrid
-
-  azure_messaging_servicebus:
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: publish
-        run: |
-          cargo publish -p azure_messaging_servicebus
-
-  azure_security_keyvault:
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: publish
-        run: |
-          cargo publish -p azure_security_keyvault
 
   azure_storage:
     if: always()

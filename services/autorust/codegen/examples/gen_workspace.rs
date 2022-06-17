@@ -26,14 +26,14 @@ fn main() -> Result<()> {
 
 fn publish_sdks() -> Result<()> {
     let packages = &vec![
-        "azure_core",
+        // "azure_core",
         "azure_data_cosmos",
         "azure_data_tables",
-        "azure_identity",
-        "azure_iot_hub",
-        "azure_messaging_eventgrid",
-        "azure_messaging_servicebus",
-        "azure_security_keyvault",
+        // "azure_identity",
+        // "azure_iot_hub",
+        // "azure_messaging_eventgrid",
+        // "azure_messaging_servicebus",
+        // "azure_security_keyvault",
         "azure_storage",
         "azure_storage_blobs",
         "azure_storage_datalake",
