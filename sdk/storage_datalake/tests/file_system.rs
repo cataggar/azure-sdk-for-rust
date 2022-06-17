@@ -1,14 +1,14 @@
 #![cfg(feature = "mock_transport_framework")]
 
+use azure_core::error::Result;
 use azure_storage_datalake::prelude::*;
 use futures::stream::StreamExt;
-use std::error::Error;
 use std::num::NonZeroU32;
 
 mod setup;
 
 #[tokio::test]
-async fn file_system_create_delete() -> Result<(), Box<dyn Error + Send + Sync>> {
+async fn file_system_create_delete() -> Result<()> {
     let data_lake_client = setup::create_data_lake_client("datalake_file_system")
         .await
         .unwrap();
@@ -76,6 +76,66 @@ async fn file_system_create_delete() -> Result<(), Box<dyn Error + Send + Sync>>
         "Iota",
         "did not find expected property value for: ModifiedBy"
     );
+
+    file_system_client.delete().into_future().await?;
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn file_system_list_paths() -> Result<()> {
+    let data_lake_client = setup::create_data_lake_client("datalake_file_system_list_paths")
+        .await
+        .unwrap();
+
+    let file_system_name = "azurerustsdk-datalake-file-system-list-paths";
+    let file_system_client = data_lake_client
+        .clone()
+        .into_file_system_client(file_system_name.to_string());
+
+    file_system_client.create().into_future().await?;
+
+    let file_path = "some/path/file1.txt";
+    let file_client = file_system_client.get_file_client(file_path);
+    file_client.create().into_future().await?;
+
+    let file_path = "some/path/file2.txt";
+    let file_client = file_system_client.get_file_client(file_path);
+    file_client.create().into_future().await?;
+
+    let file_path = "some/other_path/file3.txt";
+    let file_client = file_system_client.get_file_client(file_path);
+    file_client.create().into_future().await?;
+
+    // by default all paths are listed
+    let paths = file_system_client
+        .list_paths()
+        .into_stream()
+        .next()
+        .await
+        .unwrap()?;
+    assert_eq!(paths.paths.len(), 6);
+
+    // test only paths within directory
+    let paths = file_system_client
+        .list_paths()
+        .directory("some/path")
+        .into_stream()
+        .next()
+        .await
+        .unwrap()?;
+    assert_eq!(paths.paths.len(), 2);
+
+    // test non recursive paths
+    let paths = file_system_client
+        .list_paths()
+        .directory("some")
+        .recursive(false)
+        .into_stream()
+        .next()
+        .await
+        .unwrap()?;
+    assert_eq!(paths.paths.len(), 2);
 
     file_system_client.delete().into_future().await?;
 

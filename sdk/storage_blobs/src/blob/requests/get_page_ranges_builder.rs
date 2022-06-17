@@ -1,7 +1,9 @@
-use crate::blob::responses::GetPageRangesResponse;
-use crate::prelude::*;
-use azure_core::headers::{add_optional_header, add_optional_header_ref};
-use azure_core::prelude::*;
+use crate::{blob::responses::GetPageRangesResponse, prelude::*};
+use azure_core::{
+    error::Result,
+    headers::{add_optional_header, add_optional_header_ref},
+    prelude::*,
+};
 
 pub struct GetPageRangesBuilder<'a> {
     blob_client: &'a BlobClient,
@@ -29,9 +31,7 @@ impl<'a> GetPageRangesBuilder<'a> {
         timeout: Timeout => Some(timeout),
     }
 
-    pub async fn execute(
-        &self,
-    ) -> Result<GetPageRangesResponse, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn execute(&self) -> Result<GetPageRangesResponse> {
         let mut url = self.blob_client.url_with_segments(None)?;
 
         url.query_pairs_mut().append_pair("comp", "pagelist");
@@ -59,9 +59,6 @@ impl<'a> GetPageRangesBuilder<'a> {
 
         debug!("response.headers() == {:#?}", response.headers());
 
-        Ok(GetPageRangesResponse::from_response(
-            response.headers(),
-            response.body(),
-        )?)
+        GetPageRangesResponse::from_response(response.headers(), response.body())
     }
 }
