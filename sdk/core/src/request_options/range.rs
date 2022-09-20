@@ -1,11 +1,10 @@
-use super::BA512Range;
-use crate::{AddAsHeader, ParsingError};
-use http::request::Builder;
+use crate::error::{Error, ErrorKind, ResultExt};
+use crate::headers::{self, AsHeaders, HeaderName, HeaderValue};
 use std::convert::From;
 use std::fmt;
 use std::str::FromStr;
 
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct Range {
     pub start: u64,
     pub end: u64,
@@ -25,12 +24,18 @@ impl Range {
     }
 }
 
-impl<'a> From<&'a BA512Range> for Range {
-    fn from(ba: &'a BA512Range) -> Range {
-        Range {
-            start: ba.start(),
-            end: ba.end(),
+impl AsHeaders for Range {
+    type Iter = std::vec::IntoIter<(HeaderName, HeaderValue)>;
+
+    fn as_headers(&self) -> Self::Iter {
+        let mut headers = vec![(headers::MS_RANGE, format!("{}", self).into())];
+        if self.len() < 1024 * 1024 * 4 {
+            headers.push((
+                headers::RANGE_GET_CONTENT_CRC64,
+                HeaderValue::from_static("true"),
+            ));
         }
+        headers.into_iter()
     }
 }
 
@@ -62,19 +67,20 @@ impl From<std::ops::Range<usize>> for Range {
 }
 
 impl FromStr for Range {
-    type Err = ParsingError;
-    fn from_str(s: &str) -> Result<Range, Self::Err> {
+    type Err = Error;
+    fn from_str(s: &str) -> crate::Result<Range> {
         let v = s.split('/').collect::<Vec<&str>>();
         if v.len() != 2 {
-            return Err(ParsingError::TokenNotFound {
-                item: "Range",
-                token: "/".to_owned(),
-                full: s.to_owned(),
-            });
+            return Err(Error::with_message(ErrorKind::Other, || {
+                format!(
+                    "expected token \"{}\" not found when parsing Range from \"{}\"",
+                    "/", s
+                )
+            }));
         }
 
-        let cp_start = v[0].parse::<u64>()?;
-        let cp_end = v[1].parse::<u64>()? + 1;
+        let cp_start = v[0].parse::<u64>().map_kind(ErrorKind::DataConversion)?;
+        let cp_end = v[1].parse::<u64>().map_kind(ErrorKind::DataConversion)? + 1;
 
         Ok(Range {
             start: cp_start,
@@ -86,38 +92,6 @@ impl FromStr for Range {
 impl fmt::Display for Range {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "bytes={}-{}", self.start, self.end - 1)
-    }
-}
-
-impl<'a> AddAsHeader for Range {
-    // here we ask for the CRC64 value if we can (that is,
-    // if the range is smaller than 4MB).
-    fn add_as_header(&self, builder: Builder) -> Builder {
-        let builder = builder.header("x-ms-range", &format!("{}", self));
-        if self.len() < 1024 * 1024 * 4 {
-            builder.header("x-ms-range-get-content-crc64", "true")
-        } else {
-            builder
-        }
-    }
-
-    fn add_as_header2(
-        &self,
-        request: &mut crate::Request,
-    ) -> Result<(), crate::errors::HTTPHeaderError> {
-        request.headers_mut().append(
-            "x-ms-range",
-            http::HeaderValue::from_str(&format!("{}", self))?,
-        );
-
-        if self.len() < 1024 * 1024 * 4 {
-            request.headers_mut().append(
-                "x-ms-range-get-content-crc64",
-                http::HeaderValue::from_str("true")?,
-            );
-        }
-
-        Ok(())
     }
 }
 
@@ -135,21 +109,12 @@ mod test {
 
     #[test]
     fn test_range_parse_panic_1() {
-        let err = "abba/2000".parse::<Range>().unwrap_err();
-        assert!(matches!(err, ParsingError::ParseIntError(_)));
+        "abba/2000".parse::<Range>().unwrap_err();
     }
 
     #[test]
     fn test_range_parse_panic_2() {
-        let err = "1000-2000".parse::<Range>().unwrap_err();
-        assert_eq!(
-            err,
-            ParsingError::TokenNotFound {
-                item: "Range",
-                token: "/".to_string(),
-                full: "1000-2000".to_string()
-            }
-        );
+        "1000-2000".parse::<Range>().unwrap_err();
     }
 
     #[test]

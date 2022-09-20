@@ -1,6 +1,5 @@
-pub use crate::etag::Etag;
+//! The Azure Core prelude.
+
 pub use crate::request_options::*;
-pub use crate::{
-    new_http_client, AddAsHeader, AppendToUrlQuery, Context, HttpClient, RequestId, SessionToken,
-    EMPTY_BODY,
-};
+pub use crate::util::*;
+pub use crate::{AppendToUrlQuery, Context, Continuable, Header};

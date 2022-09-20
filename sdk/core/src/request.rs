@@ -1,17 +1,37 @@
-use crate::SeekableStream;
-use http::{HeaderMap, Method, Uri};
-use serde::ser::{Serialize, SerializeStruct, Serializer};
+use crate::headers::{AsHeaders, Headers};
+use crate::{Method, SeekableStream};
+use bytes::Bytes;
 use std::fmt::Debug;
+use url::Url;
 
+/// An HTTP Body.
 #[derive(Debug, Clone)]
 pub enum Body {
+    /// A body of a known size.
     Bytes(bytes::Bytes),
+    /// A streaming body.
     SeekableStream(Box<dyn SeekableStream>),
 }
 
-impl From<bytes::Bytes> for Body {
-    fn from(bytes: bytes::Bytes) -> Self {
-        Self::Bytes(bytes)
+impl Body {
+    pub fn len(&self) -> usize {
+        match self {
+            Body::Bytes(bytes) => bytes.len(),
+            Body::SeekableStream(stream) => stream.len(),
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+}
+
+impl<B> From<B> for Body
+where
+    B: Into<Bytes>,
+{
+    fn from(bytes: B) -> Self {
+        Self::Bytes(bytes.into())
     }
 }
 
@@ -21,209 +41,83 @@ impl From<Box<dyn SeekableStream>> for Body {
     }
 }
 
-const FIELDS: &[&str] = &["uri", "method", "headers", "body"];
-
 /// A pipeline request.
 ///
 /// A pipeline request is composed by a destination (uri), a method, a collection of headers and a
 /// body. Policies are expected to enrich the request by mutating it.
 #[derive(Debug, Clone)]
 pub struct Request {
-    uri: Uri,
-    method: Method,
-    headers: HeaderMap,
-    body: Body,
+    pub(crate) url: Url,
+    pub(crate) method: Method,
+    pub(crate) headers: Headers,
+    pub(crate) body: Body,
 }
 
 impl Request {
-    fn new(uri: Uri, method: Method, headers: HeaderMap, body: Body) -> Self {
+    /// Create a new request with an empty body and no headers
+    pub fn new(url: Url, method: Method) -> Self {
         Self {
-            uri,
+            url,
             method,
-            headers,
-            body,
+            headers: Headers::new(),
+            body: Body::Bytes(bytes::Bytes::new()),
         }
     }
-}
 
-impl Serialize for Request {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let mut hm = std::collections::BTreeMap::new();
-        for (h, v) in self.headers().iter() {
-            if h.as_str().to_lowercase() == "authorization" {
-                hm.insert(h.to_string(), "<<STRIPPED>>");
-            } else {
-                hm.insert(h.to_string(), v.to_str().unwrap());
-            }
+    pub fn url(&self) -> &Url {
+        &self.url
+    }
+
+    pub fn url_mut(&mut self) -> &mut Url {
+        &mut self.url
+    }
+
+    pub fn path_and_query(&self) -> String {
+        let mut result = self.url.path().to_owned();
+        if let Some(query) = self.url.query() {
+            result.push('?');
+            result.push_str(query);
         }
-
-        let mut state = serializer.serialize_struct("Request", 4)?;
-        state.serialize_field(
-            FIELDS[0],
-            &self
-                .uri
-                .path_and_query()
-                .map(|p| p.to_string())
-                .unwrap_or_else(String::new),
-        )?;
-        state.serialize_field(FIELDS[1], &self.method.to_string())?;
-        state.serialize_field(FIELDS[2], &hm)?;
-        state.serialize_field(
-            FIELDS[3],
-            &match &self.body {
-                Body::Bytes(bytes) => base64::encode(bytes as &[u8]),
-                Body::SeekableStream(_) => unimplemented!(),
-            },
-        )?;
-
-        state.end()
-    }
-}
-
-impl Request {
-    pub fn uri(&self) -> &Uri {
-        &self.uri
+        result
     }
 
-    pub fn method(&self) -> Method {
-        self.method.clone()
+    pub fn method(&self) -> &Method {
+        &self.method
     }
 
-    pub fn headers(&self) -> &HeaderMap {
+    pub fn insert_headers<T: AsHeaders>(&mut self, headers: &T) {
+        for (name, value) in headers.as_headers() {
+            self.insert_header(name, value);
+        }
+    }
+
+    pub fn headers(&self) -> &Headers {
         &self.headers
-    }
-
-    pub fn headers_mut(&mut self) -> &mut HeaderMap {
-        &mut self.headers
     }
 
     pub fn body(&self) -> &Body {
         &self.body
     }
 
-    pub fn set_body(&mut self, body: Body) {
-        self.body = body;
+    pub fn set_body(&mut self, body: impl Into<Body>) {
+        self.body = body.into();
     }
 
-    /// Clones the internal body and gives it back to the caller.
-    pub fn clone_body(&self) -> Body {
-        self.body.clone()
-    }
-}
-
-/// Temporary hack to convert preexisting requests into the new format. It
-/// will be removed as soon as we remove the dependency from `http::Request`.
-impl From<http::Request<bytes::Bytes>> for Request {
-    fn from(request: http::Request<bytes::Bytes>) -> Self {
-        let (parts, body) = request.into_parts();
-        Self {
-            uri: parts.uri,
-            method: parts.method,
-            headers: parts.headers,
-            body: Body::Bytes(body),
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct Parts {
-    pub uri: Uri,
-    pub method: Method,
-    pub headers: HeaderMap,
-}
-
-use serde::de::Visitor;
-use serde::{Deserialize, Deserializer};
-use std::collections::HashMap;
-use std::str::FromStr;
-
-impl<'de> Deserialize<'de> for Request {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    pub fn insert_header<K, V>(&mut self, key: K, value: V)
     where
-        D: Deserializer<'de>,
+        K: Into<crate::headers::HeaderName>,
+        V: Into<crate::headers::HeaderValue>,
     {
-        deserializer.deserialize_struct("Request", FIELDS, RequestVisitor)
-    }
-}
-
-struct RequestVisitor;
-
-impl<'de> Visitor<'de> for RequestVisitor {
-    type Value = Request;
-
-    fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        formatter.write_str("struct Request")
+        self.headers.insert(key, value);
     }
 
-    fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
-    where
-        A: serde::de::MapAccess<'de>,
-    {
-        let uri: (&str, &str) = match map.next_entry()? {
-            Some((a, b)) => (a, b),
-            None => return Err(serde::de::Error::custom("missing uri")),
-        };
-
-        if uri.0 != FIELDS[0] {
-            return Err(serde::de::Error::custom(format!(
-                "unexpected field {}, expected {}",
-                uri.0, FIELDS[0]
-            )));
+    pub fn add_optional_header<T: crate::Header>(&mut self, item: &Option<T>) {
+        if let Some(item) = item {
+            self.insert_header(item.name(), item.value());
         }
+    }
 
-        let method: (&str, &str) = match map.next_entry()? {
-            Some((a, b)) => (a, b),
-            None => return Err(serde::de::Error::custom("missing method")),
-        };
-
-        if method.0 != FIELDS[1] {
-            return Err(serde::de::Error::custom(format!(
-                "unexpected field {}, expected {}",
-                method.0, FIELDS[1]
-            )));
-        }
-
-        let headers: (&str, HashMap<&str, String>) = match map.next_entry()? {
-            Some((a, b)) => (a, b),
-            None => return Err(serde::de::Error::custom("missing header map")),
-        };
-        if headers.0 != FIELDS[2] {
-            return Err(serde::de::Error::custom(format!(
-                "unexpected field {}, expected {}",
-                headers.0, FIELDS[2]
-            )));
-        }
-
-        let body: (&str, String) = match map.next_entry()? {
-            Some((a, b)) => (a, b),
-            None => return Err(serde::de::Error::custom("missing body")),
-        };
-        if body.0 != FIELDS[3] {
-            return Err(serde::de::Error::custom(format!(
-                "unexpected field {}, expected {}",
-                body.0, FIELDS[3]
-            )));
-        }
-
-        let body = base64::decode(&body.1).map_err(serde::de::Error::custom)?;
-
-        let mut hm = HeaderMap::new();
-        for (k, v) in headers.1.into_iter() {
-            hm.append(
-                http::header::HeaderName::from_lowercase(k.as_bytes())
-                    .map_err(serde::de::Error::custom)?,
-                http::HeaderValue::from_str(&v).map_err(serde::de::Error::custom)?,
-            );
-        }
-
-        Ok(Self::Value::new(
-            Uri::from_str(uri.1).expect("expected a valid uri"),
-            Method::from_str(method.1).expect("expected a valid HTTP method"),
-            hm,
-            bytes::Bytes::from(body).into(),
-        ))
+    pub fn add_mandatory_header<T: crate::Header>(&mut self, item: &T) {
+        self.insert_header(item.name(), item.value());
     }
 }

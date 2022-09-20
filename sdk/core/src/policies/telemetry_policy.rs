@@ -1,8 +1,7 @@
+use crate::headers::{HeaderValue, USER_AGENT};
 use crate::options::TelemetryOptions;
 use crate::policies::{Policy, PolicyResult};
-use crate::{PipelineContext, Request, Response};
-
-use http::{header::USER_AGENT, HeaderValue};
+use crate::{Context, Request};
 use std::env::consts::{ARCH, OS};
 use std::sync::Arc;
 
@@ -57,20 +56,16 @@ impl<'a> TelemetryPolicy {
     }
 }
 
-#[async_trait::async_trait]
-impl<C> Policy<C> for TelemetryPolicy
-where
-    C: Send + Sync,
-{
+#[cfg_attr(target_arch = "wasm32", async_trait::async_trait(?Send))]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
+impl Policy for TelemetryPolicy {
     async fn send(
         &self,
-        ctx: &mut PipelineContext<C>,
+        ctx: &Context,
         request: &mut Request,
-        next: &[Arc<dyn Policy<C>>],
-    ) -> PolicyResult<Response> {
-        request
-            .headers_mut()
-            .insert(USER_AGENT, HeaderValue::from_str(&self.header)?);
+        next: &[Arc<dyn Policy>],
+    ) -> PolicyResult {
+        request.insert_header(USER_AGENT, HeaderValue::from(self.header.to_string()));
 
         next[0].send(ctx, request, &next[1..]).await
     }

@@ -1,7 +1,9 @@
+use azure_core::date;
 use azure_identity::*;
 use oauth2::{ClientId, ClientSecret, TokenResponse};
 use std::env;
 use std::error::Error;
+use time::OffsetDateTime;
 use url::Url;
 
 #[tokio::main]
@@ -42,14 +44,17 @@ async fn main() -> Result<(), Box<dyn Error>> {
     println!("code received: {:?}", code);
 
     // Exchange the token with one that can be used for authorization
-    let token = c.exchange(code).await.unwrap();
+    let token = c
+        .exchange(azure_core::new_http_client(), code)
+        .await
+        .unwrap();
 
     println!("token received: {:?}", token);
 
     println!("token secret: {}", token.access_token().secret());
 
-    let dt = chrono::Utc::now();
-    let time = format!("{}", dt.format("%a, %d %h %Y %T GMT"));
+    let dt = OffsetDateTime::now_utc();
+    let time = date::to_rfc1123(&dt);
     println!("x-ms-date ==> {}", time);
 
     let resp = reqwest::Client::new()

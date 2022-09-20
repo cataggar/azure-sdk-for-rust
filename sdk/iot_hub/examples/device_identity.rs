@@ -1,5 +1,6 @@
-use iot_hub::service::resources::{AuthenticationMechanism, DesiredCapability, Status};
-use iot_hub::service::ServiceClient;
+use azure_iot_hub::service::resources::{AuthenticationMechanism, DesiredCapability, Status};
+use azure_iot_hub::service::responses::DeviceIdentityResponse;
+use azure_iot_hub::service::ServiceClient;
 use std::error::Error;
 
 #[tokio::main]
@@ -12,12 +13,9 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
         .expect("Please pass the device id as the first parameter");
 
     println!("Getting device twin for device '{}'", device_id);
-    let http_client = azure_core::new_http_client();
-    let service_client =
-        ServiceClient::from_connection_string(http_client, iot_hub_connection_string, 3600)?;
+    let service_client = ServiceClient::new_connection_string(iot_hub_connection_string, 3600)?;
     let device = service_client
-        .create_device_identity()
-        .execute(
+        .create_device_identity(
             &device_id,
             Status::Enabled,
             AuthenticationMechanism::new_using_symmetric_key(
@@ -25,7 +23,9 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
                 "6YS6w5wqkpdfkEW7iOP1NvituehFlFRfPko2n7KY4Gk",
             ),
         )
+        .into_future()
         .await?;
+    let device: DeviceIdentityResponse = device.try_into()?;
 
     println!("Successfully created a new device '{}'", device.device_id);
 
@@ -34,26 +34,31 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
         device.device_id
     );
     let device = service_client
-        .update_device_identity(device.etag)
-        .device_capability(DesiredCapability::IotEdge)
-        .execute(
+        .update_device_identity(
             &device_id,
             Status::Enabled,
             AuthenticationMechanism::new_using_symmetric_key(
                 "QhgevIUBSWe37q1MP+M/vtktjOcrE74BVbpcxlLQw58=",
                 "6YS6w5wqkpdfkEW7iOP1NvituehFlFRfPko2n7KY4Gk",
             ),
+            device.etag,
         )
+        .device_capability(DesiredCapability::IotEdge)
+        .into_future()
         .await?;
 
     println!("Getting device identity of '{}'", device.device_id);
-    let device = service_client.get_device_identity(device.device_id).await?;
+    let device = service_client
+        .get_device_identity(device.device_id)
+        .into_future()
+        .await?;
+    let device: DeviceIdentityResponse = device.try_into()?;
     println!("Identity is: {:?}", device);
 
     println!("Deleting device '{}'", device.device_id);
     service_client
         .delete_device_identity(device.device_id, device.etag)
-        .execute()
+        .into_future()
         .await?;
 
     Ok(())

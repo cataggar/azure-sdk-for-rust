@@ -1,17 +1,16 @@
-use super::TokenCredential;
-use azure_core::TokenResponse;
-use chrono::Utc;
-use oauth2::{
-    basic::{BasicClient, BasicErrorResponseType},
-    reqwest::async_http_client,
-    AccessToken, AuthType, AuthUrl, Scope, StandardErrorResponse, TokenUrl,
-};
-use std::{str, time::Duration};
+use crate::oauth2_http_client::Oauth2HttpClient;
+use azure_core::auth::{AccessToken, TokenCredential, TokenResponse};
+use azure_core::error::{ErrorKind, ResultExt};
+use azure_core::HttpClient;
+use oauth2::{basic::BasicClient, AuthType, AuthUrl, Scope, TokenUrl};
+use std::str;
+use std::sync::Arc;
+use time::OffsetDateTime;
 use url::Url;
 
 /// Provides options to configure how the Identity library makes authentication
 /// requests to Azure Active Directory.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TokenCredentialOptions {
     authority_host: String,
 }
@@ -29,13 +28,13 @@ impl TokenCredentialOptions {
     pub fn new(authority_host: String) -> Self {
         Self { authority_host }
     }
-
+    /// Set the authority host for authentication requests.
     pub fn set_authority_host(&mut self, authority_host: String) {
         self.authority_host = authority_host
     }
 
     /// The authority host to use for authentication requests.  The default is
-    /// "https://login.microsoftonline.com".
+    /// `https://login.microsoftonline.com`.
     pub fn authority_host(&self) -> &str {
         &self.authority_host
     }
@@ -53,10 +52,11 @@ pub mod authority_hosts {
     pub const AZURE_PUBLIC_CLOUD: &str = "https://login.microsoftonline.com";
 }
 
+/// A list of tenant IDs
 pub mod tenant_ids {
     /// The tenant ID for multi-tenant apps
     ///
-    /// https://docs.microsoft.com/azure/active-directory/develop/howto-convert-app-to-be-multi-tenant
+    /// <https://docs.microsoft.com/azure/active-directory/develop/howto-convert-app-to-be-multi-tenant>
     pub const TENANT_ID_COMMON: &str = "common";
     /// The tenant ID for Active Directory Federated Services
     pub const TENANT_ID_ADFS: &str = "adfs";
@@ -65,8 +65,9 @@ pub mod tenant_ids {
 /// Enables authentication to Azure Active Directory using a client secret that was generated for an App Registration.
 ///
 /// More information on how to configure a client secret can be found here:
-/// https://docs.microsoft.com/azure/active-directory/develop/quickstart-configure-app-access-web-apis#add-credentials-to-your-web-application
+/// <https://docs.microsoft.com/azure/active-directory/develop/quickstart-configure-app-access-web-apis#add-credentials-to-your-web-application>
 pub struct ClientSecretCredential {
+    http_client: Arc<dyn HttpClient>,
     tenant_id: String,
     client_id: oauth2::ClientId,
     client_secret: Option<oauth2::ClientSecret>,
@@ -74,13 +75,16 @@ pub struct ClientSecretCredential {
 }
 
 impl ClientSecretCredential {
+    /// Create a new ClientSecretCredential
     pub fn new(
+        http_client: Arc<dyn HttpClient>,
         tenant_id: String,
         client_id: String,
         client_secret: String,
         options: TokenCredentialOptions,
     ) -> ClientSecretCredential {
         ClientSecretCredential {
+            http_client,
             tenant_id,
             client_id: oauth2::ClientId::new(client_id),
             client_secret: Some(oauth2::ClientSecret::new(client_secret)),
@@ -93,27 +97,10 @@ impl ClientSecretCredential {
     }
 }
 
-#[non_exhaustive]
-#[derive(Debug, thiserror::Error)]
-pub enum ClientSecretCredentialError {
-    #[error("Failed to construct token endpoint with tenant id {1}: {0}")]
-    FailedConstructTokenEndpoint(url::ParseError, String),
-    #[error("Failed to construct authorize endpoint with tenant id {1}: {0}")]
-    FailedConstructAuthorizeEndpoint(url::ParseError, String),
-    #[error("Request token error: {0}")]
-    RequestTokenError(
-        oauth2::RequestTokenError<
-            oauth2::reqwest::Error<reqwest::Error>,
-            StandardErrorResponse<BasicErrorResponseType>,
-        >,
-    ),
-}
-
-#[async_trait::async_trait]
+#[cfg_attr(target_arch = "wasm32", async_trait::async_trait(?Send))]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 impl TokenCredential for ClientSecretCredential {
-    type Error = ClientSecretCredentialError;
-
-    async fn get_token(&self, resource: &str) -> Result<TokenResponse, Self::Error> {
+    async fn get_token(&self, resource: &str) -> azure_core::Result<TokenResponse> {
         let options = self.options();
         let authority_host = options.authority_host();
 
@@ -122,10 +109,10 @@ impl TokenCredential for ClientSecretCredential {
                 "{}/{}/oauth2/v2.0/token",
                 authority_host, self.tenant_id
             ))
-            .map_err(|error| {
-                ClientSecretCredentialError::FailedConstructTokenEndpoint(
-                    error,
-                    self.tenant_id.clone(),
+            .with_context(ErrorKind::Credential, || {
+                format!(
+                    "failed to construct token endpoint with tenant id {}",
+                    self.tenant_id
                 )
             })?,
         );
@@ -135,10 +122,10 @@ impl TokenCredential for ClientSecretCredential {
                 "{}/{}/oauth2/v2.0/authorize",
                 authority_host, self.tenant_id
             ))
-            .map_err(|error| {
-                ClientSecretCredentialError::FailedConstructAuthorizeEndpoint(
-                    error,
-                    self.tenant_id.clone(),
+            .with_context(ErrorKind::Credential, || {
+                format!(
+                    "failed to construct authorize endpoint with tenant id {}",
+                    self.tenant_id
                 )
             })?,
         );
@@ -151,36 +138,21 @@ impl TokenCredential for ClientSecretCredential {
         )
         .set_auth_type(AuthType::RequestBody);
 
+        let oauth_http_client = Oauth2HttpClient::new(self.http_client.clone());
         let token_result = client
             .exchange_client_credentials()
             .add_scope(Scope::new(format!("{}/.default", resource)))
-            .request_async(async_http_client)
+            .request_async(|request| oauth_http_client.request(request))
             .await
             .map(|r| {
                 use oauth2::TokenResponse as _;
                 TokenResponse::new(
                     AccessToken::new(r.access_token().secret().to_owned()),
-                    Utc::now()
-                        + chrono::Duration::from_std(
-                            r.expires_in().unwrap_or_else(|| Duration::from_secs(0)),
-                        )
-                        .unwrap(),
+                    OffsetDateTime::now_utc() + r.expires_in().unwrap_or_default(),
                 )
             })
-            .map_err(ClientSecretCredentialError::RequestTokenError)?;
+            .context(ErrorKind::Credential, "request token error")?;
 
         Ok(token_result)
-    }
-}
-
-#[async_trait::async_trait]
-impl azure_core::TokenCredential for ClientSecretCredential {
-    async fn get_token(
-        &self,
-        resource: &str,
-    ) -> Result<azure_core::TokenResponse, azure_core::Error> {
-        TokenCredential::get_token(self, resource)
-            .await
-            .map_err(|error| azure_core::Error::GetTokenError(Box::new(error)))
     }
 }

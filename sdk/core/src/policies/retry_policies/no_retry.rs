@@ -1,5 +1,6 @@
-use crate::policies::{Policy, PolicyResult, Request, Response};
-use crate::PipelineContext;
+use crate::error::{Error, ErrorKind, HttpError};
+use crate::policies::{Policy, PolicyResult, Request};
+use crate::Context;
 use std::sync::Arc;
 
 /// Retry policy that does not retry.
@@ -10,18 +11,34 @@ pub struct NoRetryPolicy {
     _priv: std::marker::PhantomData<u32>,
 }
 
-#[async_trait::async_trait]
-impl<C> Policy<C> for NoRetryPolicy
-where
-    C: Send + Sync,
-{
+#[cfg_attr(target_arch = "wasm32", async_trait::async_trait(?Send))]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
+impl Policy for NoRetryPolicy {
     async fn send(
         &self,
-        ctx: &mut PipelineContext<C>,
+        ctx: &Context,
         request: &mut Request,
-        next: &[Arc<dyn Policy<C>>],
-    ) -> PolicyResult<Response> {
+        next: &[Arc<dyn Policy>],
+    ) -> PolicyResult {
         // just call the following policies and bubble up the error
-        next[0].send(ctx, request, &next[1..]).await
+        let response = next[0].send(ctx, request, &next[1..]).await?;
+
+        if response.status().is_success() {
+            Ok(response)
+        } else {
+            let status = response.status();
+            let http_error = HttpError::new(response).await;
+
+            let error_kind = ErrorKind::http_response(
+                status,
+                http_error.error_code().map(std::borrow::ToOwned::to_owned),
+            );
+            let error = Error::full(
+                error_kind,
+                http_error,
+                format!("server returned error status which will not be retried: {status}"),
+            );
+            return Err(error);
+        }
     }
 }

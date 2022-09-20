@@ -1,17 +1,19 @@
-use oauth2::AccessToken;
-
+use azure_core::auth::AccessToken;
 use serde::Deserialize;
-use thiserror::Error;
-
-use std::convert::TryInto;
 use std::fmt;
 
-#[derive(Debug, Clone, PartialEq, Deserialize)]
+/// Error response returned from the device code flow.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 pub struct DeviceCodeErrorResponse {
+    /// Name of the error.
     pub error: String,
+    /// Description of the error.
     pub error_description: String,
+    /// Uri to get more information on this error.
     pub error_uri: String,
 }
+
+impl std::error::Error for DeviceCodeErrorResponse {}
 
 impl fmt::Display for DeviceCodeErrorResponse {
     // This trait requires `fmt` with this exact signature.
@@ -20,90 +22,38 @@ impl fmt::Display for DeviceCodeErrorResponse {
     }
 }
 
+/// A successful token response.
 #[derive(Debug, Clone, Deserialize)]
 pub struct DeviceCodeAuthorization {
+    /// Always `Bearer`.
     pub token_type: String,
+    /// The scopes the access token is valid for.
+    /// Format: Space separated strings
     pub scope: String,
+    /// Number of seconds the included access token is valid for.
     pub expires_in: u64,
+    /// Issued for the scopes that were requested.
+    /// Format: Opaque string
     access_token: AccessToken,
+    /// Issued if the original scope parameter included offline_access.
+    /// Format: JWT
     refresh_token: Option<AccessToken>,
+    /// Issued if the original scope parameter included the openid scope.
+    /// Format: Opaque string
     id_token: Option<AccessToken>,
 }
 
 impl DeviceCodeAuthorization {
+    /// Get the access token
     pub fn access_token(&self) -> &AccessToken {
         &self.access_token
     }
-
+    /// Get the refresh token
     pub fn refresh_token(&self) -> Option<&AccessToken> {
         self.refresh_token.as_ref()
     }
-
+    /// Get the id token
     pub fn id_token(&self) -> Option<&AccessToken> {
         self.id_token.as_ref()
-    }
-}
-
-#[derive(Error, Debug)]
-pub enum DeviceCodeError {
-    #[error("Authorization declined")]
-    AuthorizationDeclined(DeviceCodeErrorResponse),
-    #[error("Bad verification code")]
-    BadVerificationCode(DeviceCodeErrorResponse),
-    #[error("Expired token")]
-    ExpiredToken(DeviceCodeErrorResponse),
-    #[error("Unrecognized error: {0}")]
-    UnrecognizedError(DeviceCodeErrorResponse),
-    #[error("Unhandled error: {0}. {1}")]
-    UnhandledError(String, String),
-    #[error("Reqwest error: {0}")]
-    ReqwestError(reqwest::Error),
-}
-
-#[derive(Debug, Clone)]
-pub enum DeviceCodeResponse {
-    AuthorizationSucceded(DeviceCodeAuthorization),
-    AuthorizationPending(DeviceCodeErrorResponse),
-}
-
-impl TryInto<DeviceCodeResponse> for String {
-    type Error = DeviceCodeError;
-
-    fn try_into(self) -> Result<DeviceCodeResponse, Self::Error> {
-        // first we try to deserialize as DeviceCodeAuthorization (success)
-        match serde_json::from_str::<DeviceCodeAuthorization>(&self) {
-            Ok(device_code_authorization) => Ok(DeviceCodeResponse::AuthorizationSucceded(
-                device_code_authorization,
-            )),
-            Err(_) => {
-                // now we try to map it to a DeviceCodeErrorResponse
-                match serde_json::from_str::<DeviceCodeErrorResponse>(&self) {
-                    Ok(device_code_error_response) => {
-                        match &device_code_error_response.error as &str {
-                            "authorization_pending" => {
-                                Ok(DeviceCodeResponse::AuthorizationPending(
-                                    device_code_error_response,
-                                ))
-                            }
-                            "authorization_declined" => Err(
-                                DeviceCodeError::AuthorizationDeclined(device_code_error_response),
-                            ),
-
-                            "bad_verification_code" => Err(DeviceCodeError::BadVerificationCode(
-                                device_code_error_response,
-                            )),
-                            "expired_token" => {
-                                Err(DeviceCodeError::ExpiredToken(device_code_error_response))
-                            }
-                            _ => Err(DeviceCodeError::UnrecognizedError(
-                                device_code_error_response,
-                            )),
-                        }
-                    }
-                    // If we cannot, we bail out giving the full error as string
-                    Err(error) => Err(DeviceCodeError::UnhandledError(error.to_string(), self)),
-                }
-            }
-        }
     }
 }

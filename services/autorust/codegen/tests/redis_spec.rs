@@ -6,7 +6,7 @@ use autorust_codegen::{
     spec::{self, TypedReference},
     Spec,
 };
-use std::path::PathBuf;
+use camino::{Utf8Path, Utf8PathBuf};
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
@@ -16,8 +16,9 @@ const LINKS_SPEC: &str = "../../../../azure-rest-api-specs/specification/common-
 
 #[test]
 fn test_redis_ref_files() -> Result<()> {
-    let api = &spec::openapi::parse(REDIS_SPEC)?;
-    let files = spec::openapi::get_reference_file_paths(api);
+    let doc_file = REDIS_SPEC;
+    let api = &spec::openapi::parse(doc_file)?;
+    let files = spec::openapi::get_reference_file_paths(doc_file, api);
     println!("{:#?}", files);
     assert_eq!(2, files.len());
     assert!(files.contains("../../../../../common-types/resource-management/v2/types.json"));
@@ -29,7 +30,7 @@ fn test_redis_read_spec() -> Result<()> {
     let spec = &Spec::read_files(&[REDIS_SPEC])?;
     println!("{:#?}", spec.docs().keys());
     assert_eq!(4, spec.docs().len());
-    assert!(spec.docs().contains_key(std::path::Path::new(
+    assert!(spec.docs().contains_key(Utf8Path::new(
         "../../../../azure-rest-api-specs/specification/common-types/resource-management/v2/types.json"
     )));
     Ok(())
@@ -37,8 +38,9 @@ fn test_redis_read_spec() -> Result<()> {
 
 #[test]
 fn test_links_ref_files() -> Result<()> {
-    let api = &spec::openapi::parse(LINKS_SPEC)?;
-    let files = spec::openapi::get_reference_file_paths(api);
+    let doc_file = LINKS_SPEC;
+    let api = &spec::openapi::parse(doc_file)?;
+    let files = spec::openapi::get_reference_file_paths(doc_file, api);
     println!("{:#?}", files);
     assert_eq!(1, files.len());
     assert!(files.contains("./types.json"));
@@ -47,18 +49,19 @@ fn test_links_ref_files() -> Result<()> {
 
 #[test]
 fn test_links_refs_count() -> Result<()> {
-    let api = &spec::openapi::parse(LINKS_SPEC)?;
-    let refs = spec::openapi::get_references(api);
+    let doc_file = LINKS_SPEC;
+    let api = &spec::openapi::parse(doc_file)?;
+    let refs = spec::openapi::get_references(doc_file, api);
     assert_eq!(10, refs.len());
     Ok(())
 }
 
 #[test]
 fn test_redis_resolve_all_refs() -> Result<()> {
-    let doc_file = PathBuf::from(REDIS_SPEC);
+    let doc_file = Utf8PathBuf::from(REDIS_SPEC);
     let spec = &Spec::read_files(&[&doc_file])?;
-    for (doc_file, doc) in spec.docs() {
-        let refs = spec::openapi::get_references(doc);
+    for (doc_file, api) in spec.docs() {
+        let refs = spec::openapi::get_references(doc_file, api);
         for rs in refs {
             match rs {
                 TypedReference::PathItem(_) => {}
@@ -67,7 +70,7 @@ fn test_redis_resolve_all_refs() -> Result<()> {
                     spec.resolve_parameter_ref(&doc_file, reference)?;
                 }
                 TypedReference::Schema(reference) => {
-                    spec.resolve_schema_ref(&doc_file, reference)?;
+                    spec.resolve_schema_ref(&doc_file, &reference)?;
                 }
             }
         }

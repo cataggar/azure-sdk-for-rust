@@ -1,17 +1,9 @@
-mod activity_id;
-mod ba512_range;
-mod client_request_id;
-mod content_disposition;
-mod content_encoding;
-mod content_language;
 mod content_length;
 mod content_range;
-mod content_type;
-mod continuation;
-mod delimiter;
 mod if_match_condition;
 mod if_modified_since;
 mod if_modified_since_condition;
+mod if_sequence_number;
 mod if_source_match_condition;
 mod if_source_modified_since_condition;
 mod lease;
@@ -21,29 +13,18 @@ mod max_item_count;
 mod max_results;
 mod metadata;
 mod next_marker;
-mod prefix;
 mod proposed_lease_id;
 mod range;
 mod sequence_number;
-mod sequence_number_condition;
 mod source_lease_id;
 mod timeout;
-mod user_agent;
 
-pub use activity_id::ActivityId;
-pub use ba512_range::BA512Range;
-pub use client_request_id::ClientRequestId;
-pub use content_disposition::ContentDisposition;
-pub use content_encoding::ContentEncoding;
-pub use content_language::ContentLanguage;
 pub use content_length::ContentLength;
 pub use content_range::ContentRange;
-pub use content_type::ContentType;
-pub use continuation::Continuation;
-pub use delimiter::Delimiter;
 pub use if_match_condition::IfMatchCondition;
 pub use if_modified_since::IfModifiedSince;
 pub use if_modified_since_condition::IfModifiedSinceCondition;
+pub use if_sequence_number::IfSequenceNumber;
 pub use if_source_match_condition::IfSourceMatchCondition;
 pub use if_source_modified_since_condition::IfSourceModifiedSinceCondition;
 pub use lease::LeaseId;
@@ -53,11 +34,76 @@ pub use max_item_count::MaxItemCount;
 pub use max_results::MaxResults;
 pub use metadata::Metadata;
 pub use next_marker::NextMarker;
-pub use prefix::Prefix;
 pub use proposed_lease_id::ProposedLeaseId;
 pub use range::Range;
 pub use sequence_number::SequenceNumber;
-pub use sequence_number_condition::SequenceNumberCondition;
 pub use source_lease_id::SourceLeaseId;
 pub use timeout::Timeout;
-pub use user_agent::UserAgent;
+
+request_header!(
+    /// Advertises which content encoding the client is able to understand.
+    ///
+    /// The Accept-Encoding request HTTP header advertises which content
+    /// encoding, usually a compression algorithm, the client is able to
+    /// understand. Using content negotiation, the server selects one of the
+    /// proposals, uses it and informs the client of its choice with the
+    /// Content-Encoding response header.
+    ///
+    /// Even if both the client and the server supports the same compression
+    /// algorithms, the server may choose not to compress the body of a
+    /// response, if the identity value is also acceptable.
+    AcceptEncoding,
+    ACCEPT_ENCODING,
+);
+
+request_header!(
+    /// The (friendly) version identifier for the client making the request
+    ClientVersion,
+    CLIENT_VERSION
+);
+
+request_header!(
+    /// The Content Type indicates the media type of the request body
+    ContentType,
+    CONTENT_TYPE,
+    (APPLICATION_JSON, "application/json")
+);
+
+request_header!(
+    /// Advertises which content types the client is able to understand.
+    ///
+    /// The Accept request HTTP header advertises which content types, expressed
+    /// as MIME types, the client is able to understand. Using content
+    /// negotiation, the server then selects one of the proposals, uses it and
+    /// informs the client of its choice with the Content-Type response header.
+    /// Browsers set adequate values for this header depending of the context
+    /// where the request is done: when fetching a CSS stylesheet a different
+    /// value is set for the request than when fetching an image, video or a
+    /// script.
+    Accept,
+    ACCEPT
+);
+
+request_header!(
+    /// The (friendly) name of the user making the request
+    User,
+    USER,
+);
+
+request_header!(ActivityId, ACTIVITY_ID);
+request_header!(App, APP,);
+request_header!(ClientRequestId, CLIENT_REQUEST_ID);
+request_header!(ContentDisposition, CONTENT_DISPOSITION);
+request_header!(ContentEncoding, CONTENT_ENCODING);
+request_header!(ContentLanguage, CONTENT_LANGUAGE);
+request_header!(Continuation, CONTINUATION);
+request_header!(IfTags, IF_TAGS);
+request_header!(UserAgent, USER_AGENT);
+request_header!(Version, VERSION);
+
+request_query!(
+    /// Set delimiter for the request
+    Delimiter,
+    "delimiter"
+);
+request_query!(Prefix, "prefix");

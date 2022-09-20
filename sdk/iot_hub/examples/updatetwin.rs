@@ -1,5 +1,5 @@
-use iot_hub::service::ServiceClient;
-use serde_json;
+use azure_iot_hub::service::ServiceClient;
+
 use std::error::Error;
 
 #[tokio::main]
@@ -16,14 +16,12 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
         .expect("Please pass the payload as the second parameter");
 
     println!("Updating device twin for device: {}", device_id);
-    let http_client = azure_core::new_http_client();
 
-    let service_client =
-        ServiceClient::from_connection_string(http_client, iot_hub_connection_string, 3600)?;
+    let service_client = ServiceClient::new_connection_string(iot_hub_connection_string, 3600)?;
     let updated_twin = service_client
         .update_device_twin(device_id)
-        .properties(serde_json::from_str(&payload)?)
-        .execute()
+        .desired_properties(serde_json::from_str(&payload)?)
+        .into_future()
         .await?;
 
     println!("Received device twin: {:?}", updated_twin);

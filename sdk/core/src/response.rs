@@ -1,71 +1,47 @@
-use crate::bytes_response::BytesResponse;
-use crate::BytesStream;
-use crate::StreamError;
+use crate::error::{ErrorKind, ResultExt};
+use crate::headers::Headers;
+use crate::StatusCode;
 use bytes::Bytes;
-use futures::Stream;
-use futures::StreamExt;
-use http::{header::HeaderName, HeaderMap, HeaderValue, StatusCode};
+use futures::{Stream, StreamExt};
+use std::fmt::Debug;
 use std::pin::Pin;
 
-type PinnedStream = Pin<Box<dyn Stream<Item = Result<Bytes, StreamError>> + Send + Sync>>;
+pub(crate) type PinnedStream = Pin<Box<dyn Stream<Item = crate::Result<Bytes>> + Send + Sync>>;
 
-#[allow(dead_code)]
-pub(crate) struct ResponseBuilder {
-    status: StatusCode,
-    headers: HeaderMap,
-}
-
-impl ResponseBuilder {
-    #[allow(dead_code)]
-    pub fn new(status: StatusCode) -> Self {
-        Self {
-            status,
-            headers: HeaderMap::new(),
-        }
-    }
-
-    #[allow(dead_code)]
-    pub fn with_header(&mut self, key: &HeaderName, value: HeaderValue) -> &mut Self {
-        self.headers.append(key, value);
-        self
-    }
-
-    #[allow(dead_code)]
-    pub fn with_pinned_stream(self, response: PinnedStream) -> Response {
-        Response::new(self.status, self.headers, response)
-    }
-}
-
-// An HTTP Response
+/// An HTTP Response.
 pub struct Response {
     status: StatusCode,
-    headers: HeaderMap,
-    body: PinnedStream,
+    headers: Headers,
+    body: ResponseBody,
 }
 
 impl Response {
-    pub(crate) fn new(status: StatusCode, headers: HeaderMap, body: PinnedStream) -> Self {
+    pub fn new(status: StatusCode, headers: Headers, stream: PinnedStream) -> Self {
         Self {
             status,
             headers,
-            body,
+            body: ResponseBody::new(stream),
         }
     }
 
+    /// Get the status code from the response.
     pub fn status(&self) -> StatusCode {
         self.status
     }
 
-    pub fn headers(&self) -> &HeaderMap {
+    /// Get the headers from the response.
+    pub fn headers(&self) -> &Headers {
         &self.headers
     }
 
-    pub fn deconstruct(self) -> (StatusCode, HeaderMap, PinnedStream) {
+    /// Deconstruct the HTTP response into its components.
+    pub fn deconstruct(self) -> (StatusCode, Headers, ResponseBody) {
         (self.status, self.headers, self.body)
     }
 
-    pub async fn into_body_string(self) -> String {
-        pinned_stream_into_utf8_string(self.body).await
+    /// Consume the HTTP response and return the HTTP body bytes.
+    pub fn into_body(self) -> ResponseBody {
+        self.body
     }
 }
 
@@ -79,42 +55,93 @@ impl std::fmt::Debug for Response {
     }
 }
 
-/// Convenience function that transforms a `PinnedStream` in a `bytes::Bytes` struct by collecting all the chunks. It consumes the response stream.
-pub async fn collect_pinned_stream(mut pinned_stream: PinnedStream) -> Result<Bytes, StreamError> {
-    let mut final_result = Vec::new();
-
-    while let Some(res) = pinned_stream.next().await {
-        let res = res?;
-        final_result.extend(&res);
-    }
-
-    Ok(final_result.into())
+/// A response with the body collected as bytes
+#[derive(Debug, Clone)]
+pub struct CollectedResponse {
+    status: StatusCode,
+    headers: Headers,
+    body: Bytes,
 }
 
-/// Collects a `PinnedStream` into a utf8 String
-///
-/// If the stream cannot be collected or is not utf8, a placeholder string
-/// will be returned.
-pub async fn pinned_stream_into_utf8_string(stream: PinnedStream) -> String {
-    let body = collect_pinned_stream(stream)
-        .await
-        .unwrap_or_else(|_| Bytes::from_static("<INVALID BODY>".as_bytes()));
-    let body = std::str::from_utf8(&body)
-        .unwrap_or("<NON-UTF8 BODY>")
-        .to_owned();
-    body
-}
-
-impl From<BytesResponse> for Response {
-    fn from(bytes_response: BytesResponse) -> Self {
-        let (status, headers, body) = bytes_response.deconstruct();
-
-        let bytes_stream: BytesStream = body.into();
-
+impl CollectedResponse {
+    /// Create a new instance
+    pub fn new(status: StatusCode, headers: Headers, body: Bytes) -> Self {
         Self {
             status,
             headers,
-            body: Box::pin(bytes_stream),
+            body,
         }
+    }
+
+    /// Get the status
+    pub fn status(&self) -> &StatusCode {
+        &self.status
+    }
+
+    /// Get the headers
+    pub fn headers(&self) -> &Headers {
+        &self.headers
+    }
+
+    /// Get the body
+    pub fn body(&self) -> &Bytes {
+        &self.body
+    }
+
+    /// From a response
+    pub async fn from_response(response: Response) -> crate::Result<Self> {
+        let (status, headers, body) = response.deconstruct();
+        let body = body.collect().await?;
+        Ok(Self::new(status, headers, body))
+    }
+}
+
+/// A response body stream
+///
+/// This body can either be streamed or collected into `Bytes`
+#[pin_project::pin_project]
+pub struct ResponseBody(#[pin] PinnedStream);
+
+impl ResponseBody {
+    fn new(stream: PinnedStream) -> Self {
+        Self(stream)
+    }
+
+    /// Collect the stream into a `Bytes` collection
+    pub async fn collect(mut self) -> crate::Result<Bytes> {
+        let mut final_result = Vec::new();
+
+        while let Some(res) = self.0.next().await {
+            final_result.extend(&res?);
+        }
+
+        Ok(final_result.into())
+    }
+
+    /// Collect the stream into a `String`
+    pub async fn collect_string(self) -> crate::Result<String> {
+        std::str::from_utf8(&self.collect().await?)
+            .context(
+                ErrorKind::DataConversion,
+                "response body was not utf-8 like expected",
+            )
+            .map(ToOwned::to_owned)
+    }
+}
+
+impl Stream for ResponseBody {
+    type Item = crate::Result<Bytes>;
+    fn poll_next(
+        self: Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Option<Self::Item>> {
+        let this = self.project();
+        this.0.poll_next(cx)
+    }
+}
+
+impl Debug for ResponseBody {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("ResonseBody")
     }
 }
