@@ -1,10 +1,7 @@
-#[cfg(not(target_arch = "wasm32"))]
 use crate::policies::{Policy, PolicyResult};
-#[allow(unused_imports)]
 use crate::TransportOptions;
-#[allow(unused_imports)]
-use crate::{Context, HttpClient, PipelineContext, Request, Response};
-#[cfg(not(target_arch = "wasm32"))]
+use crate::{Context, Request};
+use async_trait::async_trait;
 use std::sync::Arc;
 
 #[derive(Debug, Clone)]
@@ -13,29 +10,26 @@ pub struct TransportPolicy {
 }
 
 impl TransportPolicy {
-    #[cfg(not(target_arch = "wasm32"))]
     pub fn new(transport_options: TransportOptions) -> Self {
         Self { transport_options }
     }
 }
 
-#[async_trait::async_trait]
-#[cfg(not(target_arch = "wasm32"))]
-impl<C> Policy<C> for TransportPolicy
-where
-    C: Send + Sync,
-{
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+impl Policy for TransportPolicy {
     async fn send(
         &self,
-        _ctx: &mut PipelineContext<C>,
+        ctx: &Context,
         request: &mut Request,
-        next: &[Arc<dyn Policy<C>>],
-    ) -> PolicyResult<Response> {
+        next: &[Arc<dyn Policy>],
+    ) -> PolicyResult {
         // there must be no more policies
         assert_eq!(0, next.len());
 
-        let response = { self.transport_options.http_client.execute_request2(request) };
+        log::debug!("the following request will be passed to the transport policy: {request:#?}");
+        let response = { self.transport_options.send(ctx, request) };
 
-        Ok(response.await?)
+        response.await
     }
 }

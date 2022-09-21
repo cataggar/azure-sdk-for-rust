@@ -13,7 +13,7 @@ pub struct Parameter {
 
     /// may be `header`, `query`, 'path`, `formData`
     #[serde(rename = "in")]
-    pub in_: ParameterType,
+    pub in_: ParameterIn,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub required: Option<bool>,
@@ -50,17 +50,18 @@ pub struct Parameter {
     pub x_ms_header_collection_prefix: Option<String>,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-pub enum ParameterType {
+pub enum ParameterIn {
     Path,
     Query,
     Header,
     Body,
-    Form,
+    /// https://swagger.io/docs/specification/2-0/describing-parameters/#form-parameters
+    FormData,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub enum CollectionFormat {
     Csv,

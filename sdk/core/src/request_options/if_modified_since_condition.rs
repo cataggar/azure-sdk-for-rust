@@ -1,45 +1,28 @@
-use crate::AddAsHeader;
-use chrono::{DateTime, Utc};
-use http::header::{IF_MODIFIED_SINCE, IF_UNMODIFIED_SINCE};
-use http::request::Builder;
+use crate::{
+    date,
+    headers::{self, Header, HeaderName},
+};
+use time::OffsetDateTime;
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum IfModifiedSinceCondition {
-    Modified(DateTime<Utc>),
-    Unmodified(DateTime<Utc>),
+    Modified(OffsetDateTime),
+    Unmodified(OffsetDateTime),
 }
 
-impl AddAsHeader for IfModifiedSinceCondition {
-    fn add_as_header(&self, builder: Builder) -> Builder {
+impl Header for IfModifiedSinceCondition {
+    fn name(&self) -> HeaderName {
         match self {
-            IfModifiedSinceCondition::Modified(date) => {
-                builder.header(IF_MODIFIED_SINCE, &date.to_rfc2822() as &str)
-            }
-            IfModifiedSinceCondition::Unmodified(date) => {
-                builder.header(IF_UNMODIFIED_SINCE, &date.to_rfc2822() as &str)
-            }
+            IfModifiedSinceCondition::Modified(_) => headers::IF_MODIFIED_SINCE,
+            IfModifiedSinceCondition::Unmodified(_) => headers::IF_UNMODIFIED_SINCE,
         }
     }
 
-    fn add_as_header2(
-        &self,
-        request: &mut crate::Request,
-    ) -> Result<(), crate::errors::HTTPHeaderError> {
+    fn value(&self) -> headers::HeaderValue {
         match self {
-            IfModifiedSinceCondition::Modified(date) => {
-                request.headers_mut().append(
-                    IF_MODIFIED_SINCE,
-                    http::HeaderValue::from_str(&date.to_rfc2822() as &str)?,
-                );
-            }
-            IfModifiedSinceCondition::Unmodified(date) => {
-                request.headers_mut().append(
-                    IF_UNMODIFIED_SINCE,
-                    http::HeaderValue::from_str(&date.to_rfc2822() as &str)?,
-                );
-            }
+            IfModifiedSinceCondition::Modified(date)
+            | IfModifiedSinceCondition::Unmodified(date) => date::to_rfc1123(date),
         }
-
-        Ok(())
+        .into()
     }
 }

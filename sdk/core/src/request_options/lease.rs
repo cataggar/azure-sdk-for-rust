@@ -1,10 +1,8 @@
-use crate::headers::*;
-use crate::AddAsHeader;
-use http::request::Builder;
+use crate::headers::{self, Header};
 use std::str::FromStr;
 use uuid::Uuid;
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct LeaseId(Uuid);
 
 impl std::fmt::Display for LeaseId {
@@ -21,19 +19,12 @@ impl std::str::FromStr for LeaseId {
     }
 }
 
-impl AddAsHeader for LeaseId {
-    fn add_as_header(&self, builder: Builder) -> Builder {
-        builder.header(LEASE_ID, &format!("{}", self.0))
+impl Header for LeaseId {
+    fn name(&self) -> headers::HeaderName {
+        headers::LEASE_ID
     }
 
-    fn add_as_header2(
-        &self,
-        request: &mut crate::Request,
-    ) -> Result<(), crate::errors::HTTPHeaderError> {
-        request
-            .headers_mut()
-            .append(LEASE_ID, http::HeaderValue::from_str(&self.0.to_string())?);
-
-        Ok(())
+    fn value(&self) -> headers::HeaderValue {
+        format!("{}", self.0).into()
     }
 }

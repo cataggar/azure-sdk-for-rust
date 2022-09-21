@@ -1,0 +1,11 @@
+{
+  "status": 202,
+  "headers": {
+    "content-length": "0",
+    "date": "Fri, 16 Sep 2022 18:46:36 GMT",
+    "server": "Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0",
+    "x-ms-request-id": "0c3b5299-901e-005e-13fc-c9a9ed000000",
+    "x-ms-version": "2019-12-12"
+  },
+  "body": ""
+}

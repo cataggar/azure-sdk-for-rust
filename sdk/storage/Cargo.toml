@@ -1,153 +1,48 @@
 [package]
 name = "azure_storage"
-version = "0.1.0"
-description = "Rust wrappers around Microsoft Azure Storage REST APIs"
+version = "0.6.0"
+description = "Azure Storage crate from the Azure SDK for Rust"
 readme = "README.md"
 authors = ["Microsoft Corp."]
 license = "MIT"
 repository = "https://github.com/azure/azure-sdk-for-rust"
 homepage = "https://github.com/azure/azure-sdk-for-rust"
 documentation = "https://docs.rs/azure_storage"
-keywords = ["sdk", "azure", "rest", "iot", "cloud"]
+keywords = ["sdk", "azure", "storage"]
 categories = ["api-bindings"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 async-trait = "0.1"
-azure_core = { path = "../core", version = "0.1.0" }
-ring = "0.16"
+azure_core = { path = "../core", version = "0.5", features = ["xml"] }
 base64 = "0.13"
-chrono = "0.4"
-http = "0.2"
+time = "0.3.10"
 futures = "0.3"
 log = "0.4"
 serde = "1.0"
 serde_derive = "1.0"
 serde_json = "1.0"
-serde-xml-rs = "0.4"
+serde-xml-rs = "0.6"
 url = "2.2"
-uuid = { version = "0.8", features = ["v4"] }
+uuid = { version = "1.0", features = ["v4"] }
 bytes = "1.0"
-md5 = "0.7"
 RustyXML = "0.3"
-thiserror = "1.0"
 once_cell = "1.7"
+hmac = "0.12"
+sha2 = "0.10"
 
 [dev-dependencies]
-tokio = { version = "1.0", features = ["macros"] }
-env_logger = "0.8"
-azure_identity = { path = "../identity" }
+tokio = { version = "1.0", features = ["macros", "rt-multi-thread"] }
+env_logger = "0.9"
 reqwest = "0.11"
+mock_transport = { path = "../../eng/test/mock_transport" }
+azure_identity = { path = "../identity", default-features = false }
+
 
 [features]
-default = ["account", "blob", "queue", "table", "data_lake"]
-test_e2e = ["account", "blob", "queue", "table", "data_lake"]
-mock_transport_framework = [ "azure_core/mock_transport_framework"]
-test_integration = ["account", "blob", "queue", "table", "data_lake"]
-account = []
+default = ["enable_reqwest"]
+test_e2e = []
+test_integration = []
 azurite_workaround = []
-blob = []
-queue = []
-table = []
-data_lake = []
-
-# This section specifies the required features for the examples.
-[[example]]
-name="table_00"
-required-features = ["table"]
-[[example]]
-name="account00"
-required-features = ["account"]
-[[example]]
-name="blob_00"
-required-features=["blob"]
-[[example]]
-name="blob_01"
-required-features=["blob"]
-[[example]]
-name="blob_02_bearer_token"
-required-features=["blob"]
-[[example]]
-name="blob_04"
-required-features=["blob"]
-[[example]]
-name="blob_05_default_credential"
-required-features=["blob"]
-[[example]]
-name="blob_range"
-required-features=["blob"]
-[[example]]
-name="connection_string_builder"
-required-features=["blob"]
-[[example]]
-name="connection_string"
-required-features=["blob"]
-[[example]]
-name="container_00"
-required-features=["blob"]
-[[example]]
-name="container_01"
-required-features=["blob"]
-[[example]]
-name="container_and_blob"
-required-features=["blob"]
-[[example]]
-name="copy_blob_from_url"
-required-features=["blob"]
-[[example]]
-name="copy_blob"
-required-features=["blob"]
-[[example]]
-name="count_blobs"
-required-features=["blob"]
-[[example]]
-name="emulator_00"
-required-features=["blob"]
-[[example]]
-name="list_blobs_00"
-required-features=["blob"]
-[[example]]
-name="list_blobs_01"
-required-features=["blob"]
-[[example]]
-name="list_containers2"
-required-features=["blob"]
-[[example]]
-name="put_append_blob_00"
-required-features=["blob"]
-[[example]]
-name="put_block_blob_00"
-required-features=["blob"]
-[[example]]
-name="put_page_blob_00"
-required-features=["blob"]
-[[example]]
-name="shared_access_signature"
-required-features=["blob"]
-[[example]]
-name="stream_blob_00"
-required-features=["blob"]
-[[example]]
-name="stream_blob_01"
-required-features=["blob"]
-[[example]]
-name="list_queues"
-required-features=["queue"]
-[[example]]
-name="queue_create"
-required-features=["queue"]
-[[example]]
-name="get_messages"
-required-features=["queue"]
-[[example]]
-name="peek_messages"
-required-features=["queue"]
-[[example]]
-name="delete_message"
-required-features=["queue"]
-[[example]]
-name="put_message"
-required-features=["queue"]
-[[example]]
-name="data_lake_00"
-required-features=["data_lake"]
+enable_reqwest = ["azure_core/enable_reqwest"]
+enable_reqwest_rustls = ["azure_core/enable_reqwest_rustls"]

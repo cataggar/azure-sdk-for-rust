@@ -1,6 +1,8 @@
-use crate::{AppendToUrlQuery, Error};
+use crate::headers::{self, Headers};
+use crate::AppendToUrlQuery;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct NextMarker(String);
 
 impl NextMarker {
@@ -9,14 +11,10 @@ impl NextMarker {
     }
 
     pub fn from_possibly_empty_string(next_marker: Option<String>) -> Option<Self> {
-        if let Some(nm) = next_marker {
-            if nm.is_empty() {
-                None
-            } else {
-                Some(NextMarker::new(nm))
-            }
-        } else {
+        if let Some("") = next_marker.as_deref() {
             None
+        } else {
+            next_marker.map(Into::into)
         }
     }
 
@@ -28,11 +26,8 @@ impl NextMarker {
         url.query_pairs_mut().append_pair("continuation", &self.0);
     }
 
-    pub fn from_header_optional(headers: &http::HeaderMap) -> Result<Option<Self>, Error> {
-        let header_as_str = headers
-            .get("x-ms-continuation")
-            .map(|item| item.to_str())
-            .transpose()?;
+    pub fn from_header_optional(headers: &Headers) -> crate::Result<Option<Self>> {
+        let header_as_str = headers.get_optional_str(&headers::CONTINUATION);
 
         Ok(header_as_str
             .filter(|h| !h.is_empty())

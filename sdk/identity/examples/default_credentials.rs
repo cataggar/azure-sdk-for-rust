@@ -1,4 +1,5 @@
-use azure_identity::token_credentials::*;
+use azure_core::auth::TokenCredential;
+use azure_identity::*;
 use url::Url;
 
 #[tokio::main]
@@ -6,7 +7,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init();
 
     let sub_id = std::env::var("AZURE_SUBSCRIPTION_ID")?;
-    let creds = DefaultAzureCredential::default();
+    let creds = DefaultAzureCredentialBuilder::new()
+        .exclude_azure_cli_credential() // disable using CLI for credentials (just as an example)
+        .build();
+
     let res = creds
         .get_token("https://management.azure.com/")
         .await
@@ -29,6 +33,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .text()
         .await?;
 
-    println!("\n\nresp {:?}", resp);
+    println!("\n\n{:?}", resp);
     Ok(())
 }

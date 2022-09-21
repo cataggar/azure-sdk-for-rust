@@ -1,5 +1,4 @@
 use crate::SeekableStream;
-use crate::StreamError;
 use bytes::Bytes;
 use futures::io::AsyncRead;
 use futures::stream::Stream;
@@ -38,7 +37,7 @@ impl From<Bytes> for BytesStream {
 }
 
 impl Stream for BytesStream {
-    type Item = Result<Bytes, StreamError>;
+    type Item = crate::Result<Bytes>;
 
     fn poll_next(
         self: Pin<&mut Self>,
@@ -57,11 +56,16 @@ impl Stream for BytesStream {
     }
 }
 
-#[async_trait::async_trait]
+#[cfg_attr(target_arch = "wasm32", async_trait::async_trait(?Send))]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 impl SeekableStream for BytesStream {
-    async fn reset(&mut self) -> Result<(), StreamError> {
+    async fn reset(&mut self) -> crate::Result<()> {
         self.bytes_read = 0;
         Ok(())
+    }
+
+    fn len(&self) -> usize {
+        self.bytes.len()
     }
 }
 

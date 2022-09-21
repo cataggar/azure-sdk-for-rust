@@ -5,20 +5,26 @@ az vm list --query [].id
 cargo run --package azure_mgmt_compute --example vm_list
 */
 
-use azure_identity::token_credentials::AzureCliCredential;
-use azure_mgmt_compute::operations::virtual_machines;
+use azure_identity::AzureCliCredential;
+use futures::stream::StreamExt;
+use std::sync::Arc;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let http_client = azure_core::new_http_client();
-    let token_credential = AzureCliCredential {};
-    let subscription_id = &AzureCliCredential::get_subscription()?;
-    let config = &azure_mgmt_compute::config(http_client, Box::new(token_credential)).build();
+    let credential = Arc::new(AzureCliCredential::new());
+    let subscription_id = AzureCliCredential::get_subscription()?;
+    let client = azure_mgmt_compute::Client::builder(credential).build();
 
-    let vms = virtual_machines::list_all(config, subscription_id, None).await?;
-    println!("# of virtual machines {}", vms.value.len());
-    for vm in &vms.value {
-        println!("{:?}", &vm.resource.id);
+    let mut count = 0;
+    let mut vms = client.virtual_machines_client().list_all(subscription_id).into_stream();
+    while let Some(vms) = vms.next().await {
+        let vms = vms?;
+        count += vms.value.len();
+        for vm in vms.value {
+            println!("{:?}", &vm.resource.id);
+        }
     }
+    println!("# of virtual machines {}", count);
+
     Ok(())
 }

@@ -1,5 +1,5 @@
-use iot_hub::service::ServiceClient;
-use serde_json;
+use azure_iot_hub::service::ServiceClient;
+
 use std::error::Error;
 
 #[tokio::main]
@@ -23,20 +23,20 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
         .nth(4)
         .expect("Please pass the payload as the fourth parameter");
 
-    let http_client = azure_core::new_http_client();
-    let service_client =
-        ServiceClient::from_connection_string(http_client, iot_hub_connection_string, 3600)?;
+    let service_client = ServiceClient::new_connection_string(iot_hub_connection_string, 3600)?;
     println!(
         "Sending direct method {} to {}:{} on: {}",
         method_name, device_id, module_id, service_client.iot_hub_name
     );
 
-    let direct_method =
-        service_client.create_module_method(device_id, module_id, method_name, 30, 30);
+    let direct_method = service_client.create_module_method(
+        device_id,
+        module_id,
+        method_name,
+        serde_json::from_str(&payload)?,
+    );
 
-    let response = direct_method
-        .execute(serde_json::from_str(&payload)?)
-        .await?;
+    let response = direct_method.into_future().await?;
 
     println!(
         "Received a response from the direct method with status code {} and payload {:?}",

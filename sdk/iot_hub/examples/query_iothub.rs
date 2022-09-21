@@ -1,4 +1,4 @@
-use iot_hub::service::ServiceClient;
+use azure_iot_hub::service::ServiceClient;
 use std::error::Error;
 
 #[tokio::main]
@@ -11,14 +11,12 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
     let query = "SELECT * FROM devices";
     println!("Invoking query '{}' on the IoT Hub", query);
 
-    let http_client = azure_core::new_http_client();
-    let service_client =
-        ServiceClient::from_connection_string(http_client, iot_hub_connection_string, 3600)?;
+    let service_client = ServiceClient::new_connection_string(iot_hub_connection_string, 3600)?;
 
     let response = service_client
-        .query()
+        .query(query)
         .max_item_count(1)
-        .execute(query)
+        .into_future()
         .await?;
 
     println!(
@@ -32,10 +30,10 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
     };
 
     let response = service_client
-        .query()
+        .query(query)
         .max_item_count(1)
-        .continuation(token.as_str())
-        .execute(query)
+        .continuation(token)
+        .into_future()
         .await?;
 
     println!(

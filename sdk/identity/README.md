@@ -1,14 +1,23 @@
-# Azure SDK for Rust - Azure OAuth2 Crate
+# Azure SDK for Rust - Azure Identity Crate
 
- Azure OAuth2 helper crate for the unofficial Microsoft Azure SDK for Rust. This crate is part of a collection of crates: for more information please refer to [https://github.com/azure/azure-sdk-for-rust](https://github.com/azure/azure-sdk-for-rust).
+ Azure Identity crate for the unofficial Microsoft Azure SDK for Rust. This crate is part of a collection of crates: for more information please refer to [https://github.com/azure/azure-sdk-for-rust](https://github.com/azure/azure-sdk-for-rust).
 This crate provides mechanisms for several ways to authenticate against Azure
 
-For example, to authenticate using the client credential flow, you can do the following:
+Several implementations of `azure_core::auth::TokenCredential` trait are available:
+
+- DefaultAzureCredential
+- EnvironmentCredential
+- ImdsManagedIdentityCredential
+- AzureCliCredential
+- AutoRefreshingTokenCredential
+
+There are several [examples](https://github.com/Azure/azure-sdk-for-rust/tree/main/sdk/identity/examples) available. The [service examples](https://github.com/Azure/azure-sdk-for-rust/tree/main/services#examples) mostly use `AzureCliCredential`.
+
+To authenticate using the client credential flow, you can do the following:
 
 ```rust
 use azure_identity::client_credentials_flow;
 use oauth2::{ClientId, ClientSecret};
-use url::Url;
 
 use std::env;
 use std::error::Error;
@@ -21,8 +30,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
         env::var("CLIENT_SECRET").expect("Missing CLIENT_SECRET environment variable."),
     );
     let tenant_id = env::var("TENANT_ID").expect("Missing TENANT_ID environment variable.");
-    let subscription_id =
-        env::var("SUBSCRIPTION_ID").expect("Missing SUBSCRIPTION_ID environment variable.");
 
     let client = reqwest::Client::new();
     // This will give you the final token to use in authorization.
@@ -45,11 +52,4 @@ The supported authentication flows are:
 
 This crate also includes utilities for handling refresh tokens and accessing token credentials from many different sources.
 
-## Usage
-
-To set this crate as a dependency, add this to your Cargo.toml
-
-```toml
-[dependencies]
-azure_identity = { version = "0.1.0", git = "https://github.com/Azure/azure-sdk-for-rust" }
-```
+A list of changes can be found in [CHANGELOG.md](https://github.com/Azure/azure-sdk-for-rust/blob/main/sdk/identity/CHANGELOG.md);

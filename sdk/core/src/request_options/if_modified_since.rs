@@ -1,30 +1,30 @@
-use crate::{headers, AddAsHeader};
-use chrono::{DateTime, Utc};
-use http::request::Builder;
+use crate::{
+    date,
+    headers::{self, Header},
+};
+use time::OffsetDateTime;
 
 #[derive(Debug, Clone, Copy)]
-pub struct IfModifiedSince<'a>(&'a DateTime<Utc>);
+pub struct IfModifiedSince(OffsetDateTime);
 
-impl<'a> IfModifiedSince<'a> {
-    pub fn new(time: &'a DateTime<Utc>) -> Self {
+impl IfModifiedSince {
+    pub fn new(time: OffsetDateTime) -> Self {
         Self(time)
     }
 }
 
-impl AddAsHeader for IfModifiedSince<'_> {
-    fn add_as_header(&self, builder: Builder) -> Builder {
-        builder.header(headers::IF_MODIFIED_SINCE, self.0.to_rfc2822())
+impl Header for IfModifiedSince {
+    fn name(&self) -> headers::HeaderName {
+        headers::IF_MODIFIED_SINCE
     }
 
-    fn add_as_header2(
-        &self,
-        request: &mut crate::Request,
-    ) -> Result<(), crate::errors::HTTPHeaderError> {
-        request.headers_mut().append(
-            headers::IF_MODIFIED_SINCE,
-            http::HeaderValue::from_str(&self.0.to_rfc2822())?,
-        );
+    fn value(&self) -> headers::HeaderValue {
+        date::to_rfc1123(&self.0).into()
+    }
+}
 
-        Ok(())
+impl From<OffsetDateTime> for IfModifiedSince {
+    fn from(time: OffsetDateTime) -> Self {
+        Self::new(time)
     }
 }

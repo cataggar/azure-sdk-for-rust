@@ -1,32 +1,23 @@
-use crate::spec::WebVerb;
-use crate::status_codes::{get_response_type_ident, get_status_code_ident_camel_case};
-use crate::WebOperation;
-use crate::{
-    codegen::{
-        create_generated_by_header, get_type_name_for_schema, get_type_name_for_schema_ref, is_array, parse_params, AsReference, Error,
-        PARAM_RE,
-    },
-    identifier::ident,
-    path, spec,
-    status_codes::{get_error_responses, get_response_type_name, get_status_code_name, get_success_responses, has_default_response},
-    CodeGen,
-};
-use autorust_openapi::{ParameterType, ReferenceOr, Response, StatusCode};
-use heck::CamelCase;
-use heck::ShoutySnakeCase;
-use heck::SnakeCase;
+use crate::codegen::TypeNameCode;
+use crate::codegen_operations::WebOperationGen;
+use crate::identifier::{parse_ident, CamelCaseIdent, SnakeCaseIdent};
+use crate::spec::{get_type_name_for_schema_ref, WebParameter, WebVerb};
+use crate::{codegen::PARAM_RE, status_codes::get_status_code_name, CodeGen};
+use crate::{status_codes, Error, ErrorKind};
+use autorust_openapi::{ReferenceOr, Response, StatusCode};
+use camino::Utf8Path;
+use heck::{ToShoutySnakeCase, ToSnakeCase};
 use indexmap::IndexMap;
-use proc_macro2::TokenStream;
-use quote::quote;
+use proc_macro2::{Ident, TokenStream};
+use quote::{quote, ToTokens};
 use regex::Replacer;
-use std::path::Path;
 
 /// Create a route call from the function name and to routes
-fn add_route(routes: &mut Vec<TokenStream>, module_name: Option<&str>, function_name: &str) -> Result<(), Error> {
-    let function_name = ident(function_name).map_err(Error::FunctionName)?;
+fn add_route(routes: &mut Vec<TokenStream>, module_name: Option<&str>, function_name: &str) -> crate::Result<()> {
+    let function_name = parse_ident(function_name)?;
     match module_name {
         Some(module_name) => {
-            let module_name = ident(module_name).map_err(Error::ModuleName)?;
+            let module_name = parse_ident(module_name)?;
             routes.push(quote! {
                 #module_name::#function_name
             });
@@ -40,31 +31,30 @@ fn add_route(routes: &mut Vec<TokenStream>, module_name: Option<&str>, function_
     Ok(())
 }
 
-pub fn create_routes(cg: &CodeGen) -> Result<TokenStream, Error> {
+// TODO return RoutesCode & impl ToTokens
+pub fn create_routes(cg: &CodeGen) -> crate::Result<TokenStream> {
     let mut modules: IndexMap<Option<String>, TokenStream> = IndexMap::new();
     let mut routes = Vec::new();
     // println!("input_files {:?}", cg.input_files());
-    for (doc_file, doc) in cg.spec.docs() {
+    for (doc_file, _doc) in cg.spec.docs() {
         // only operations from listed input files
         // println!("doc_file {:?}", doc_file);
         if cg.spec.is_input_file(&doc_file) {
-            let paths = cg.spec.resolve_path_map(doc_file, doc.paths())?;
-            for (path, item) in &paths {
-                for op in spec::path_operations(path, item) {
-                    let module_name = op.rust_module_name();
-                    let function_name = op.rust_function_name();
-                    add_route(&mut routes, module_name.as_deref(), function_name.as_ref())?;
-                    let function = create_function(cg, doc_file, &op)?;
-                    if modules.contains_key(&module_name) {}
-                    match modules.get_mut(&module_name) {
-                        Some(module) => {
-                            module.extend(function);
-                        }
-                        None => {
-                            let mut module = TokenStream::new();
-                            module.extend(function);
-                            modules.insert(module_name, module);
-                        }
+            let operations: Vec<_> = cg.spec.operations()?.into_iter().map(WebOperationGen).collect();
+            for op in operations {
+                let module_name = op.rust_module_name();
+                let function_name = op.rust_function_name();
+                add_route(&mut routes, module_name.as_deref(), function_name.as_ref())?;
+                let function = create_function(doc_file, &op)?;
+                if modules.contains_key(&module_name) {}
+                match modules.get_mut(&module_name) {
+                    Some(module) => {
+                        module.extend(function);
+                    }
+                    None => {
+                        let mut module = TokenStream::new();
+                        module.extend(function);
+                        modules.insert(module_name, module);
                     }
                 }
             }
@@ -72,7 +62,6 @@ pub fn create_routes(cg: &CodeGen) -> Result<TokenStream, Error> {
     }
 
     let mut file = TokenStream::new();
-    file.extend(create_generated_by_header());
     file.extend(quote! {
         #![allow(unused_mut)]
         #![allow(unused_variables)]
@@ -89,7 +78,7 @@ pub fn create_routes(cg: &CodeGen) -> Result<TokenStream, Error> {
     for (module_name, module) in modules {
         match module_name {
             Some(module_name) => {
-                let name = ident(&module_name).map_err(Error::ModuleName)?;
+                let name = parse_ident(&module_name)?;
                 file.extend(quote! {
                     pub mod #name {
                         use super::*;
@@ -105,112 +94,33 @@ pub fn create_routes(cg: &CodeGen) -> Result<TokenStream, Error> {
     Ok(file)
 }
 
-pub struct OperationParameters(Vec<OperationParameter>);
-
-#[allow(dead_code)]
-pub struct OperationParameter {
-    name: String,
-    in_: ParameterType,
-    type_: TokenStream,
-    is_required: bool,
-    is_array: bool,
-}
-
-#[allow(dead_code)]
-impl OperationParameter {
-    pub fn snake_case_name(&self) -> String {
-        self.name.to_snake_case()
-    }
-    pub fn snake_case_name_ident(&self) -> Result<TokenStream, Error> {
-        ident(&self.snake_case_name()).map_err(Error::ParamName)
-    }
-    pub fn in_body(&self) -> bool {
-        self.in_ == ParameterType::Body
-    }
-    pub fn in_path(&self) -> bool {
-        self.in_ == ParameterType::Path
-    }
-    pub fn in_query(&self) -> bool {
-        self.in_ == ParameterType::Query
-    }
-    pub fn in_header(&self) -> bool {
-        self.in_ == ParameterType::Header
-    }
-    pub fn in_form(&self) -> bool {
-        self.in_ == ParameterType::Form
-    }
-}
-
-impl OperationParameters {
-    pub fn create(cg: &CodeGen, doc_file: &Path, operation: &WebOperation) -> Result<OperationParameters, Error> {
-        let parameters = cg.spec.resolve_parameters(doc_file, &operation.parameters)?;
-        let mut v = Vec::new();
-        for param in &parameters {
-            let name = param.name.to_owned();
-            let in_ = param.in_.to_owned();
-            if name != "api-version" {
-                let type_ = {
-                    if let Some(_param_type) = &param.common.type_ {
-                        get_type_name_for_schema(&param.common, AsReference::True)?
-                    } else if let Some(schema) = &param.schema {
-                        get_type_name_for_schema_ref(schema, AsReference::False)?
-                    } else {
-                        eprintln!("WARN unknown param type for {}", &param.name);
-                        quote! { &serde_json::Value }
-                    }
-                };
-                let is_required = param.required.unwrap_or(false);
-                let is_array = is_array(&param.common);
-                v.push(OperationParameter {
-                    name,
-                    in_,
-                    type_,
-                    is_required,
-                    is_array,
-                })
-            }
-        }
-        Ok(OperationParameters(v))
-    }
-
-    pub fn iter(&self) -> std::slice::Iter<OperationParameter> {
-        self.0.iter()
-    }
-
-    pub fn get_body(&self) -> Option<&OperationParameter> {
-        self.iter().find(|param| param.in_body())
-    }
-}
-
-fn create_function(cg: &CodeGen, doc_file: &Path, operation: &WebOperation) -> Result<TokenStream, Error> {
+fn create_function(doc_file: &Utf8Path, operation: &WebOperationGen) -> crate::Result<TokenStream> {
     let function_name = operation.rust_function_name();
-    let fname = ident(&function_name).map_err(Error::FunctionName)?;
+    let fname = parse_ident(&function_name)?;
 
-    let params = parse_params(&operation.path);
-    // println!("path params {:#?}", params);
-    let params: Result<Vec<_>, Error> = params.iter().map(|s| ident(&s.to_snake_case()).map_err(Error::ParamName)).collect();
+    let params = operation.parameters();
+    let params: crate::Result<Vec<_>> = params.iter().map(|p| parse_ident(&p.name().to_snake_case())).collect();
     let params = params?;
     let _url_str_args = quote! { #(#params),* };
 
-    let parameters = OperationParameters::create(cg, doc_file, operation)?;
+    let parameters = operation.parameters();
 
     let fparams = create_function_params(&parameters)?;
 
-    let examples_name = ident(&format!("{}_examples", function_name.to_snake_case())).map_err(Error::FunctionName)?;
+    let examples_name = parse_ident(&format!("{}_examples", function_name.to_snake_case()))?;
     let examples = get_operation_examples(operation);
-    // TODO make configurable
     let base_path = doc_file;
     let examples_mod = create_examples_mod(base_path, &examples_name, &examples)?;
     let first_example = examples.0.first();
 
-    let responses = &operation.responses;
-    let success_responses = get_success_responses(responses);
-    let error_responses = get_error_responses(responses);
+    let success_responses = operation.success_responses();
+    let error_responses = operation.error_responses();
     let is_single_response = success_responses.len() == 1;
-    let has_default_response = has_default_response(responses);
+    let default_response = operation.default_response();
+    let has_default_response = default_response.is_some();
 
     let responses = get_operation_responses(operation)?;
-    let responder_name = ident(&format!("{}Response", function_name.to_camel_case())).map_err(Error::FunctionName)?;
+    let responder_name = parse_ident(&format!("{}Response", function_name.to_camel_case_id()))?;
     let responder = create_responder(&responder_name, &responses)?;
 
     let fresponse = quote! { Result<#responder_name, crate::CloudErrorResponse> };
@@ -249,7 +159,6 @@ fn create_function(cg: &CodeGen, doc_file: &Path, operation: &WebOperation) -> R
                 DefaultResponse { status_code: http::StatusCode, #tp },
             });
         } else {
-            let response_type = ident(response_type).map_err(Error::ResponseTypeName)?;
             error_responses_ts.extend(quote! {
                 #[error("Error response #response_type")]
                 #response_type { #tp },
@@ -317,7 +226,7 @@ fn create_function(cg: &CodeGen, doc_file: &Path, operation: &WebOperation) -> R
         match status_code {
             autorust_openapi::StatusCode::Code(_) => {
                 let tp = create_response_type(rsp)?;
-                let status_code_name = ident(get_status_code_name(status_code)?).map_err(Error::StatusCodeName)?;
+                let status_code_name = parse_ident(get_status_code_name(status_code)?)?;
                 let response_type_name = get_response_type_name(status_code)?;
                 match tp {
                     Some(tp) => {
@@ -342,7 +251,7 @@ fn create_function(cg: &CodeGen, doc_file: &Path, operation: &WebOperation) -> R
         }
     }
 
-    let verb = match operation.verb {
+    let verb = match operation.0.verb {
         WebVerb::Get => quote! { get },
         WebVerb::Post => quote! { post },
         WebVerb::Put => quote! { put },
@@ -352,17 +261,17 @@ fn create_function(cg: &CodeGen, doc_file: &Path, operation: &WebOperation) -> R
         WebVerb::Head => quote! { head },
     };
 
-    let api_version = cg.spec.api_version().ok_or(Error::MissingApiVersion)?;
-    let route_path = route_path(&operation.path);
+    let api_version = operation.api_version();
+    let route_path = route_path(&operation.0.path);
     let mut verb_parts = Vec::new();
     let path = format!("{}?api-version={}", route_path, api_version);
     verb_parts.push(quote! { #path });
-    if let Some(param) = parameters.get_body() {
-        let data = format!("<{}>", param.snake_case_name());
+    if let Some(param) = operation.body_parameter() {
+        let data = format!("<{}>", param.name().to_snake_case_id());
         verb_parts.push(quote! { data = #data });
     }
     // Use operationId as the route name
-    match &operation.id {
+    match &operation.0.id {
         Some(operation_id) => {
             verb_parts.push(quote! { name = #operation_id });
         }
@@ -374,18 +283,19 @@ fn create_function(cg: &CodeGen, doc_file: &Path, operation: &WebOperation) -> R
     let first_response = responses
         .0
         .first()
-        .ok_or_else(|| Error::OperationMissingResponses(operation.id.clone()))?;
+        .ok_or_else(|| Error::with_message(ErrorKind::CodeGen, || format!("no first response {:?}", operation.0.id.clone())))?;
     // make sure it is a terminal response
-    let first_response = terminal_responses
-        .first()
-        // .ok_or_else(|| Error::OperationMissingResponses(operation.id.clone()))?;
-        .unwrap_or(&first_response);
-    let status_code = &StatusCode::Code(first_response.status_code.ok_or(Error::StatusCodeRequired)?);
+    let first_response = terminal_responses.first().unwrap_or(&first_response);
+    let status_code = &StatusCode::Code(first_response.status_code.ok_or_else(|| {
+        Error::with_message(ErrorKind::CodeGen, || {
+            format!("first response missing status code {:?}", operation.0.id.clone())
+        })
+    })?);
     let status_code_name = get_status_code_ident_camel_case(status_code)?;
     let response_type = get_response_type_ident(status_code)?;
     let first_responder = match (&first_example, &first_response.body_type_name) {
         (Some(first_example), Some(_body)) => {
-            let first_example_name = ident(&first_example.const_name()).map_err(Error::ExamplesName)?;
+            let first_example_name = parse_ident(&first_example.const_name())?;
             quote! {
                 #responder_name::#response_type(read_example_response_body(#examples_name::#first_example_name, &rocket::http::Status::#status_code_name)?)
             }
@@ -406,14 +316,18 @@ fn create_function(cg: &CodeGen, doc_file: &Path, operation: &WebOperation) -> R
     Ok(func)
 }
 
-fn create_examples_mod(base_path: &Path, name: &TokenStream, examples: &OperationExamples) -> Result<TokenStream, Error> {
+fn get_response_type_name(status_code: &StatusCode) -> crate::Result<Ident> {
+    status_codes::get_status_code_ident(status_code)
+}
+
+fn create_examples_mod(base_path: &Utf8Path, name: &Ident, examples: &OperationExamples) -> crate::Result<TokenStream> {
     let mut values = TokenStream::new();
     for example in &examples.0 {
-        let name = ident(&example.const_name()).map_err(Error::ExamplesName)?;
+        let name = parse_ident(&example.const_name())?;
         let trim = "../../../azure-rest-api-specs-pr/specification/";
-        let file = path::join(&base_path.to_str().unwrap()[trim.len()..], &example.file).map_err(Error::ExamplePath)?;
-        let file = file.to_str().ok_or(Error::ExamplePathNotUtf8)?;
-        let file = file.replace("\\", "/");
+        let file = crate::io::join(&base_path.to_string()[trim.len()..], &example.file)?;
+        let file = file.to_string();
+        let file = file.replace('\\', "/");
         values.extend(quote! {
             pub const #name: &str = #file;
         });
@@ -425,23 +339,25 @@ fn create_examples_mod(base_path: &Path, name: &TokenStream, examples: &Operatio
     })
 }
 
-fn create_function_params(parameters: &OperationParameters) -> Result<TokenStream, Error> {
+fn create_function_params(parameters: &[&WebParameter]) -> crate::Result<TokenStream> {
     let mut params: Vec<TokenStream> = Vec::new();
     for param in parameters.iter() {
-        let name = param.snake_case_name_ident()?;
-        let mut tp = &param.type_;
-        let body_tp = quote! { Json<#tp> };
+        let name = param.name().to_snake_case_ident()?;
         if param.in_body() {
-            tp = &body_tp;
+            let tp = TypeNameCode::new(&param.type_name()?)?.into_token_stream();
+            let body_tp = quote! { Json<#tp> };
+            params.push(quote! { #name: #body_tp });
+        } else {
+            let tp = TypeNameCode::new_ref(&param.type_name()?)?.into_token_stream();
+            params.push(quote! { #name: #tp });
         }
-        params.push(quote! { #name: #tp });
     }
     Ok(quote! { #(#params),* })
 }
 
-fn create_response_type(rsp: &Response) -> Result<Option<TokenStream>, Error> {
+fn create_response_type(rsp: &Response) -> crate::Result<Option<TypeNameCode>> {
     if let Some(schema) = &rsp.schema {
-        Ok(Some(get_type_name_for_schema_ref(schema, AsReference::False)?))
+        Ok(Some(TypeNameCode::new(&get_type_name_for_schema_ref(schema)?)?))
     } else {
         Ok(None)
     }
@@ -474,9 +390,9 @@ impl OperationExample {
     }
 }
 
-fn get_operation_examples(operation: &WebOperation) -> OperationExamples {
+fn get_operation_examples(operation: &WebOperationGen) -> OperationExamples {
     let mut examples = Vec::new();
-    for (name, example) in &operation.examples {
+    for (name, example) in &operation.0.examples {
         match example {
             ReferenceOr::Reference { reference, .. } => match &reference.file {
                 Some(file) => {
@@ -494,10 +410,9 @@ fn get_operation_examples(operation: &WebOperation) -> OperationExamples {
 
 struct OperationExamples(pub Vec<OperationExample>);
 
-#[derive(Debug)]
 struct OperationResponse {
     status_code: Option<u16>,
-    body_type_name: Option<TokenStream>,
+    body_type_name: Option<TypeNameCode>,
     is_long_running: bool,
 }
 
@@ -521,32 +436,30 @@ impl OperationRespones {
     }
 }
 
-fn get_operation_responses(operation: &WebOperation) -> Result<OperationRespones, Error> {
+fn get_operation_responses(operation: &WebOperationGen) -> crate::Result<OperationRespones> {
     let mut responses = Vec::new();
-    for (status_code, response) in get_success_responses(&operation.responses) {
-        let body_type_name = response
-            .schema
-            .map(|ref schema| get_type_name_for_schema_ref(schema, AsReference::False))
-            .transpose()?;
+    for (status_code, response) in operation.success_responses() {
+        let body_type_name = response.schema.as_ref().map(get_type_name_for_schema_ref).transpose()?;
+        let body_type_name = body_type_name.map(|tn| TypeNameCode::new(&tn)).transpose()?;
         let status_code = match status_code {
-            StatusCode::Code(status_code) => Some(status_code),
+            StatusCode::Code(status_code) => Some(*status_code),
             StatusCode::Default => None,
         };
         responses.push(OperationResponse {
             status_code,
             body_type_name,
-            is_long_running: operation.is_long_running,
+            is_long_running: operation.0.long_running_operation,
         });
     }
     Ok(OperationRespones(responses))
 }
 
-fn create_responder(name: &TokenStream, responses: &OperationRespones) -> Result<TokenStream, Error> {
+fn create_responder(name: &Ident, responses: &OperationRespones) -> crate::Result<TokenStream> {
     let mut values = Vec::new();
     let mut respond_tos = Vec::new();
     for response in &responses.0 {
         let status_code = &response.status_code;
-        let status_code = &StatusCode::Code(status_code.ok_or_else(|| Error::StatusCodeRequired)?);
+        let status_code = &StatusCode::Code(status_code.ok_or_else(|| Error::message(ErrorKind::CodeGen, "status code required"))?);
         let status_code_name = get_status_code_ident_camel_case(status_code)?;
         let response_type = get_response_type_ident(status_code)?;
         match &response.body_type_name {
@@ -576,6 +489,14 @@ fn create_responder(name: &TokenStream, responses: &OperationRespones) -> Result
             }
         }
     })
+}
+
+fn get_response_type_ident(status_code: &StatusCode) -> crate::Result<Ident> {
+    status_codes::get_status_code_name_with_number_ident(status_code)
+}
+
+fn get_status_code_ident_camel_case(status_code: &StatusCode) -> crate::Result<Ident> {
+    status_codes::get_status_code_ident(status_code)
 }
 
 #[cfg(test)]

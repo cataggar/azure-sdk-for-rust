@@ -1,97 +1,133 @@
-use crate::policies::{Policy, PolicyResult, Request, Response};
+use crate::error::{Error, ErrorKind, HttpError};
+use crate::policies::{Policy, PolicyResult, Request};
 use crate::sleep::sleep;
-use crate::{HttpError, PipelineContext};
-use chrono::{DateTime, Local};
-use http::StatusCode;
+use crate::{Context, StatusCode};
+
+use async_trait::async_trait;
+use time::OffsetDateTime;
+
 use std::sync::Arc;
 use std::time::Duration;
 
 /// A retry policy.
 ///
-/// All retry policies follow a similar pattern only differing in how
+/// In the simple form, the policies need only differ in how
 /// they determine if the retry has expired and for how long they should
 /// sleep between retries.
-pub trait RetryPolicy {
+///
+/// `wait` can be implemented in more complex cases where a simple test of time
+/// is not enough.
+#[async_trait]
+pub trait RetryPolicy: std::fmt::Debug + Send + Sync {
     /// Determine if no more retries should be performed.
     ///
     /// Must return true if no more retries should be attempted.
-    fn is_expired(&self, first_retry_time: &mut Option<DateTime<Local>>, retry_count: u32) -> bool;
+    fn is_expired(&self, duration_since_start: Duration, retry_count: u32) -> bool;
     /// Determine how long before the next retry should be attempted.
     fn sleep_duration(&self, retry_count: u32) -> Duration;
+    /// A Future that will wait until the request can be retried.
+    /// `error` is the [`Error`] value the led to a retry attempt.
+    async fn wait(&self, _error: &Error, retry_count: u32) {
+        sleep(self.sleep_duration(retry_count)).await;
+    }
 }
 
 /// The status codes where a retry should be attempted.
 ///
 /// On all other 4xx and 5xx status codes no retry is attempted.
 const RETRY_STATUSES: &[StatusCode] = &[
-    StatusCode::REQUEST_TIMEOUT,
-    StatusCode::TOO_MANY_REQUESTS,
-    StatusCode::INTERNAL_SERVER_ERROR,
-    StatusCode::BAD_GATEWAY,
-    StatusCode::SERVICE_UNAVAILABLE,
-    StatusCode::GATEWAY_TIMEOUT,
+    StatusCode::RequestTimeout,
+    StatusCode::TooManyRequests,
+    StatusCode::InternalServerError,
+    StatusCode::BadGateway,
+    StatusCode::ServiceUnavailable,
+    StatusCode::GatewayTimeout,
 ];
 
-#[async_trait::async_trait]
-impl<T, C> Policy<C> for T
+#[cfg_attr(target_arch = "wasm32", async_trait::async_trait(?Send))]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
+impl<T> Policy for T
 where
-    T: RetryPolicy + std::fmt::Debug + Send + Sync,
-    C: Send + Sync,
+    T: RetryPolicy,
 {
     async fn send(
         &self,
-        ctx: &mut PipelineContext<C>,
+        ctx: &Context,
         request: &mut Request,
-        next: &[Arc<dyn Policy<C>>],
-    ) -> PolicyResult<Response> {
-        let mut first_retry_time = None;
+        next: &[Arc<dyn Policy>],
+    ) -> PolicyResult {
         let mut retry_count = 0;
+        let mut start = None;
 
         loop {
-            let error = match next[0].send(ctx, request, &next[1..]).await {
-                Ok(response) if (200..400).contains(&response.status().as_u16()) => {
+            let result = next[0].send(ctx, request, &next[1..]).await;
+            // only start keeping track of time after the first request is made
+            let start = start.get_or_insert_with(OffsetDateTime::now_utc);
+            let last_error = match result {
+                Ok(response) if response.status().is_success() => {
                     log::trace!(
-                        "Succesful response. Request={:?} response={:?}",
+                        "Successful response. Request={:?} response={:?}",
                         request,
                         response
                     );
-                    // Successful status code
                     return Ok(response);
                 }
                 Ok(response) => {
                     // Error status code
                     let status = response.status();
-                    let body = response.into_body_string().await;
-                    let error = Box::new(HttpError::ErrorStatusCode { status, body });
+                    let http_error = HttpError::new(response).await;
+
+                    let error_kind = ErrorKind::http_response(
+                        status,
+                        http_error.error_code().map(std::borrow::ToOwned::to_owned),
+                    );
+
                     if !RETRY_STATUSES.contains(&status) {
-                        log::error!(
+                        log::debug!(
                             "server returned error status which will not be retried: {}",
                             status
                         );
                         // Server didn't return a status we retry on so return early
+                        let error = Error::full(
+                            error_kind,
+                            http_error,
+                            format!(
+                                "server returned error status which will not be retried: {status}"
+                            ),
+                        );
                         return Err(error);
                     }
                     log::debug!(
                         "server returned error status which requires retry: {}",
                         status
                     );
-                    error
+                    Error::new(error_kind, http_error)
                 }
                 Err(error) => {
-                    log::debug!(
-                        "error occurred when making request which will be retried: {}",
+                    if error.kind() == &ErrorKind::Io {
+                        log::debug!(
+                            "io error occurred when making request which will be retried: {}",
+                            error
+                        );
                         error
-                    );
-                    error
+                    } else {
+                        return Err(
+                            error.context("non-io error occurred which will not be retried")
+                        );
+                    }
                 }
             };
 
-            if self.is_expired(&mut first_retry_time, retry_count) {
-                return Err(error);
+            let time_since_start = (OffsetDateTime::now_utc() - *start)
+                .try_into()
+                .unwrap_or_default();
+            if self.is_expired(time_since_start, retry_count) {
+                return Err(last_error
+                    .context("retry policy expired and the request will no longer be retried"));
             }
             retry_count += 1;
 
-            sleep(self.sleep_duration(retry_count)).await;
+            self.wait(&last_error, retry_count).await;
         }
     }
 }
