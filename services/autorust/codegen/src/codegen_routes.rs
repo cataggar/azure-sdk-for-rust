@@ -532,7 +532,7 @@ fn create_responder(name: &Ident, responses: &OperationRespones) -> crate::Resul
 }
 
 fn get_response_type_ident(status_code: &StatusCode) -> crate::Result<Ident> {
-    status_codes::get_status_code_ident(status_code)
+    status_codes::get_status_code_name_with_number_ident(status_code)
 }
 
 fn get_status_code_ident_camel_case(status_code: &StatusCode) -> crate::Result<Ident> {

@@ -17,10 +17,19 @@ fn try_from_u16(status_code: u16) -> Result<HttpStatusCode> {
 pub fn get_status_code_name(status_code: &StatusCode) -> Result<&'static str> {
     match status_code {
         StatusCode::Code(status_code) => Ok(try_from_u16(*status_code)?.canonical_reason()),
-        StatusCode::Default => Err(Error::with_message(ErrorKind::Parse, || {
-            format!("no status code for default {status_code}")
-        })),
+        StatusCode::Default => Ok("Default"),
     }
+}
+
+pub fn get_status_code_name_with_number(status_code: &StatusCode) -> Result<String> {
+    match status_code {
+        StatusCode::Code(number) => Ok(format!("{}{}", get_status_code_name(status_code)?.to_pascal_case(), number)),
+        StatusCode::Default => Ok("Default".to_owned()),
+    }
+}
+
+pub fn get_status_code_name_with_number_ident(status_code: &StatusCode) -> Result<Ident> {
+    parse_ident(&get_status_code_name_with_number(status_code)?)
 }
 
 /// The canonical name in camel case.

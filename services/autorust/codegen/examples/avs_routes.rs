@@ -1,7 +1,6 @@
-// cargo run --example avs_mgmt
-// https://github.com/Azure/azure-rest-api-specs/blob/master/specification/vmware/resource-manager
+// cargo run --example avs_routes
 
-use autorust_codegen::*;
+use autorust_codegen::{autorust_toml::PackageConfig, *};
 
 struct MainConfig {
     pub input_file: &'static str,
@@ -11,26 +10,9 @@ struct MainConfig {
 fn main() -> Result<()> {
     let mut configs = Vec::new();
 
-    // configs.push(MainConfig {
-    //     input_file: "../../../azure-rest-api-specs-pr/specification/resources/resource-manager/Microsoft.Resources/stable/2020-10-01/resources.json",
-    //     output_folder: "../../../avs/src/fct/mock_api/src/resources_v2020_10_01",
-    // });
-
     configs.push(MainConfig {
         input_file: "../../../azure-rest-api-specs-pr/specification/vmware/resource-manager/Microsoft.AVS/stable/2020-03-20/vmware.json",
         output_folder: "../../../avs/src/fct/mock_api/src/v2020_03_20",
-    });
-
-    configs.push(MainConfig {
-        input_file:
-            "../../../azure-rest-api-specs-pr/specification/vmware/resource-manager/Microsoft.AVS/preview/2020-07-17-preview/vmware.json",
-        output_folder: "../../../avs/src/fct/mock_api/src/v2020_07_17_preview",
-    });
-
-    configs.push(MainConfig {
-        input_file:
-            "../../../azure-rest-api-specs-pr/specification/vmware/resource-manager/Microsoft.AVS/preview/2021-01-01-preview/vmware.json",
-        output_folder: "../../../avs/src/fct/mock_api/src/v2021_01_01_preview",
     });
 
     configs.push(MainConfig {
@@ -49,12 +31,18 @@ fn main() -> Result<()> {
     });
 
     for config in configs {
-        run(Config {
-            runs: vec![Runs::Models, Runs::Routes],
-            output_folder: config.output_folder.into(),
-            input_files: [config.input_file].iter().map(Into::into).collect(),
-            ..Config::default()
-        })?;
+        run(
+            &CrateConfig {
+                run_config: &RunConfig {
+                    crate_name_prefix: "avs_mgmt_",
+                    runs: vec![Runs::Models, Runs::Routes],
+                    print_writing_file: true,
+                },
+                output_folder: config.output_folder.into(),
+                input_files: [config.input_file].iter().map(Into::into).collect(),
+            },
+            &PackageConfig::default(),
+        )?;
     }
 
     Ok(())
