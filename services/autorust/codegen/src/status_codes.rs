@@ -39,6 +39,23 @@ pub fn is_success(status_code: &StatusCode) -> bool {
     }
 }
 
+pub fn is_error(status_code: &StatusCode) -> bool {
+    match status_code {
+        StatusCode::Code(status_code) => match try_from_u16(*status_code) {
+            Ok(status_code) => !status_code.is_success(),
+            Err(_) => false,
+        },
+        StatusCode::Default => false,
+    }
+}
+
+pub fn is_default(status_code: &StatusCode) -> bool {
+    match status_code {
+        StatusCode::Code(_status_code) => false,
+        StatusCode::Default => true,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

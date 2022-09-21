@@ -1,7 +1,7 @@
 use crate::io;
 use crate::{Error, ErrorKind, Result};
 use autorust_openapi::{
-    AdditionalProperties, CollectionFormat, DataType, MsExamples, MsPageable, OpenAPI, Operation, Parameter, ParameterType, PathItem,
+    AdditionalProperties, CollectionFormat, DataType, MsExamples, MsPageable, OpenAPI, Operation, Parameter, ParameterIn, PathItem,
     Reference, ReferenceOr, Response, Schema, SchemaCommon, StatusCode,
 };
 use camino::{Utf8Path, Utf8PathBuf};
@@ -485,7 +485,7 @@ impl WebOperation {
     }
 }
 
-pub struct WebParameter(Parameter);
+pub struct WebParameter(pub Parameter);
 
 impl WebParameter {
     pub fn name(&self) -> &str {
@@ -504,8 +504,24 @@ impl WebParameter {
         self.0.collection_format.as_ref().unwrap_or(&CollectionFormat::Csv)
     }
 
-    pub fn type_(&self) -> &ParameterType {
+    pub fn parameter_in(&self) -> &ParameterIn {
         &self.0.in_
+    }
+
+    pub fn in_body(&self) -> bool {
+        self.0.in_ == ParameterIn::Body
+    }
+    pub fn in_path(&self) -> bool {
+        self.0.in_ == ParameterIn::Path
+    }
+    pub fn in_query(&self) -> bool {
+        self.0.in_ == ParameterIn::Query
+    }
+    pub fn in_header(&self) -> bool {
+        self.0.in_ == ParameterIn::Header
+    }
+    pub fn in_form(&self) -> bool {
+        self.0.in_ == ParameterIn::FormData
     }
 
     pub fn description(&self) -> &Option<String> {
@@ -561,7 +577,7 @@ impl WebOperation {
     }
 
     pub fn has_body_parameter(&self) -> bool {
-        self.parameters.iter().any(|p| p.type_() == &ParameterType::Body)
+        self.parameters.iter().any(|p| p.parameter_in() == &ParameterIn::Body)
     }
 }
 
