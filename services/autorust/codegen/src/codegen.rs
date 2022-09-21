@@ -8,6 +8,7 @@ use proc_macro2::{Ident, TokenStream};
 use quote::ToTokens;
 use regex::Regex;
 use std::{collections::HashSet, convert::TryFrom};
+use syn::TypeReference;
 use syn::{
     punctuated::Punctuated,
     token::{Gt, Impl, Lt},
@@ -103,8 +104,16 @@ pub fn parse_query_params(uri: &str) -> Result<HashSet<String>> {
     }
 }
 
+/// Whether or not to pass a type as a reference.
+#[derive(Copy, Clone, PartialEq)]
+pub enum AsReference {
+    True,
+    False,
+}
+
 #[derive(Clone)]
 pub struct TypeNameCode {
+    as_ref: AsReference,
     type_path: TypePath,
     force_value: bool,
     pub optional: bool,
@@ -138,6 +147,19 @@ impl TypeNameCode {
         };
         type_name_code.type_name = Some(type_name.clone());
         Ok(type_name_code)
+    }
+
+    pub fn new_ref(type_name: &TypeName) -> Result<Self> {
+        let mut type_name_code = match type_name {
+            TypeName::String => TypeNameCode::from(tp_str()),
+            _ => Self::new(type_name)?,
+        };
+        type_name_code.as_ref = AsReference::True;
+        Ok(type_name_code)
+    }
+
+    pub fn is_ref(&self) -> bool {
+        self.as_ref == AsReference::True
     }
 
     pub fn is_string(&self) -> bool {
@@ -233,6 +255,15 @@ impl TypeNameCode {
                 });
             }
         }
+        if self.is_ref() {
+            let tr = TypeReference {
+                and_token: Default::default(),
+                lifetime: Default::default(),
+                mutability: Default::default(),
+                elem: Box::new(tp),
+            };
+            tp = Type::from(tr);
+        }
         if self.boxed {
             tp = generic_type(tp_box(), tp);
         }
@@ -273,6 +304,7 @@ fn generic_type(mut wrap_tp: TypePath, tp: Type) -> Type {
 impl From<TypePath> for TypeNameCode {
     fn from(type_path: TypePath) -> Self {
         Self {
+            as_ref: AsReference::False,
             type_path,
             force_value: false,
             optional: false,
@@ -387,6 +419,10 @@ fn tp_string() -> TypePath {
     parse_type_path("String").unwrap() // std::string::String
 }
 
+fn tp_str() -> TypePath {
+    parse_type_path("str").unwrap() // std::str
+}
+
 fn tp_box() -> TypePath {
     parse_type_path("Box").unwrap() // std::boxed::Box
 }
@@ -493,6 +529,13 @@ mod tests {
         tp.set_as_bytes();
         assert!(tp.is_bytes());
         assert_eq!("bytes :: Bytes", tp.to_string());
+        Ok(())
+    }
+
+    #[test]
+    fn test_string_ref() -> Result<()> {
+        let tp = TypeNameCode::new_ref(&TypeName::String)?;
+        assert_eq!("& str", tp.to_string());
         Ok(())
     }
 }

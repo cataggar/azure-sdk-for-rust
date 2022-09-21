@@ -94,52 +94,11 @@ pub fn create_routes(cg: &CodeGen) -> crate::Result<TokenStream> {
     Ok(file)
 }
 
-// impl OperationParameters {
-//     pub fn new(cg: &CodeGen, doc_file: &Utf8Path, operation: &WebOperationGen) -> crate::Result<OperationParameters> {
-//         let mut v = Vec::new();
-//         for param in operation.parameters() {
-//             let name = param.name();
-//             let in_ = param.in_.to_owned();
-//             if name != "api-version" {
-//                 let type_ = {
-//                     if let Some(_param_type) = &param.common.type_ {
-//                         get_type_name_for_schema(&param.common, AsReference::True)?
-//                     } else if let Some(schema) = &param.schema {
-//                         get_type_name_for_schema_ref(schema, AsReference::False)?
-//                     } else {
-//                         eprintln!("WARN unknown param type for {}", &param.name);
-//                         quote! { &serde_json::Value }
-//                     }
-//                 };
-//                 let is_required = param.required.unwrap_or(false);
-//                 let is_array = is_array(&param.common);
-//                 v.push(OperationParameter {
-//                     name,
-//                     in_,
-//                     type_,
-//                     is_required,
-//                     is_array,
-//                 })
-//             }
-//         }
-//         Ok(OperationParameters(v))
-//     }
-
-//     pub fn iter(&self) -> std::slice::Iter<OperationParameter> {
-//         self.0.iter()
-//     }
-
-//     pub fn get_body(&self) -> Option<&OperationParameter> {
-//         self.iter().find(|param| param.in_body())
-//     }
-// }
-
 fn create_function(doc_file: &Utf8Path, operation: &WebOperationGen) -> crate::Result<TokenStream> {
     let function_name = operation.rust_function_name();
     let fname = parse_ident(&function_name)?;
 
     let params = operation.parameters();
-    // println!("path params {:#?}", params);
     let params: crate::Result<Vec<_>> = params.iter().map(|p| parse_ident(&p.name().to_snake_case())).collect();
     let params = params?;
     let _url_str_args = quote! { #(#params),* };
@@ -150,7 +109,6 @@ fn create_function(doc_file: &Utf8Path, operation: &WebOperationGen) -> crate::R
 
     let examples_name = parse_ident(&format!("{}_examples", function_name.to_snake_case()))?;
     let examples = get_operation_examples(operation);
-    // TODO make configurable
     let base_path = doc_file;
     let examples_mod = create_examples_mod(base_path, &examples_name, &examples)?;
     let first_example = examples.0.first();
@@ -385,12 +343,14 @@ fn create_function_params(parameters: &[&WebParameter]) -> crate::Result<TokenSt
     let mut params: Vec<TokenStream> = Vec::new();
     for param in parameters.iter() {
         let name = param.name().to_snake_case_ident()?;
-        let mut tp = TypeNameCode::new(&param.type_name()?)?.into_token_stream();
-        let body_tp = quote! { Json<#tp> };
         if param.in_body() {
-            tp = body_tp;
+            let tp = TypeNameCode::new(&param.type_name()?)?.into_token_stream();
+            let body_tp = quote! { Json<#tp> };
+            params.push(quote! { #name: #body_tp });
+        } else {
+            let tp = TypeNameCode::new_ref(&param.type_name()?)?.into_token_stream();
+            params.push(quote! { #name: #tp });
         }
-        params.push(quote! { #name: #tp });
     }
     Ok(quote! { #(#params),* })
 }
