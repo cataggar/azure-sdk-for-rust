@@ -105,7 +105,7 @@ pub fn parse_query_params(uri: &str) -> Result<HashSet<String>> {
 }
 
 /// Whether or not to pass a type as a reference.
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub enum AsReference {
     True,
     False,
