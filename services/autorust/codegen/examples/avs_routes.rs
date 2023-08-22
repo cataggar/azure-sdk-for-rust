@@ -30,6 +30,11 @@ fn main() -> Result<()> {
         output_folder: "../../../avs/src/fct/mock_api/src/v2022_05_01",
     });
 
+    configs.push(MainConfig {
+        input_file: "../../../azure-rest-api-specs-pr/specification/vmware/resource-manager/Microsoft.AVS/stable/2023-03-01/vmware.json",
+        output_folder: "../../../avs/src/fct/mock_api/src/v2023_03_01",
+    });
+
     for config in configs {
         run(
             &CrateConfig {
