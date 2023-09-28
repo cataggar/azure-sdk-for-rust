@@ -341,13 +341,13 @@ fn create_function_params(parameters: &[&WebParameter]) -> crate::Result<TokenSt
         let name = param.name().to_snake_case_ident()?;
         if param.in_body() {
             let mut tp = TypeNameCode::new(&param.type_name()?)?;
-            tp = tp.optional(!param.required());
+            tp.optional(!param.required());
             let body_tp = quote! { Json<#tp> };
             params.push(quote! { #name: #body_tp });
         } else {
             let mut tp = TypeNameCode::new(&param.type_name()?)?;
-            tp.set_is_ref(true);
-            tp = tp.optional(!param.required());
+            tp.reference(true);
+            tp.optional(!param.required());
             params.push(quote! { #name: #tp });
         }
     }

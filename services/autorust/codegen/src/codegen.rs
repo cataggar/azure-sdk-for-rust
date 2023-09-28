@@ -280,13 +280,6 @@ impl TypeNameCode {
         self.type_path.clone()
     }
 
-    fn type_path(&self) -> TypePath {
-        if self.is_string() && self.is_ref() {
-            return tp_str();
-        }
-        self.type_path.clone()
-    }
-
     fn to_type(&self) -> Type {
         let mut tp = self.type_path();
         if self.union {
