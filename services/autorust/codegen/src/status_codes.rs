@@ -17,7 +17,7 @@ fn try_from_u16(status_code: u16) -> Result<HttpStatusCode> {
 pub fn get_status_code_name(status_code: &StatusCode) -> Result<&'static str> {
     match status_code {
         StatusCode::Code(status_code) => Ok(try_from_u16(*status_code)?.canonical_reason()),
-        StatusCode::Default => Err(Error::with_message(ErrorKind::Parse, || format!("no status code name for default"))),
+        StatusCode::Default => Err(Error::with_message(ErrorKind::Parse, || "no status code name for default")),
     }
 }
 

@@ -11,8 +11,9 @@ use azure_storage::{
         service_sas::{BlobSharedAccessSignature, BlobSignedResource},
         SasToken,
     },
-    CloudLocation, StorageCredentials,
+    CloudLocation, StorageCredentials, StorageCredentialsInner,
 };
+use std::ops::Deref;
 use time::OffsetDateTime;
 
 #[derive(Debug, Clone)]
@@ -32,6 +33,7 @@ impl ContainerClient {
 
     pub fn from_sas_url(url: &Url) -> azure_core::Result<Self> {
         let cloud_location: CloudLocation = url.try_into()?;
+        let credentials: StorageCredentials = url.try_into()?;
 
         let container = url.path().split_terminator('/').nth(1).ok_or_else(|| {
             azure_core::Error::with_message(azure_core::error::ErrorKind::DataConversion, || {
@@ -39,7 +41,8 @@ impl ContainerClient {
             })
         })?;
 
-        let client = ClientBuilder::with_location(cloud_location).container_client(container);
+        let client =
+            ClientBuilder::with_location(cloud_location, credentials).container_client(container);
         Ok(client)
     }
 
@@ -115,29 +118,27 @@ impl ContainerClient {
     }
 
     /// Create a shared access signature.
-    pub fn shared_access_signature(
+    pub async fn shared_access_signature(
         &self,
         permissions: BlobSasPermissions,
         expiry: OffsetDateTime,
     ) -> azure_core::Result<BlobSharedAccessSignature> {
-        match self.service_client.credentials() {
-            StorageCredentials::Key(account, ref key) => {
-                let canonicalized_resource =
-                    format!("/blob/{}/{}", account, self.container_name(),);
-                Ok(BlobSharedAccessSignature::new(
-                    key.to_string(),
-                    canonicalized_resource,
-                    permissions,
-                    expiry,
-                    BlobSignedResource::Container,
-                ))
-            }
-            _ => Err(Error::message(
+        let creds = self.service_client.credentials().0.lock().await;
+        let StorageCredentialsInner::Key(account, key) = creds.deref() else {
+            return Err(Error::message(
                 ErrorKind::Credential,
-                "Shared access signature generation - \
-                SAS can be generated only from key and account clients",
-            )),
-        }
+                "Shared access signature generation - SAS can be generated with access_key clients",
+            ));
+        };
+
+        let canonicalized_resource = format!("/blob/{}/{}", account, self.container_name(),);
+        Ok(BlobSharedAccessSignature::new(
+            key.to_string(),
+            canonicalized_resource,
+            permissions,
+            expiry,
+            BlobSignedResource::Container,
+        ))
     }
 
     pub fn generate_signed_container_url<T>(&self, signature: &T) -> azure_core::Result<url::Url>
