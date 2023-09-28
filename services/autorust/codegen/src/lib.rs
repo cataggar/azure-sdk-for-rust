@@ -129,7 +129,7 @@ pub fn run<'a>(crate_config: &'a CrateConfig, package_config: &'a PackageConfig)
     if crate_config.should_run(&Runs::Routes) {
         let routes = codegen_routes::create_routes(&cg)?;
         let routes_path = io::join(&crate_config.output_folder, "routes.rs")?;
-        write_file(&routes_path, &routes, crate_config.print_writing_file())?;
+        write_file(routes_path, &routes, crate_config.print_writing_file())?;
     }
 
     Ok(cg)
