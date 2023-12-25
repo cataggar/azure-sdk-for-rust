@@ -1,20 +1,24 @@
 use crate::{
+    env::ProcessEnv,
     timeout::TimeoutExt,
     token_credentials::cache::TokenCache,
-    {AzureCliCredential, ImdsManagedIdentityCredential},
+    TokenCredentialOptions, {AzureCliCredential, ImdsManagedIdentityCredential},
 };
 use azure_core::{
     auth::{AccessToken, TokenCredential},
     error::{Error, ErrorKind, ResultExt},
 };
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 
-#[derive(Debug)]
 /// Provides a mechanism of selectively disabling credentials used for a `DefaultAzureCredential` instance
 pub struct DefaultAzureCredentialBuilder {
     include_environment_credential: bool,
     include_managed_identity_credential: bool,
     include_azure_cli_credential: bool,
+
+    http_client: Arc<dyn azure_core::HttpClient>,
+    options: TokenCredentialOptions,
+    env: Box<dyn crate::env::Env>,
 }
 
 impl Default for DefaultAzureCredentialBuilder {
@@ -23,6 +27,10 @@ impl Default for DefaultAzureCredentialBuilder {
             include_environment_credential: true,
             include_managed_identity_credential: true,
             include_azure_cli_credential: true,
+
+            http_client: azure_core::new_http_client(),
+            options: TokenCredentialOptions::default(),
+            env: Box::new(ProcessEnv::new()),
         }
     }
 }
@@ -58,6 +66,18 @@ impl DefaultAzureCredentialBuilder {
             + usize::from(self.include_managed_identity_credential);
         let mut sources = Vec::<DefaultAzureCredentialEnum>::with_capacity(source_count);
         if self.include_environment_credential {
+            match super::environment_credential::EnvironmentCredential::create_credential(
+                &env,
+                http_client,
+                &options,
+            ) {
+                Ok(credential) => {
+                    sources.push(DefaultAzureCredentialEnum::Environment(credential));
+                }
+                Err(err) => {
+                    log::debug!("Failed to create EnvironmentCredential: {}", err);
+                }
+            }
             sources.push(DefaultAzureCredentialEnum::Environment(
                 super::EnvironmentCredential::default(),
             ));

@@ -1,5 +1,9 @@
-use crate::token_credentials::{
-    cache::TokenCache, ClientSecretCredential, TokenCredentialOptions, WorkloadIdentityCredential,
+use crate::{
+    env::Env,
+    token_credentials::{
+        ClientSecretCredential, CreateTokenCredential, TokenCredentialOptions,
+        WorkloadIdentityCredential,
+    },
 };
 use azure_core::{
     auth::{AccessToken, TokenCredential},
@@ -37,99 +41,84 @@ const AZURE_AUTHORITY_HOST: &str = "AZURE_AUTHORITY_HOST";
 /// Please consult the documentation of that class for more details.
 #[derive(Debug)]
 pub struct EnvironmentCredential {
-    http_client: Arc<dyn HttpClient>,
-    options: TokenCredentialOptions,
-    cache: TokenCache,
+    credential: Box<dyn TokenCredential>,
 }
 
-impl Default for EnvironmentCredential {
-    /// Creates an instance of the `EnvironmentCredential` using the default `HttpClient`.
-    fn default() -> Self {
-        Self::new(
-            azure_core::new_http_client(),
-            TokenCredentialOptions::default(),
-        )
-    }
-}
-
-impl EnvironmentCredential {
-    /// Creates a new `EnvironmentCredential` with the given `TokenCredentialOptions`.
-    pub fn new(http_client: Arc<dyn HttpClient>, options: TokenCredentialOptions) -> Self {
-        Self {
-            http_client,
-            options,
-            cache: TokenCache::new(),
-        }
-    }
-
-    async fn get_token(&self, scopes: &[&str]) -> azure_core::Result<AccessToken> {
-        let tenant_id = std::env::var(AZURE_TENANT_ID_ENV_KEY)
+impl CreateTokenCredential for EnvironmentCredential {
+    fn create_credential(
+        &self,
+        env: impl Env,
+        http_client: std::sync::Arc<dyn azure_core::HttpClient>,
+        options: &TokenCredentialOptions,
+    ) -> azure_core::Result<impl TokenCredential> {
+        let tenant_id = env
+            .var(AZURE_TENANT_ID_ENV_KEY)
             .with_context(ErrorKind::Credential, || {
                 format!("missing tenant id set in {AZURE_TENANT_ID_ENV_KEY} environment variable")
             })?;
-        let client_id = std::env::var(AZURE_CLIENT_ID_ENV_KEY)
+        let client_id = env
+            .var(AZURE_CLIENT_ID_ENV_KEY)
             .with_context(ErrorKind::Credential, || {
                 format!("missing client id set in {AZURE_CLIENT_ID_ENV_KEY} environment variable")
             })?;
 
-        let client_secret = std::env::var(AZURE_CLIENT_SECRET_ENV_KEY);
-        let username = std::env::var(AZURE_USERNAME_ENV_KEY);
-        let password = std::env::var(AZURE_PASSWORD_ENV_KEY);
-        let client_certificate_path = std::env::var(AZURE_CLIENT_CERTIFICATE_PATH_ENV_KEY);
-        let federated_token_file = std::env::var(AZURE_FEDERATED_TOKEN_FILE);
-        let federated_token = std::env::var(AZURE_FEDERATED_TOKEN);
-        let authority_host = std::env::var(AZURE_AUTHORITY_HOST);
+        let client_secret = env.var(AZURE_CLIENT_SECRET_ENV_KEY);
+        // let username = env.var(AZURE_USERNAME_ENV_KEY);
+        // let password = env.var(AZURE_PASSWORD_ENV_KEY);
+        // let client_certificate_path = env.var(AZURE_CLIENT_CERTIFICATE_PATH_ENV_KEY);
+        let federated_token_file = env.var(AZURE_FEDERATED_TOKEN_FILE);
+        let federated_token = env.var(AZURE_FEDERATED_TOKEN);
+        let authority_host = env.var(AZURE_AUTHORITY_HOST);
 
         let options: TokenCredentialOptions = if let Ok(authority_host) = authority_host {
             TokenCredentialOptions::new(Url::parse(&authority_host)?)
         } else {
-            self.options.clone()
+            options.clone()
         };
 
-        if let Ok(token) = federated_token {
-            let mut credential: WorkloadIdentityCredential = WorkloadIdentityCredential::new(
-                self.http_client.clone(),
-                tenant_id,
-                client_id,
-                token,
-            );
+        let credential: Box<dyn TokenCredential> = if let Ok(token) = federated_token {
+            let mut credential: WorkloadIdentityCredential =
+                WorkloadIdentityCredential::new(http_client.clone(), tenant_id, client_id, token);
             credential.set_options(options);
 
-            return credential.get_token(scopes).await;
+            Box::new(credential)
         } else if let Ok(file) = federated_token_file {
             let token = std::fs::read_to_string(file.clone())
                 .with_context(ErrorKind::Credential, || {
                     format!("failed to read federated token from file {}", file.as_str())
                 })?;
-            let mut credential: WorkloadIdentityCredential = WorkloadIdentityCredential::new(
-                self.http_client.clone(),
-                tenant_id,
-                client_id,
-                token,
-            );
+            let mut credential: WorkloadIdentityCredential =
+                WorkloadIdentityCredential::new(http_client.clone(), tenant_id, client_id, token);
             credential.set_options(options);
 
-            return credential.get_token(scopes).await;
+            Box::new(credential)
         } else if let Ok(client_secret) = client_secret {
             let credential = ClientSecretCredential::new(
-                self.http_client.clone(),
+                http_client.clone(),
                 tenant_id,
                 client_id,
                 client_secret,
                 options,
             );
-            return credential.get_token(scopes).await;
-        } else if username.is_ok() && password.is_ok() {
-            // Could use multiple if-let with #![feature(let_chains)] once stabilised - see https://github.com/rust-lang/rust/issues/53667
-            // TODO: username & password credential
-        } else if let Ok(_path) = client_certificate_path {
-            // TODO: client certificate credential
-        }
+            Box::new(credential)
+        // } else if username.is_ok() && password.is_ok() {
+        //     // Could use multiple if-let with #![feature(let_chains)] once stabilised - see https://github.com/rust-lang/rust/issues/53667
+        //     // TODO: username & password credential
+        // } else if let Ok(_path) = client_certificate_path {
+        // TODO: client certificate credential
+        } else {
+            return Err(Error::message(
+                ErrorKind::Credential,
+                "no valid environment credential providers",
+            ));
+        };
+        Ok(Self::new(credential))
+    }
+}
 
-        Err(Error::message(
-            ErrorKind::Credential,
-            "no valid environment credential providers",
-        ))
+impl EnvironmentCredential {
+    pub fn new(credential: Box<dyn TokenCredential>) -> Self {
+        Self { credential }
     }
 }
 
@@ -137,10 +126,10 @@ impl EnvironmentCredential {
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 impl TokenCredential for EnvironmentCredential {
     async fn get_token(&self, scopes: &[&str]) -> azure_core::Result<AccessToken> {
-        self.cache.get_token(scopes, self.get_token(scopes)).await
+        self.credential.as_ref().get_token(scopes).await
     }
 
     async fn clear_cache(&self) -> azure_core::Result<()> {
-        self.cache.clear().await
+        self.credential.as_ref().clear_cache().await
     }
 }

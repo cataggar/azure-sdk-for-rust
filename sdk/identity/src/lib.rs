@@ -46,6 +46,7 @@ pub mod client_credentials_flow;
 #[cfg(feature = "development")]
 pub mod development;
 pub mod device_code_flow;
+mod env;
 pub mod federated_credentials_flow;
 mod oauth2_http_client;
 pub mod refresh_token;
