@@ -1,4 +1,4 @@
-use crate::token_credentials::cache::TokenCache;
+use crate::{token_credentials::cache::TokenCache, TokenCredentialOptions};
 use azure_core::{
     auth::{AccessToken, Secret, TokenCredential},
     error::{Error, ErrorKind, ResultExt},
@@ -32,15 +32,15 @@ pub struct ImdsManagedIdentityCredential {
 impl Default for ImdsManagedIdentityCredential {
     /// Creates an instance of the `TransportOptions` using the default `HttpClient`.
     fn default() -> Self {
-        Self::new(azure_core::new_http_client())
+        Self::new(TokenCredentialOptions::default())
     }
 }
 
 impl ImdsManagedIdentityCredential {
     /// Creates a new `ImdsManagedIdentityCredential` using the given `HttpClient`.
-    pub fn new(http_client: Arc<dyn HttpClient>) -> Self {
+    pub fn new(options: TokenCredentialOptions) -> Self {
         Self {
-            http_client,
+            http_client: options.http_client(),
             object_id: None,
             client_id: None,
             msi_res_id: None,

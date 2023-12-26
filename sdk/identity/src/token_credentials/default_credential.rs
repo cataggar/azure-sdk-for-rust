@@ -1,7 +1,8 @@
 use crate::{
     timeout::TimeoutExt,
     token_credentials::cache::TokenCache,
-    TokenCredentialOptions, {AzureCliCredential, ImdsManagedIdentityCredential},
+    EnvironmentCredential, TokenCredentialOptions,
+    {AzureCliCredential, ImdsManagedIdentityCredential},
 };
 use azure_core::{
     auth::{AccessToken, TokenCredential},
@@ -64,29 +65,19 @@ impl DefaultAzureCredentialBuilder {
             + usize::from(self.include_managed_identity_credential);
         let mut sources = Vec::<DefaultAzureCredentialEnum>::with_capacity(source_count);
         if self.include_environment_credential {
-            // match super::environment_credential::EnvironmentCredential::create(self.options.clone())
-            // {
-            //     Ok(credential) => {
-            //         sources.push(DefaultAzureCredentialEnum::Environment(credential));
-            //     }
-            //     Err(err) => {
-            //         log::debug!("Failed to create EnvironmentCredential: {}", err);
-            //     }
-            // }
-            // sources.push(DefaultAzureCredentialEnum::Environment(
-            //     super::EnvironmentCredential::default(),
-            // ));
-            // TODO
+            if let Ok(credential) = EnvironmentCredential::create(self.options.clone()) {
+                sources.push(DefaultAzureCredentialEnum::Environment(credential));
+            }
         }
         if self.include_managed_identity_credential {
             sources.push(DefaultAzureCredentialEnum::ManagedIdentity(
-                ImdsManagedIdentityCredential::default(),
+                ImdsManagedIdentityCredential::new(self.options.clone()),
             ));
         }
         if self.include_azure_cli_credential {
-            sources.push(DefaultAzureCredentialEnum::AzureCli(
-                AzureCliCredential::new(),
-            ));
+            if let Ok(credential) = AzureCliCredential::create() {
+                sources.push(DefaultAzureCredentialEnum::AzureCli(credential));
+            }
         }
         DefaultAzureCredential::with_sources(sources)
     }
@@ -96,7 +87,7 @@ impl DefaultAzureCredentialBuilder {
 #[derive(Debug)]
 pub enum DefaultAzureCredentialEnum {
     /// `TokenCredential` from environment variable.
-    Environment(super::EnvironmentCredential),
+    Environment(EnvironmentCredential),
     /// `TokenCredential` from managed identity that has been assigned in this deployment environment.
     ManagedIdentity(ImdsManagedIdentityCredential),
     /// `TokenCredential` from Azure CLI.

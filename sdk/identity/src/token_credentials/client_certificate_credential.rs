@@ -89,6 +89,7 @@ pub struct ClientCertificateCredential {
 impl ClientCertificateCredential {
     /// Create a new `ClientCertificateCredential`
     pub fn new<C, P>(
+        options: TokenCredentialOptions,
         tenant_id: String,
         client_id: String,
         client_certificate: C,
@@ -104,7 +105,7 @@ impl ClientCertificateCredential {
             client_id,
             client_certificate: client_certificate.into(),
             client_certificate_pass: client_certificate_pass.into(),
-            http_client: new_http_client(),
+            http_client: options.http_client().clone(),
             options,
             cache: TokenCache::new(),
         }

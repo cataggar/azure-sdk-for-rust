@@ -101,7 +101,7 @@ impl EnvironmentCredential {
 }
 
 #[derive(Debug, Default)]
-struct EnvironmentCredentialCreator {}
+pub struct EnvironmentCredentialCreator {}
 
 impl TokenCredentialCreator for EnvironmentCredentialCreator {
     fn create(
