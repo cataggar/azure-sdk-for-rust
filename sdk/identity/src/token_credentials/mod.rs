@@ -15,6 +15,7 @@ mod client_secret_credential;
 mod default_credential;
 mod environment_credential;
 mod imds_managed_identity_credential;
+mod options;
 mod specific_azure_credential;
 mod workload_identity_credential;
 
@@ -27,14 +28,6 @@ pub use client_secret_credential::*;
 pub use default_credential::*;
 pub use environment_credential::*;
 pub use imds_managed_identity_credential::*;
+pub use options::*;
 pub use specific_azure_credential::*;
 pub use workload_identity_credential::*;
-
-pub(crate) trait CreateTokenCredential {
-    fn create_credential(
-        &self,
-        env: impl crate::env::Env,
-        http_client: std::sync::Arc<dyn azure_core::HttpClient>,
-        options: &TokenCredentialOptions,
-    ) -> azure_core::Result<impl azure_core::auth::TokenCredential>;
-}

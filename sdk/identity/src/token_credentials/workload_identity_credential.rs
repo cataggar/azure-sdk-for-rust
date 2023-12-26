@@ -8,6 +8,7 @@ use azure_core::{
 };
 use std::{str, sync::Arc, time::Duration};
 use time::OffsetDateTime;
+use url::Url;
 
 /// Enables authentication to Azure Active Directory using a client secret that was generated for an App Registration.
 ///
@@ -17,17 +18,17 @@ use time::OffsetDateTime;
 #[derive(Debug)]
 pub struct WorkloadIdentityCredential {
     http_client: Arc<dyn HttpClient>,
+    authority_host: Url,
     tenant_id: String,
     client_id: String,
     token: Secret,
-    options: TokenCredentialOptions,
     cache: TokenCache,
 }
 
 impl WorkloadIdentityCredential {
     /// Create a new `WorkloadIdentityCredential`
     pub fn new<T>(
-        http_client: Arc<dyn HttpClient>,
+        options: TokenCredentialOptions,
         tenant_id: String,
         client_id: String,
         token: T,
@@ -36,18 +37,13 @@ impl WorkloadIdentityCredential {
         T: Into<Secret>,
     {
         Self {
-            http_client,
+            http_client: options.http_client().clone(),
+            authority_host: options.authority_host().clone(),
             tenant_id,
             client_id,
             token: token.into(),
-            options: TokenCredentialOptions::default(),
             cache: TokenCache::new(),
         }
-    }
-
-    /// set `TokenCredentialOptions`
-    pub fn set_options(&mut self, options: TokenCredentialOptions) {
-        self.options = options;
     }
 
     async fn get_token(&self, scopes: &[&str]) -> azure_core::Result<AccessToken> {
@@ -57,7 +53,7 @@ impl WorkloadIdentityCredential {
             self.token.secret(),
             scopes,
             &self.tenant_id,
-            self.options.authority_host(),
+            &self.authority_host,
         )
         .await
         .map(|r| {

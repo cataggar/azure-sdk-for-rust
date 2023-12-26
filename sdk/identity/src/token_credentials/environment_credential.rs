@@ -1,16 +1,11 @@
-use crate::{
-    env::Env,
-    token_credentials::{
-        ClientSecretCredential, CreateTokenCredential, TokenCredentialOptions,
-        WorkloadIdentityCredential,
-    },
+use crate::token_credentials::{
+    ClientSecretCredential, TokenCredentialOptions, WorkloadIdentityCredential,
 };
 use azure_core::{
     auth::{AccessToken, TokenCredential},
     error::{Error, ErrorKind, ResultExt},
-    HttpClient, Url,
+    Url,
 };
-use std::sync::Arc;
 
 const AZURE_TENANT_ID_ENV_KEY: &str = "AZURE_TENANT_ID";
 const AZURE_CLIENT_ID_ENV_KEY: &str = "AZURE_CLIENT_ID";
@@ -44,13 +39,11 @@ pub struct EnvironmentCredential {
     credential: Box<dyn TokenCredential>,
 }
 
-impl CreateTokenCredential for EnvironmentCredential {
-    fn create_credential(
-        &self,
-        env: impl Env,
-        http_client: std::sync::Arc<dyn azure_core::HttpClient>,
-        options: &TokenCredentialOptions,
-    ) -> azure_core::Result<impl TokenCredential> {
+impl EnvironmentCredential {
+    pub(crate) fn create(
+        options: TokenCredentialOptions,
+    ) -> azure_core::Result<EnvironmentCredential> {
+        let env = options.env();
         let tenant_id = env
             .var(AZURE_TENANT_ID_ENV_KEY)
             .with_context(ErrorKind::Credential, || {
@@ -70,17 +63,14 @@ impl CreateTokenCredential for EnvironmentCredential {
         let federated_token = env.var(AZURE_FEDERATED_TOKEN);
         let authority_host = env.var(AZURE_AUTHORITY_HOST);
 
-        let options: TokenCredentialOptions = if let Ok(authority_host) = authority_host {
-            TokenCredentialOptions::new(Url::parse(&authority_host)?)
-        } else {
-            options.clone()
-        };
+        let mut options = options.clone();
+        if let Ok(authority_host) = authority_host {
+            options.set_authority_host(Url::parse(&authority_host)?);
+        }
 
         let credential: Box<dyn TokenCredential> = if let Ok(token) = federated_token {
             let mut credential: WorkloadIdentityCredential =
-                WorkloadIdentityCredential::new(http_client.clone(), tenant_id, client_id, token);
-            credential.set_options(options);
-
+                WorkloadIdentityCredential::new(options.clone(), tenant_id, client_id, token);
             Box::new(credential)
         } else if let Ok(file) = federated_token_file {
             let token = std::fs::read_to_string(file.clone())
@@ -88,18 +78,11 @@ impl CreateTokenCredential for EnvironmentCredential {
                     format!("failed to read federated token from file {}", file.as_str())
                 })?;
             let mut credential: WorkloadIdentityCredential =
-                WorkloadIdentityCredential::new(http_client.clone(), tenant_id, client_id, token);
-            credential.set_options(options);
-
+                WorkloadIdentityCredential::new(options, tenant_id, client_id, token);
             Box::new(credential)
         } else if let Ok(client_secret) = client_secret {
-            let credential = ClientSecretCredential::new(
-                http_client.clone(),
-                tenant_id,
-                client_id,
-                client_secret,
-                options,
-            );
+            let credential =
+                ClientSecretCredential::new(options, tenant_id, client_id, client_secret);
             Box::new(credential)
         // } else if username.is_ok() && password.is_ok() {
         //     // Could use multiple if-let with #![feature(let_chains)] once stabilised - see https://github.com/rust-lang/rust/issues/53667
@@ -112,13 +95,7 @@ impl CreateTokenCredential for EnvironmentCredential {
                 "no valid environment credential providers",
             ));
         };
-        Ok(Self::new(credential))
-    }
-}
-
-impl EnvironmentCredential {
-    pub fn new(credential: Box<dyn TokenCredential>) -> Self {
-        Self { credential }
+        Ok(Self { credential })
     }
 }
 

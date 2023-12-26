@@ -1,9 +1,10 @@
 use azure_core::error::{ErrorKind, ResultExt};
 
-pub(crate) trait Env {
+pub(crate) trait Env: Send + Sync + std::fmt::Debug {
     fn var(&self, key: &str) -> azure_core::Result<String>;
 }
 
+#[derive(Debug, Clone)]
 pub(crate) struct ProcessEnv;
 
 impl ProcessEnv {
@@ -23,6 +24,7 @@ mod tests {
     use super::*;
     use std::collections::HashMap;
 
+    #[derive(Debug, Clone)]
     struct MockEnv {
         vars: HashMap<String, String>,
     }
@@ -71,7 +73,7 @@ mod tests {
     // test ProcessEnv::var() returns an error when the environment variable is not set
     #[test]
     fn test_env_var_not_set() {
-        let env = ProcessEnv::new();
+        let env = ProcessEnv {};
         assert!(env.var("CHRISTMAS_GRINCH").is_err());
     }
 }

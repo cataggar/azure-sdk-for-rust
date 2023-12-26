@@ -1,46 +1,13 @@
-use crate::oauth2_http_client::Oauth2HttpClient;
 use crate::token_credentials::cache::TokenCache;
+use crate::{oauth2_http_client::Oauth2HttpClient, TokenCredentialOptions};
 use azure_core::{
     auth::{AccessToken, Secret, TokenCredential},
-    authority_hosts::AZURE_PUBLIC_CLOUD,
     error::{ErrorKind, ResultExt},
     HttpClient, Url,
 };
 use oauth2::{basic::BasicClient, AuthType, AuthUrl, Scope, TokenUrl};
 use std::{str, sync::Arc};
 use time::OffsetDateTime;
-
-/// Provides options to configure how the Identity library makes authentication
-/// requests to Azure Active Directory.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct TokenCredentialOptions {
-    authority_host: Url,
-}
-
-impl Default for TokenCredentialOptions {
-    fn default() -> Self {
-        Self {
-            authority_host: AZURE_PUBLIC_CLOUD.to_owned(),
-        }
-    }
-}
-
-impl TokenCredentialOptions {
-    /// Create a new `TokenCredentialsOptions`. `default()` may also be used.
-    pub fn new(authority_host: Url) -> Self {
-        Self { authority_host }
-    }
-    /// Set the authority host for authentication requests.
-    pub fn set_authority_host(&mut self, authority_host: Url) {
-        self.authority_host = authority_host;
-    }
-
-    /// The authority host to use for authentication requests.  The default is
-    /// `https://login.microsoftonline.com`.
-    pub fn authority_host(&self) -> &Url {
-        &self.authority_host
-    }
-}
 
 /// A list of tenant IDs
 pub mod tenant_ids {
@@ -59,39 +26,33 @@ pub mod tenant_ids {
 #[derive(Debug)]
 pub struct ClientSecretCredential {
     http_client: Arc<dyn HttpClient>,
+    authority_host: Url,
     tenant_id: String,
     client_id: oauth2::ClientId,
     client_secret: Option<oauth2::ClientSecret>,
-    options: TokenCredentialOptions,
     cache: TokenCache,
 }
 
 impl ClientSecretCredential {
     /// Create a new `ClientSecretCredential`
     pub fn new(
-        http_client: Arc<dyn HttpClient>,
+        options: TokenCredentialOptions,
         tenant_id: String,
         client_id: String,
         client_secret: String,
-        options: TokenCredentialOptions,
     ) -> ClientSecretCredential {
         ClientSecretCredential {
-            http_client,
+            http_client: options.http_client().clone(),
+            authority_host: options.authority_host().clone(),
             tenant_id,
             client_id: oauth2::ClientId::new(client_id),
             client_secret: Some(oauth2::ClientSecret::new(client_secret)),
-            options,
             cache: TokenCache::new(),
         }
     }
 
-    fn options(&self) -> &TokenCredentialOptions {
-        &self.options
-    }
-
     async fn get_token(&self, scopes: &[&str]) -> azure_core::Result<AccessToken> {
-        let options = self.options();
-        let authority_host = options.authority_host();
+        let authority_host = self.authority_host.to_string(); // TODO append URL
 
         let token_url = TokenUrl::from_url(
             Url::parse(&format!(

@@ -1,5 +1,5 @@
 // #![feature(return_position_impl_trait_in_trait)]
-use crate::{env::Env, AzureCliCredential, CreateTokenCredential, ImdsManagedIdentityCredential};
+use crate::{AzureCliCredential, ImdsManagedIdentityCredential, TokenCredentialOptions};
 use azure_core::{
     auth::{AccessToken, TokenCredential},
     error::{Error, ErrorKind},
@@ -21,18 +21,10 @@ pub struct SpecificAzureCredential {
 }
 
 impl SpecificAzureCredential {
-    pub fn new(credential: Box<dyn TokenCredential>) -> Self {
-        Self { credential }
-    }
-}
-
-impl CreateTokenCredential for SpecificAzureCredential {
-    fn create_credential(
-        &self,
-        env: impl Env,
-        _http_client: std::sync::Arc<dyn azure_core::HttpClient>,
-        _options: &crate::TokenCredentialOptions,
-    ) -> azure_core::Result<impl TokenCredential> {
+    pub(crate) fn create(
+        options: TokenCredentialOptions,
+    ) -> azure_core::Result<SpecificAzureCredential> {
+        let env = options.env();
         let credential_type = env.var(AZURE_CREDENTIAL_TYPE)?;
         let credential: Box<dyn TokenCredential> = match credential_type.to_lowercase().as_str() {
             IMDS_MANAGED_IDENTITY_CREDENTIAL => Box::new(ImdsManagedIdentityCredential::default()),
@@ -43,7 +35,7 @@ impl CreateTokenCredential for SpecificAzureCredential {
                 }))
             }
         };
-        Ok(Self::new(credential))
+        Ok(Self { credential })
     }
 }
 
