@@ -1,5 +1,8 @@
-use crate::token_credentials::{
-    ClientSecretCredential, TokenCredentialOptions, WorkloadIdentityCredential,
+use crate::{
+    token_credentials::{
+        ClientSecretCredential, TokenCredentialOptions, WorkloadIdentityCredential,
+    },
+    TokenCredentialCreator,
 };
 use azure_core::{
     auth::{AccessToken, TokenCredential},
@@ -10,9 +13,9 @@ use azure_core::{
 const AZURE_TENANT_ID_ENV_KEY: &str = "AZURE_TENANT_ID";
 const AZURE_CLIENT_ID_ENV_KEY: &str = "AZURE_CLIENT_ID";
 const AZURE_CLIENT_SECRET_ENV_KEY: &str = "AZURE_CLIENT_SECRET";
-const AZURE_USERNAME_ENV_KEY: &str = "AZURE_USERNAME";
-const AZURE_PASSWORD_ENV_KEY: &str = "AZURE_PASSWORD";
-const AZURE_CLIENT_CERTIFICATE_PATH_ENV_KEY: &str = "AZURE_CLIENT_CERTIFICATE_PATH";
+// const AZURE_USERNAME_ENV_KEY: &str = "AZURE_USERNAME";
+// const AZURE_PASSWORD_ENV_KEY: &str = "AZURE_PASSWORD";
+// const AZURE_CLIENT_CERTIFICATE_PATH_ENV_KEY: &str = "AZURE_CLIENT_CERTIFICATE_PATH";
 const AZURE_FEDERATED_TOKEN_FILE: &str = "AZURE_FEDERATED_TOKEN_FILE";
 const AZURE_FEDERATED_TOKEN: &str = "AZURE_FEDERATED_TOKEN";
 const AZURE_AUTHORITY_HOST: &str = "AZURE_AUTHORITY_HOST";
@@ -40,9 +43,7 @@ pub struct EnvironmentCredential {
 }
 
 impl EnvironmentCredential {
-    pub(crate) fn create(
-        options: TokenCredentialOptions,
-    ) -> azure_core::Result<EnvironmentCredential> {
+    pub fn create(options: TokenCredentialOptions) -> azure_core::Result<EnvironmentCredential> {
         let env = options.env();
         let tenant_id = env
             .var(AZURE_TENANT_ID_ENV_KEY)
@@ -69,7 +70,7 @@ impl EnvironmentCredential {
         }
 
         let credential: Box<dyn TokenCredential> = if let Ok(token) = federated_token {
-            let mut credential: WorkloadIdentityCredential =
+            let credential: WorkloadIdentityCredential =
                 WorkloadIdentityCredential::new(options.clone(), tenant_id, client_id, token);
             Box::new(credential)
         } else if let Ok(file) = federated_token_file {
@@ -77,7 +78,7 @@ impl EnvironmentCredential {
                 .with_context(ErrorKind::Credential, || {
                     format!("failed to read federated token from file {}", file.as_str())
                 })?;
-            let mut credential: WorkloadIdentityCredential =
+            let credential: WorkloadIdentityCredential =
                 WorkloadIdentityCredential::new(options, tenant_id, client_id, token);
             Box::new(credential)
         } else if let Ok(client_secret) = client_secret {
@@ -96,6 +97,19 @@ impl EnvironmentCredential {
             ));
         };
         Ok(Self { credential })
+    }
+}
+
+#[derive(Debug, Default)]
+struct EnvironmentCredentialCreator {}
+
+impl TokenCredentialCreator for EnvironmentCredentialCreator {
+    fn create(
+        &self,
+        options: TokenCredentialOptions,
+    ) -> azure_core::Result<Box<dyn TokenCredential>> {
+        EnvironmentCredential::create(options)
+            .map(|credential| Box::new(credential) as Box<dyn TokenCredential>)
     }
 }
 

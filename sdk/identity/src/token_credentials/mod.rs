@@ -9,6 +9,7 @@ mod azure_cli_credential;
 #[cfg(feature = "azureauth-cli")]
 mod azureauth_cli_credential;
 mod cache;
+mod chained_credential;
 #[cfg(feature = "client_certificate")]
 mod client_certificate_credential;
 mod client_secret_credential;
@@ -22,6 +23,7 @@ mod workload_identity_credential;
 pub use azure_cli_credential::*;
 #[cfg(feature = "azureauth-cli")]
 pub use azureauth_cli_credential::*;
+pub use chained_credential::*;
 #[cfg(feature = "client_certificate")]
 pub use client_certificate_credential::*;
 pub use client_secret_credential::*;
