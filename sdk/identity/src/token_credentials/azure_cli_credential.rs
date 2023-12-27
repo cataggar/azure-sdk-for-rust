@@ -1,4 +1,4 @@
-use crate::{token_credentials::cache::TokenCache, TokenCredentialCreator, TokenCredentialOptions};
+use crate::token_credentials::cache::TokenCache;
 use azure_core::{
     auth::{AccessToken, Secret, TokenCredential},
     error::{Error, ErrorKind},
@@ -214,25 +214,6 @@ impl TokenCredential for AzureCliCredential {
     /// Clear the credential's cache.
     async fn clear_cache(&self) -> azure_core::Result<()> {
         self.cache.clear().await
-    }
-}
-
-#[derive(Debug, Default)]
-pub struct AzureCliCredentialCreator {}
-
-impl AzureCliCredentialCreator {
-    pub fn new() -> Self {
-        Self {}
-    }
-}
-
-impl TokenCredentialCreator for AzureCliCredentialCreator {
-    fn create(
-        &self,
-        _options: crate::TokenCredentialOptions,
-    ) -> azure_core::Result<Box<dyn TokenCredential>> {
-        // TODO check `az version` to see if it's installed
-        Ok(Box::new(AzureCliCredential::new()))
     }
 }
 

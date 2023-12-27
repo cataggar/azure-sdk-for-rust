@@ -1,8 +1,5 @@
-use crate::{
-    token_credentials::{
-        ClientSecretCredential, TokenCredentialOptions, WorkloadIdentityCredential,
-    },
-    TokenCredentialCreator,
+use crate::token_credentials::{
+    ClientSecretCredential, TokenCredentialOptions, WorkloadIdentityCredential,
 };
 use azure_core::{
     auth::{AccessToken, TokenCredential},
@@ -97,19 +94,6 @@ impl EnvironmentCredential {
             ));
         };
         Ok(Self { credential })
-    }
-}
-
-#[derive(Debug, Default)]
-pub struct EnvironmentCredentialCreator {}
-
-impl TokenCredentialCreator for EnvironmentCredentialCreator {
-    fn create(
-        &self,
-        options: TokenCredentialOptions,
-    ) -> azure_core::Result<Box<dyn TokenCredential>> {
-        EnvironmentCredential::create(options)
-            .map(|credential| Box::new(credential) as Box<dyn TokenCredential>)
     }
 }
 
