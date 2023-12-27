@@ -18,6 +18,14 @@ const API_VERSION: &str = "2019-08-01";
 const SECRET_HEADER: HeaderName = HeaderName::from_static("x-identity-header");
 const SECRET_ENV: &str = "IDENTITY_HEADER";
 
+#[derive(Debug)]
+pub(crate) enum ImdsId {
+    SystemAssigned,
+    ClientId(String),
+    ObjectId(String),
+    MsiResId(String),
+}
+
 /// Attempts authentication using a managed identity that has been assigned to the deployment environment.
 ///
 /// This authentication type works in Azure VMs, App Service and Azure Functions applications, as well as the Azure Cloud Shell
@@ -30,9 +38,7 @@ pub(crate) struct ImdsManagedIdentityClient {
     api_version: String,
     secret_header: HeaderName,
     secret_env: String,
-    object_id: Option<String>,
-    client_id: Option<String>,
-    msi_res_id: Option<String>,
+    id: ImdsId,
     cache: TokenCache,
 }
 
@@ -51,6 +57,7 @@ impl ImdsManagedIdentityCredential {
                 API_VERSION,
                 SECRET_HEADER,
                 SECRET_ENV,
+                ImdsId::SystemAssigned,
             ),
         }
     }
@@ -75,6 +82,7 @@ impl ImdsManagedIdentityClient {
         api_version: &str,
         secret_header: HeaderName,
         secret_env: &str,
+        id: ImdsId,
     ) -> Self {
         Self {
             http_client: options.http_client(),
@@ -82,53 +90,9 @@ impl ImdsManagedIdentityClient {
             api_version: api_version.to_owned(),
             secret_header: secret_header.to_owned(),
             secret_env: secret_env.to_owned(),
-            object_id: None,
-            client_id: None,
-            msi_res_id: None,
+            id,
             cache: TokenCache::new(),
         }
-    }
-
-    /// Specifies the object id associated with a user assigned managed service identity resource that should be used to retrieve the access token.
-    ///
-    /// The values of `client_id` and `msi_res_id` are discarded, as only one id parameter may be set when getting a token.
-    #[must_use]
-    pub fn with_object_id<A>(mut self, object_id: A) -> Self
-    where
-        A: Into<String>,
-    {
-        self.object_id = Some(object_id.into());
-        self.client_id = None;
-        self.msi_res_id = None;
-        self
-    }
-
-    /// Specifies the application id (client id) associated with a user assigned managed service identity resource that should be used to retrieve the access token.
-    ///
-    /// The values of `object_id` and `msi_res_id` are discarded, as only one id parameter may be set when getting a token.
-    #[must_use]
-    pub fn with_client_id<A>(mut self, client_id: A) -> Self
-    where
-        A: Into<String>,
-    {
-        self.client_id = Some(client_id.into());
-        self.object_id = None;
-        self.msi_res_id = None;
-        self
-    }
-
-    /// Specifies the ARM resource id of the user assigned managed service identity resource that should be used to retrieve the access token.
-    ///
-    /// The values of `object_id` and `client_id` are discarded, as only one id parameter may be set when getting a token.
-    #[must_use]
-    pub fn with_identity<A>(mut self, msi_res_id: A) -> Self
-    where
-        A: Into<String>,
-    {
-        self.msi_res_id = Some(msi_res_id.into());
-        self.object_id = None;
-        self.client_id = None;
-        self
     }
 
     async fn get_token(&self, scopes: &[&str]) -> azure_core::Result<AccessToken> {
@@ -139,15 +103,11 @@ impl ImdsManagedIdentityClient {
             ("resource", resource),
         ];
 
-        match (
-            self.object_id.as_ref(),
-            self.client_id.as_ref(),
-            self.msi_res_id.as_ref(),
-        ) {
-            (Some(object_id), None, None) => query_items.push(("object_id", object_id)),
-            (None, Some(client_id), None) => query_items.push(("client_id", client_id)),
-            (None, None, Some(msi_res_id)) => query_items.push(("msi_res_id", msi_res_id)),
-            _ => (),
+        match self.id {
+            ImdsId::SystemAssigned => (),
+            ImdsId::ClientId(ref client_id) => query_items.push(("client_id", client_id)),
+            ImdsId::ObjectId(ref object_id) => query_items.push(("object_id", object_id)),
+            ImdsId::MsiResId(ref msi_res_id) => query_items.push(("msi_res_id", msi_res_id)),
         }
 
         let mut url = self.endpoint.clone();

@@ -1,4 +1,4 @@
-use crate::{ImdsManagedIdentityClient, TokenCredentialOptions};
+use crate::{ImdsId, ImdsManagedIdentityClient, TokenCredentialOptions};
 use azure_core::auth::{AccessToken, TokenCredential};
 use azure_core::headers::HeaderName;
 use azure_core::Url;
@@ -24,6 +24,7 @@ impl AppServiceManagedIdentityCredential {
                 API_VERSION,
                 SECRET_HEADER,
                 SECRET_ENV,
+                ImdsId::SystemAssigned,
             ),
         })
     }
