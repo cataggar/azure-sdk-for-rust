@@ -5,6 +5,7 @@
 //! * Azure CLI credentials cache
 //! * Managed identity
 //! * Client secret
+mod app_service_managed_identity_credential;
 mod azure_cli_credential;
 #[cfg(feature = "azureauth-cli")]
 mod azureauth_cli_credential;
@@ -19,6 +20,7 @@ mod options;
 mod specific_azure_credential;
 mod workload_identity_credential;
 
+pub use app_service_managed_identity_credential::*;
 pub use azure_cli_credential::*;
 #[cfg(feature = "azureauth-cli")]
 pub use azureauth_cli_credential::*;

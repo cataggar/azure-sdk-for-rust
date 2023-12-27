@@ -1,8 +1,10 @@
 use crate::{token_credentials::cache::TokenCache, TokenCredentialOptions};
 use azure_core::{
     auth::{AccessToken, Secret, TokenCredential},
-    error::{Error, ErrorKind, ResultExt},
-    from_json, HttpClient, Method, Request, StatusCode, Url,
+    error::{Error, ErrorKind},
+    from_json,
+    headers::HeaderName,
+    HttpClient, Method, Request, StatusCode, Url,
 };
 use serde::{
     de::{self, Deserializer},
@@ -11,9 +13,10 @@ use serde::{
 use std::{str, sync::Arc};
 use time::OffsetDateTime;
 
-const MSI_ENDPOINT_ENV_KEY: &str = "IDENTITY_ENDPOINT";
-const MSI_SECRET_ENV_KEY: &str = "IDENTITY_HEADER";
-const MSI_API_VERSION: &str = "2019-08-01";
+const ENDPOINT: &str = "http://169.254.169.254/metadata/identity/oauth2/token";
+const API_VERSION: &str = "2019-08-01";
+const SECRET_HEADER: HeaderName = HeaderName::from_static("x-identity-header");
+const SECRET_ENV: &str = "IDENTITY_HEADER";
 
 /// Attempts authentication using a managed identity that has been assigned to the deployment environment.
 ///
@@ -21,8 +24,12 @@ const MSI_API_VERSION: &str = "2019-08-01";
 ///
 /// Built up from docs at [https://docs.microsoft.com/azure/app-service/overview-managed-identity#using-the-rest-protocol](https://docs.microsoft.com/azure/app-service/overview-managed-identity#using-the-rest-protocol)
 #[derive(Debug)]
-pub struct ImdsManagedIdentityClient {
+pub(crate) struct ImdsManagedIdentityClient {
     http_client: Arc<dyn HttpClient>,
+    endpoint: Url,
+    api_version: String,
+    secret_header: HeaderName,
+    secret_env: String,
     object_id: Option<String>,
     client_id: Option<String>,
     msi_res_id: Option<String>,
@@ -36,15 +43,16 @@ pub struct ImdsManagedIdentityCredential {
 
 impl ImdsManagedIdentityCredential {
     pub fn new(options: TokenCredentialOptions) -> Self {
+        let endpoint = Url::parse(ENDPOINT).unwrap(); // valid url constant
         Self {
-            client: ImdsManagedIdentityClient::new(options),
+            client: ImdsManagedIdentityClient::new(
+                options,
+                endpoint,
+                API_VERSION,
+                SECRET_HEADER,
+                SECRET_ENV,
+            ),
         }
-    }
-}
-
-impl Default for ImdsManagedIdentityCredential {
-    fn default() -> Self {
-        Self::new(TokenCredentialOptions::default())
     }
 }
 
@@ -61,9 +69,19 @@ impl TokenCredential for ImdsManagedIdentityCredential {
 }
 
 impl ImdsManagedIdentityClient {
-    pub fn new(options: TokenCredentialOptions) -> Self {
+    pub fn new(
+        options: TokenCredentialOptions,
+        endpoint: Url,
+        api_version: &str,
+        secret_header: HeaderName,
+        secret_env: &str,
+    ) -> Self {
         Self {
             http_client: options.http_client(),
+            endpoint,
+            api_version: api_version.to_owned(),
+            secret_header: secret_header.to_owned(),
+            secret_env: secret_env.to_owned(),
             object_id: None,
             client_id: None,
             msi_res_id: None,
@@ -116,10 +134,10 @@ impl ImdsManagedIdentityClient {
     async fn get_token(&self, scopes: &[&str]) -> azure_core::Result<AccessToken> {
         let resource = scopes_to_resource(scopes)?;
 
-        let msi_endpoint = std::env::var(MSI_ENDPOINT_ENV_KEY)
-            .unwrap_or_else(|_| "http://169.254.169.254/metadata/identity/oauth2/token".to_owned());
-
-        let mut query_items = vec![("api-version", MSI_API_VERSION), ("resource", &resource)];
+        let mut query_items = vec![
+            ("api-version", self.api_version.as_str()),
+            ("resource", resource),
+        ];
 
         match (
             self.object_id.as_ref(),
@@ -132,18 +150,16 @@ impl ImdsManagedIdentityClient {
             _ => (),
         }
 
-        let url = Url::parse_with_params(&msi_endpoint, &query_items).context(
-            ErrorKind::DataConversion,
-            "error parsing url for MSI endpoint",
-        )?;
+        let mut url = self.endpoint.clone();
+        url.query_pairs_mut().extend_pairs(query_items);
 
         let mut req = Request::new(url, Method::Get);
 
         req.insert_header("metadata", "true");
 
-        let msi_secret = std::env::var(MSI_SECRET_ENV_KEY);
+        let msi_secret = std::env::var(&self.secret_env);
         if let Ok(val) = msi_secret {
-            req.insert_header("x-identity-header", val);
+            req.insert_header(self.secret_header.clone(), val);
         };
 
         let rsp = self.http_client.execute_request(&req).await?;
