@@ -21,7 +21,7 @@ const MSI_API_VERSION: &str = "2019-08-01";
 ///
 /// Built up from docs at [https://docs.microsoft.com/azure/app-service/overview-managed-identity#using-the-rest-protocol](https://docs.microsoft.com/azure/app-service/overview-managed-identity#using-the-rest-protocol)
 #[derive(Debug)]
-pub struct ImdsManagedIdentityCredential {
+pub struct ImdsManagedIdentityClient {
     http_client: Arc<dyn HttpClient>,
     object_id: Option<String>,
     client_id: Option<String>,
@@ -29,15 +29,38 @@ pub struct ImdsManagedIdentityCredential {
     cache: TokenCache,
 }
 
+#[derive(Debug)]
+pub struct ImdsManagedIdentityCredential {
+    client: ImdsManagedIdentityClient,
+}
+
+impl ImdsManagedIdentityCredential {
+    pub fn new(options: TokenCredentialOptions) -> Self {
+        Self {
+            client: ImdsManagedIdentityClient::new(options),
+        }
+    }
+}
+
 impl Default for ImdsManagedIdentityCredential {
-    /// Creates an instance of the `TransportOptions` using the default `HttpClient`.
     fn default() -> Self {
         Self::new(TokenCredentialOptions::default())
     }
 }
 
-impl ImdsManagedIdentityCredential {
-    /// Creates a new `ImdsManagedIdentityCredential` using the given `HttpClient`.
+#[cfg_attr(target_arch = "wasm32", async_trait::async_trait(?Send))]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
+impl TokenCredential for ImdsManagedIdentityCredential {
+    async fn get_token(&self, scopes: &[&str]) -> azure_core::Result<AccessToken> {
+        self.client.get_token(scopes).await
+    }
+
+    async fn clear_cache(&self) -> azure_core::Result<()> {
+        self.client.clear_cache().await
+    }
+}
+
+impl ImdsManagedIdentityClient {
     pub fn new(options: TokenCredentialOptions) -> Self {
         Self {
             http_client: options.http_client(),
@@ -159,7 +182,7 @@ impl ImdsManagedIdentityCredential {
 
 #[cfg_attr(target_arch = "wasm32", async_trait::async_trait(?Send))]
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
-impl TokenCredential for ImdsManagedIdentityCredential {
+impl TokenCredential for ImdsManagedIdentityClient {
     async fn get_token(&self, scopes: &[&str]) -> azure_core::Result<AccessToken> {
         self.cache.get_token(scopes, self.get_token(scopes)).await
     }
