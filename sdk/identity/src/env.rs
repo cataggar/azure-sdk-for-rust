@@ -1,10 +1,6 @@
 use azure_core::error::{ErrorKind, ResultExt};
 use std::collections::HashMap;
 
-pub trait Env: Send + Sync + std::fmt::Debug {
-    fn var(&self, key: &str) -> azure_core::Result<String>;
-}
-
 #[derive(Debug, Clone)]
 pub enum EnvEnum {
     Process(ProcessEnv),
@@ -13,12 +9,12 @@ pub enum EnvEnum {
 
 impl Default for EnvEnum {
     fn default() -> Self {
-        Self::Process(ProcessEnv::default())
+        Self::Process(ProcessEnv)
     }
 }
 
-impl Env for EnvEnum {
-    fn var(&self, key: &str) -> azure_core::Result<String> {
+impl EnvEnum {
+    pub fn var(&self, key: &str) -> azure_core::Result<String> {
         match self {
             EnvEnum::Process(env) => env.var(key),
             EnvEnum::Mem(env) => env.var(key),
@@ -42,7 +38,7 @@ impl From<MemEnv> for EnvEnum {
 #[derive(Debug, Clone, Default)]
 pub struct ProcessEnv;
 
-impl Env for ProcessEnv {
+impl ProcessEnv {
     fn var(&self, key: &str) -> azure_core::Result<String> {
         std::env::var(key).map_kind(ErrorKind::Io)
     }
@@ -70,7 +66,7 @@ impl From<&[(&str, &str)]> for MemEnv {
     }
 }
 
-impl Env for MemEnv {
+impl MemEnv {
     fn var(&self, key: &str) -> azure_core::Result<String> {
         self.vars
             .get(key)
