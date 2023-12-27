@@ -1,5 +1,8 @@
 // #![feature(return_position_impl_trait_in_trait)]
-use crate::{AzureCliCredential, ImdsManagedIdentityCredential, TokenCredentialOptions};
+use crate::{
+    AzureCliCredential, EnvironmentCredential, ImdsManagedIdentityCredential,
+    TokenCredentialOptions,
+};
 use azure_core::{
     auth::{AccessToken, TokenCredential},
     error::{Error, ErrorKind},
@@ -7,6 +10,7 @@ use azure_core::{
 
 pub const AZURE_CREDENTIAL_TYPE: &str = "AZURE_CREDENTIAL_TYPE";
 
+pub const ENVIRONMENT_CREDENTIAL: &str = "environment";
 pub const IMDS_MANAGED_IDENTITY_CREDENTIAL: &str = "imds";
 pub const AZURE_CLI_CREDENTIAL: &str = "azurecli";
 // pub const AZUREAUTH_CLI_CREDENTIAL: &str = "azureauthcli";
@@ -17,8 +21,9 @@ pub const AZURE_CLI_CREDENTIAL: &str = "azurecli";
 
 #[derive(Debug)]
 pub enum SpecificAzureCredentialEnum {
-    Imds(ImdsManagedIdentityCredential),
+    Environment(EnvironmentCredential),
     AzureCli(AzureCliCredential),
+    Imds(ImdsManagedIdentityCredential),
 }
 
 #[cfg_attr(target_arch = "wasm32", async_trait::async_trait(?Send))]
@@ -26,6 +31,9 @@ pub enum SpecificAzureCredentialEnum {
 impl TokenCredential for SpecificAzureCredentialEnum {
     async fn get_token(&self, scopes: &[&str]) -> azure_core::Result<AccessToken> {
         match self {
+            SpecificAzureCredentialEnum::Environment(credential) => {
+                credential.get_token(scopes).await
+            }
             SpecificAzureCredentialEnum::Imds(credential) => credential.get_token(scopes).await,
             SpecificAzureCredentialEnum::AzureCli(credential) => credential.get_token(scopes).await,
         }
@@ -33,6 +41,7 @@ impl TokenCredential for SpecificAzureCredentialEnum {
 
     async fn clear_cache(&self) -> azure_core::Result<()> {
         match self {
+            SpecificAzureCredentialEnum::Environment(credential) => credential.clear_cache().await,
             SpecificAzureCredentialEnum::Imds(credential) => credential.clear_cache().await,
             SpecificAzureCredentialEnum::AzureCli(credential) => credential.clear_cache().await,
         }
@@ -50,6 +59,8 @@ impl SpecificAzureCredential {
         let credential_type = env.var(AZURE_CREDENTIAL_TYPE)?;
         let credential: SpecificAzureCredentialEnum = match credential_type.to_lowercase().as_str()
         {
+            ENVIRONMENT_CREDENTIAL => EnvironmentCredential::create(options)
+                .map(SpecificAzureCredentialEnum::Environment)?,
             IMDS_MANAGED_IDENTITY_CREDENTIAL => {
                 SpecificAzureCredentialEnum::Imds(ImdsManagedIdentityCredential::new(options))
             }
