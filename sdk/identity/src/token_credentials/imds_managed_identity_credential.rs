@@ -13,13 +13,8 @@ use serde::{
 use std::{str, sync::Arc};
 use time::OffsetDateTime;
 
-const ENDPOINT: &str = "http://169.254.169.254/metadata/identity/oauth2/token";
-const API_VERSION: &str = "2019-08-01";
-const SECRET_HEADER: HeaderName = HeaderName::from_static("x-identity-header");
-const SECRET_ENV: &str = "IDENTITY_HEADER";
-
 #[derive(Debug)]
-pub(crate) enum ImdsId {
+pub enum ImdsId {
     SystemAssigned,
     ClientId(String),
     ObjectId(String),
@@ -32,7 +27,7 @@ pub(crate) enum ImdsId {
 ///
 /// Built up from docs at [https://docs.microsoft.com/azure/app-service/overview-managed-identity#using-the-rest-protocol](https://docs.microsoft.com/azure/app-service/overview-managed-identity#using-the-rest-protocol)
 #[derive(Debug)]
-pub(crate) struct ImdsManagedIdentityClient {
+pub struct ImdsManagedIdentityCredential {
     http_client: Arc<dyn HttpClient>,
     endpoint: Url,
     api_version: String,
@@ -42,40 +37,7 @@ pub(crate) struct ImdsManagedIdentityClient {
     cache: TokenCache,
 }
 
-#[derive(Debug)]
-pub struct ImdsManagedIdentityCredential {
-    client: ImdsManagedIdentityClient,
-}
-
 impl ImdsManagedIdentityCredential {
-    pub fn new(options: TokenCredentialOptions) -> Self {
-        let endpoint = Url::parse(ENDPOINT).unwrap(); // valid url constant
-        Self {
-            client: ImdsManagedIdentityClient::new(
-                options,
-                endpoint,
-                API_VERSION,
-                SECRET_HEADER,
-                SECRET_ENV,
-                ImdsId::SystemAssigned,
-            ),
-        }
-    }
-}
-
-#[cfg_attr(target_arch = "wasm32", async_trait::async_trait(?Send))]
-#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
-impl TokenCredential for ImdsManagedIdentityCredential {
-    async fn get_token(&self, scopes: &[&str]) -> azure_core::Result<AccessToken> {
-        self.client.get_token(scopes).await
-    }
-
-    async fn clear_cache(&self) -> azure_core::Result<()> {
-        self.client.clear_cache().await
-    }
-}
-
-impl ImdsManagedIdentityClient {
     pub fn new(
         options: TokenCredentialOptions,
         endpoint: Url,
@@ -158,7 +120,7 @@ impl ImdsManagedIdentityClient {
 
 #[cfg_attr(target_arch = "wasm32", async_trait::async_trait(?Send))]
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
-impl TokenCredential for ImdsManagedIdentityClient {
+impl TokenCredential for ImdsManagedIdentityCredential {
     async fn get_token(&self, scopes: &[&str]) -> azure_core::Result<AccessToken> {
         self.cache.get_token(scopes, self.get_token(scopes)).await
     }

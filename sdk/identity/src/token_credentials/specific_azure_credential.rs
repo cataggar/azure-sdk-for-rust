@@ -1,29 +1,32 @@
-// #![feature(return_position_impl_trait_in_trait)]
 use crate::{
-    AzureCliCredential, EnvironmentCredential, ImdsManagedIdentityCredential,
-    TokenCredentialOptions,
+    AppServiceManagedIdentityCredential, AzureCliCredential, EnvironmentCredential,
+    TokenCredentialOptions, VirtualMachineManagedIdentityCredential,
 };
 use azure_core::{
     auth::{AccessToken, TokenCredential},
-    error::{Error, ErrorKind},
+    error::ErrorKind,
+    Error,
 };
 
 pub const AZURE_CREDENTIAL_TYPE: &str = "AZURE_CREDENTIAL_TYPE";
 
-pub const ENVIRONMENT_CREDENTIAL: &str = "environment";
-pub const IMDS_MANAGED_IDENTITY_CREDENTIAL: &str = "imds";
-pub const AZURE_CLI_CREDENTIAL: &str = "azurecli";
-// pub const AZUREAUTH_CLI_CREDENTIAL: &str = "azureauthcli";
-// pub const SERVICE_FABRIC_CREDENTIAL: &str = "servicefabric";
-// pub const APP_SERVICE_MANAGED_IDENTITY_CREDENTIAL: &str = "appservice";
-// pub const CLOUD_SHELL_MANAGED_IDENTITY_CREDENTIAL: &str = "cloudshell";
-// pub const AZURE_ARC_MANAGED_IDENTITY_CREDENTIAL: &str = "azurearc";
+pub mod azure_credential_types {
+    pub const ENVIRONMENT: &str = "environment";
+    pub const AZURE_CLI: &str = "azurecli";
+    pub const VIRTUAL_MACHINE: &str = "virtualmachine";
+    pub const APP_SERVICE: &str = "appservice";
+    // pub const AZUREAUTH_CLI: &str = "azureauthcli";
+    // pub const SERVICE_FABRIC: &str = "servicefabric";
+    // pub const CLOUD_SHELL: &str = "cloudshell";
+    // pub const AZURE_ARC: &str = "azurearc";
+}
 
 #[derive(Debug)]
 pub enum SpecificAzureCredentialEnum {
     Environment(EnvironmentCredential),
     AzureCli(AzureCliCredential),
-    Imds(ImdsManagedIdentityCredential),
+    VirtualMachine(VirtualMachineManagedIdentityCredential),
+    AppService(AppServiceManagedIdentityCredential),
 }
 
 #[cfg_attr(target_arch = "wasm32", async_trait::async_trait(?Send))]
@@ -34,16 +37,24 @@ impl TokenCredential for SpecificAzureCredentialEnum {
             SpecificAzureCredentialEnum::Environment(credential) => {
                 credential.get_token(scopes).await
             }
-            SpecificAzureCredentialEnum::Imds(credential) => credential.get_token(scopes).await,
             SpecificAzureCredentialEnum::AzureCli(credential) => credential.get_token(scopes).await,
+            SpecificAzureCredentialEnum::VirtualMachine(credential) => {
+                credential.get_token(scopes).await
+            }
+            SpecificAzureCredentialEnum::AppService(credential) => {
+                credential.get_token(scopes).await
+            }
         }
     }
 
     async fn clear_cache(&self) -> azure_core::Result<()> {
         match self {
             SpecificAzureCredentialEnum::Environment(credential) => credential.clear_cache().await,
-            SpecificAzureCredentialEnum::Imds(credential) => credential.clear_cache().await,
             SpecificAzureCredentialEnum::AzureCli(credential) => credential.clear_cache().await,
+            SpecificAzureCredentialEnum::VirtualMachine(credential) => {
+                credential.clear_cache().await
+            }
+            SpecificAzureCredentialEnum::AppService(credential) => credential.clear_cache().await,
         }
     }
 }
@@ -59,12 +70,16 @@ impl SpecificAzureCredential {
         let credential_type = env.var(AZURE_CREDENTIAL_TYPE)?;
         let credential: SpecificAzureCredentialEnum = match credential_type.to_lowercase().as_str()
         {
-            ENVIRONMENT_CREDENTIAL => EnvironmentCredential::create(options)
+            azure_credential_types::ENVIRONMENT => EnvironmentCredential::create(options)
                 .map(SpecificAzureCredentialEnum::Environment)?,
-            IMDS_MANAGED_IDENTITY_CREDENTIAL => {
-                SpecificAzureCredentialEnum::Imds(ImdsManagedIdentityCredential::new(options))
+            azure_credential_types::APP_SERVICE => {
+                AppServiceManagedIdentityCredential::create(options)
+                    .map(SpecificAzureCredentialEnum::AppService)?
             }
-            AZURE_CLI_CREDENTIAL => {
+            azure_credential_types::VIRTUAL_MACHINE => SpecificAzureCredentialEnum::VirtualMachine(
+                VirtualMachineManagedIdentityCredential::new(options),
+            ),
+            azure_credential_types::AZURE_CLI => {
                 AzureCliCredential::create().map(SpecificAzureCredentialEnum::AzureCli)?
             }
             _ => {
