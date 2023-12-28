@@ -50,7 +50,6 @@ mod env;
 pub mod federated_credentials_flow;
 mod oauth2_http_client;
 pub mod refresh_token;
-mod timeout;
 mod token_credentials;
 
 pub use crate::token_credentials::*;
