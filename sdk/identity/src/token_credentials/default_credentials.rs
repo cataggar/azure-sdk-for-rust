@@ -1,6 +1,9 @@
+use std::time::Duration;
+
 use crate::{
-    token_credentials::cache::TokenCache, AppServiceManagedIdentityCredential, AzureCliCredential,
-    EnvironmentCredential, TokenCredentialOptions, VirtualMachineManagedIdentityCredential,
+    timeout::TimeoutExt, token_credentials::cache::TokenCache, AppServiceManagedIdentityCredential,
+    AzureCliCredential, EnvironmentCredential, TokenCredentialOptions,
+    VirtualMachineManagedIdentityCredential,
 };
 use azure_core::{
     auth::{AccessToken, TokenCredential},
@@ -177,10 +180,19 @@ impl TokenCredential for DefaultAzureCredentialEnum {
                 )
             }
             DefaultAzureCredentialEnum::VirtualMachine(credential) => {
-                credential.get_token(scopes).await.context(
-                    ErrorKind::Credential,
-                    "error getting managed identity credential for the virtual machine",
-                )
+                // IMSD timeout is only limited to 1 second when used in DefaultAzureCredential
+                credential
+                    .get_token(scopes)
+                    .timeout(Duration::from_secs(1))
+                    .await
+                    .context(
+                        ErrorKind::Credential,
+                        "getting virtual machine managed identity credential timed out",
+                    )?
+                    .context(
+                        ErrorKind::Credential,
+                        "error getting virtual machine managed identity credential",
+                    )
             }
             DefaultAzureCredentialEnum::AzureCli(credential) => {
                 credential.get_token(scopes).await.context(
