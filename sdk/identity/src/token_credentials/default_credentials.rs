@@ -325,10 +325,7 @@ fn format_aggregate_error(errors: &[Error]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        env::{EnvEnum, MemEnv},
-        SpecificAzureCredentialEnum,
-    };
+    use crate::{env::Env, SpecificAzureCredentialEnum};
 
     #[test]
     fn test_builder_included_credential_flags() {
@@ -459,14 +456,14 @@ mod tests {
     // test specific environment credential
     #[test]
     fn test_specific_environment_credential() {
-        let env = EnvEnum::Mem(MemEnv::from(
+        let env = Env::from(
             &[
                 ("AZURE_CREDENTIAL_TYPE", "environment"),
                 ("AZURE_TENANT_ID", "1"),
                 ("AZURE_CLIENT_ID", "2"),
                 ("AZURE_CLIENT_SECRET", "3"),
             ][..],
-        ));
+        );
         let http_client = azure_core::new_noop_client();
         let options = TokenCredentialOptions::new(
             env,

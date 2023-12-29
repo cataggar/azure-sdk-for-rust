@@ -2,33 +2,33 @@ use azure_core::error::{ErrorKind, ResultExt};
 use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
-pub enum EnvEnum {
+pub enum Env {
     Process(ProcessEnv),
     Mem(MemEnv),
 }
 
-impl Default for EnvEnum {
+impl Default for Env {
     fn default() -> Self {
         Self::Process(ProcessEnv)
     }
 }
 
-impl EnvEnum {
+impl Env {
     pub fn var(&self, key: &str) -> azure_core::Result<String> {
         match self {
-            EnvEnum::Process(env) => env.var(key),
-            EnvEnum::Mem(env) => env.var(key),
+            Env::Process(env) => env.var(key),
+            Env::Mem(env) => env.var(key),
         }
     }
 }
 
-impl From<ProcessEnv> for EnvEnum {
+impl From<ProcessEnv> for Env {
     fn from(env: ProcessEnv) -> Self {
         Self::Process(env)
     }
 }
 
-impl From<MemEnv> for EnvEnum {
+impl From<MemEnv> for Env {
     fn from(env: MemEnv) -> Self {
         Self::Mem(env)
     }
@@ -50,22 +50,6 @@ pub struct MemEnv {
     vars: HashMap<String, String>,
 }
 
-impl From<HashMap<String, String>> for MemEnv {
-    fn from(vars: HashMap<String, String>) -> Self {
-        Self { vars }
-    }
-}
-
-impl From<&[(&str, &str)]> for MemEnv {
-    fn from(pairs: &[(&str, &str)]) -> Self {
-        let mut vars = HashMap::new();
-        for (k, v) in pairs {
-            vars.insert(k.to_string(), v.to_string());
-        }
-        Self { vars }
-    }
-}
-
 impl MemEnv {
     fn var(&self, key: &str) -> azure_core::Result<String> {
         self.vars
@@ -75,13 +59,23 @@ impl MemEnv {
     }
 }
 
+impl From<&[(&str, &str)]> for Env {
+    fn from(pairs: &[(&str, &str)]) -> Self {
+        let mut vars = HashMap::new();
+        for (k, v) in pairs {
+            vars.insert(k.to_string(), v.to_string());
+        }
+        Self::Mem(MemEnv { vars })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn test_env_var() {
-        let env = MemEnv::from(&[("CHRISTMAS_GRINCH", "You're a mean one, Mr. Grinch")][..]);
+        let env = Env::from(&[("CHRISTMAS_GRINCH", "You're a mean one, Mr. Grinch")][..]);
         assert_eq!(
             env.var("CHRISTMAS_GRINCH").unwrap(),
             "You're a mean one, Mr. Grinch"
@@ -105,7 +99,7 @@ mod tests {
     // test MemEnv::var() returns valid entries when multiple environment variables are set
     #[test]
     fn test_mem_env_var_multiple() {
-        let env = MemEnv::from(
+        let env = Env::from(
             &[
                 ("CHRISTMAS_GRINCH", "You're a mean one, Mr. Grinch"),
                 ("CHRISTMAS_TREE", "O Christmas Tree, O Christmas Tree"),

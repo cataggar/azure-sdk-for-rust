@@ -1,4 +1,4 @@
-use crate::env::EnvEnum;
+use crate::env::Env;
 use azure_core::authority_hosts::AZURE_PUBLIC_CLOUD;
 use std::sync::Arc;
 use url::Url;
@@ -7,7 +7,7 @@ use url::Url;
 /// requests to Azure Active Directory.
 #[derive(Debug, Clone)]
 pub struct TokenCredentialOptions {
-    env: EnvEnum,
+    env: Env,
     http_client: Arc<dyn azure_core::HttpClient>,
     authority_host: Url,
 }
@@ -15,7 +15,7 @@ pub struct TokenCredentialOptions {
 impl Default for TokenCredentialOptions {
     fn default() -> Self {
         Self {
-            env: EnvEnum::default(),
+            env: Env::default(),
             http_client: azure_core::new_http_client(),
             authority_host: AZURE_PUBLIC_CLOUD.to_owned(),
         }
@@ -25,7 +25,7 @@ impl Default for TokenCredentialOptions {
 impl TokenCredentialOptions {
     /// Create a new `TokenCredentialsOptions`. `default()` may also be used.
     pub fn new(
-        env: EnvEnum,
+        env: Env,
         http_client: Arc<dyn azure_core::HttpClient>,
         authority_host: Url,
     ) -> Self {
@@ -50,7 +50,7 @@ impl TokenCredentialOptions {
         self.http_client.clone()
     }
 
-    pub fn env(&self) -> &EnvEnum {
+    pub fn env(&self) -> &Env {
         &self.env
     }
 }
