@@ -16,7 +16,7 @@ pub struct VirtualMachineManagedIdentityCredential {
 }
 
 impl VirtualMachineManagedIdentityCredential {
-    pub fn new(options: TokenCredentialOptions) -> Self {
+    pub fn new(options: impl Into<TokenCredentialOptions>) -> Self {
         let endpoint = Url::parse(ENDPOINT).unwrap(); // valid url constant
         Self {
             credential: ImdsManagedIdentityCredential::new(

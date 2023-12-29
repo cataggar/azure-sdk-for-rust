@@ -28,7 +28,7 @@ pub struct WorkloadIdentityCredential {
 impl WorkloadIdentityCredential {
     /// Create a new `WorkloadIdentityCredential`
     pub fn new<T>(
-        options: TokenCredentialOptions,
+        options: impl Into<TokenCredentialOptions>,
         tenant_id: String,
         client_id: String,
         token: T,
@@ -36,6 +36,7 @@ impl WorkloadIdentityCredential {
     where
         T: Into<Secret>,
     {
+        let options = options.into();
         Self {
             http_client: options.http_client().clone(),
             authority_host: options.authority_host().clone(),

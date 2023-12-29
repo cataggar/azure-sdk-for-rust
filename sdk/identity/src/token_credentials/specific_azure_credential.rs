@@ -61,15 +61,14 @@ impl TokenCredential for SpecificAzureCredentialEnum {
 
 #[derive(Debug)]
 pub struct SpecificAzureCredential {
-    credential: SpecificAzureCredentialEnum,
+    source: SpecificAzureCredentialEnum,
 }
 
 impl SpecificAzureCredential {
     pub fn create(options: TokenCredentialOptions) -> azure_core::Result<SpecificAzureCredential> {
         let env = options.env();
         let credential_type = env.var(AZURE_CREDENTIAL_TYPE)?;
-        let credential: SpecificAzureCredentialEnum = match credential_type.to_lowercase().as_str()
-        {
+        let source: SpecificAzureCredentialEnum = match credential_type.to_lowercase().as_str() {
             azure_credential_types::ENVIRONMENT => EnvironmentCredential::create(options)
                 .map(SpecificAzureCredentialEnum::Environment)?,
             azure_credential_types::APP_SERVICE => {
@@ -88,7 +87,12 @@ impl SpecificAzureCredential {
                 }))
             }
         };
-        Ok(Self { credential })
+        Ok(Self { source })
+    }
+
+    #[cfg(test)]
+    pub(crate) fn source(&self) -> &SpecificAzureCredentialEnum {
+        &self.source
     }
 }
 
@@ -96,10 +100,10 @@ impl SpecificAzureCredential {
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 impl TokenCredential for SpecificAzureCredential {
     async fn get_token(&self, scopes: &[&str]) -> azure_core::Result<AccessToken> {
-        self.credential.get_token(scopes).await
+        self.source.get_token(scopes).await
     }
 
     async fn clear_cache(&self) -> azure_core::Result<()> {
-        self.credential.clear_cache().await
+        self.source.clear_cache().await
     }
 }

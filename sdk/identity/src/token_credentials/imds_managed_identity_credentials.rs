@@ -39,13 +39,14 @@ pub struct ImdsManagedIdentityCredential {
 
 impl ImdsManagedIdentityCredential {
     pub fn new(
-        options: TokenCredentialOptions,
+        options: impl Into<TokenCredentialOptions>,
         endpoint: Url,
         api_version: &str,
         secret_header: HeaderName,
         secret_env: &str,
         id: ImdsId,
     ) -> Self {
+        let options = options.into();
         Self {
             http_client: options.http_client(),
             endpoint,

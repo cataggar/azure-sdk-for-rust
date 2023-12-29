@@ -89,7 +89,7 @@ pub struct ClientCertificateCredential {
 impl ClientCertificateCredential {
     /// Create a new `ClientCertificateCredential`
     pub fn new<C, P>(
-        options: TokenCredentialOptions,
+        options: impl Into<TokenCredentialOptions>,
         tenant_id: String,
         client_id: String,
         client_certificate: C,

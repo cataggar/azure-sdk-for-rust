@@ -14,7 +14,8 @@ pub struct AppServiceManagedIdentityCredential {
 }
 
 impl AppServiceManagedIdentityCredential {
-    pub fn create(options: TokenCredentialOptions) -> azure_core::Result<Self> {
+    pub fn create(options: impl Into<TokenCredentialOptions>) -> azure_core::Result<Self> {
+        let options = options.into();
         let env = options.env();
         let endpoint = Url::parse(&env.var(ENDPOINT_ENV)?)?;
         Ok(Self {

@@ -40,7 +40,10 @@ pub struct EnvironmentCredential {
 }
 
 impl EnvironmentCredential {
-    pub fn create(options: TokenCredentialOptions) -> azure_core::Result<EnvironmentCredential> {
+    pub fn create(
+        options: impl Into<TokenCredentialOptions>,
+    ) -> azure_core::Result<EnvironmentCredential> {
+        let options = options.into();
         let env = options.env();
         let tenant_id = env
             .var(AZURE_TENANT_ID_ENV_KEY)
