@@ -46,9 +46,9 @@ impl Default for CertificateCredentialOptions {
 
 impl CertificateCredentialOptions {
     /// Create a new `TokenCredentialsOptions`. default() may also be used.
-    pub fn new(options: TokenCredentialOptions, send_certificate_chain: bool) -> Self {
+    pub fn new(options: impl Into<TokenCredentialOptions>, send_certificate_chain: bool) -> Self {
         Self {
-            options,
+            options: options.into(),
             send_certificate_chain,
         }
     }
