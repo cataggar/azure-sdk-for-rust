@@ -1,5 +1,6 @@
 use crate::token_credentials::cache::TokenCache;
 use crate::{oauth2_http_client::Oauth2HttpClient, TokenCredentialOptions};
+use azure_core::Error;
 use azure_core::{
     auth::{AccessToken, Secret, TokenCredential},
     error::{ErrorKind, ResultExt},
@@ -36,11 +37,12 @@ pub struct ClientSecretCredential {
 impl ClientSecretCredential {
     /// Create a new `ClientSecretCredential`
     pub fn new(
-        options: TokenCredentialOptions,
+        options: impl Into<TokenCredentialOptions>,
         tenant_id: String,
         client_id: String,
         client_secret: String,
     ) -> ClientSecretCredential {
+        let options = options.into();
         ClientSecretCredential {
             http_client: options.http_client().clone(),
             authority_host: options.authority_host().clone(),
@@ -52,39 +54,31 @@ impl ClientSecretCredential {
     }
 
     async fn get_token(&self, scopes: &[&str]) -> azure_core::Result<AccessToken> {
-        let authority_host = self.authority_host.to_string(); // TODO append URL
+        let mut token_url = self.authority_host.clone();
+        token_url
+            .path_segments_mut()
+            .map_err(|_| {
+                Error::with_message(ErrorKind::Credential, || {
+                    format!("invalid authority host {}", self.authority_host)
+                })
+            })?
+            .extend(&[&self.tenant_id, "oauth2", "v2.0", "token"]);
 
-        let token_url = TokenUrl::from_url(
-            Url::parse(&format!(
-                "{}/{}/oauth2/v2.0/token",
-                authority_host, self.tenant_id
-            ))
-            .with_context(ErrorKind::Credential, || {
-                format!(
-                    "failed to construct token endpoint with tenant id {}",
-                    self.tenant_id
-                )
-            })?,
-        );
-
-        let auth_url = AuthUrl::from_url(
-            Url::parse(&format!(
-                "{}/{}/oauth2/v2.0/authorize",
-                authority_host, self.tenant_id
-            ))
-            .with_context(ErrorKind::Credential, || {
-                format!(
-                    "failed to construct authorize endpoint with tenant id {}",
-                    self.tenant_id
-                )
-            })?,
-        );
+        let mut auth_url = self.authority_host.clone();
+        auth_url
+            .path_segments_mut()
+            .map_err(|_| {
+                Error::with_message(ErrorKind::Credential, || {
+                    format!("invalid authority host {}", self.authority_host)
+                })
+            })?
+            .extend(&[&self.tenant_id, "oauth2", "v2.0", "authorize"]);
 
         let client = BasicClient::new(
             self.client_id.clone(),
             self.client_secret.clone(),
-            auth_url,
-            Some(token_url),
+            AuthUrl::from_url(auth_url),
+            Some(TokenUrl::from_url(token_url)),
         )
         .set_auth_type(AuthType::RequestBody);
 
