@@ -3,10 +3,7 @@
 /// authenticate the app. If you are using subject name validation for the app
 /// please make sure to set the `send_certificate_chain` option to true otherwise
 /// the authentication will fail.
-use azure_core::{
-    auth::{Secret, TokenCredential},
-    base64,
-};
+use azure_core::auth::{Secret, TokenCredential};
 use azure_identity::{
     CertificateCredentialOptions, ClientCertificateCredential, DefaultAzureCredential,
 };

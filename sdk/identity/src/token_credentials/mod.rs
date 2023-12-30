@@ -11,7 +11,7 @@ mod azure_cli_credentials;
 mod azureauth_cli_credentials;
 mod cache;
 #[cfg(feature = "client_certificate")]
-mod client_certificate_credential;
+mod client_certificate_credentials;
 mod client_secret_credentials;
 mod default_credentials;
 mod environment_credentials;
@@ -26,7 +26,7 @@ pub use azure_cli_credentials::*;
 #[cfg(feature = "azureauth-cli")]
 pub use azureauth_cli_credentials::*;
 #[cfg(feature = "client_certificate")]
-pub use client_certificate_credential::*;
+pub use client_certificate_credentials::*;
 pub use client_secret_credentials::*;
 pub use default_credentials::*;
 pub use environment_credentials::*;

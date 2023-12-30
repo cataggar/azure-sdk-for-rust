@@ -1,3 +1,5 @@
+#[cfg(feature = "client_certificate")]
+pub use crate::token_credentials::ClientCertificateCredential;
 use crate::token_credentials::{
     ClientSecretCredential, TokenCredentialOptions, WorkloadIdentityCredential,
 };
@@ -17,6 +19,14 @@ const AZURE_FEDERATED_TOKEN_FILE: &str = "AZURE_FEDERATED_TOKEN_FILE";
 const AZURE_FEDERATED_TOKEN: &str = "AZURE_FEDERATED_TOKEN";
 const AZURE_AUTHORITY_HOST: &str = "AZURE_AUTHORITY_HOST";
 
+#[derive(Debug)]
+pub enum EnvironmentCredentialEnum {
+    ClientSecret(ClientSecretCredential),
+    WorkloadIdentity(WorkloadIdentityCredential),
+    #[cfg(feature = "client_certificate")]
+    ClientCertificate(ClientCertificateCredential),
+}
+
 /// Enables authentication with Workflows Identity if either `AZURE_FEDERATED_TOKEN` or `AZURE_FEDERATED_TOKEN_FILE` is set,
 /// otherwise enables authentication to Azure Active Directory using client secret, or a username and password.
 ///
@@ -31,12 +41,12 @@ const AZURE_AUTHORITY_HOST: &str = "AZURE_AUTHORITY_HOST";
 /// | `AZURE_FEDERATED_TOKEN_FILE`        | Path to an federated token file. Variable is present in pods with aks workload identities. |
 /// | `AZURE_AUTHORITY_HOST`              | Url for the identity provider to exchange to federated token for an `access_token`. Variable is present in pods with aks workload identities. |
 ///
-/// This credential ultimately uses a or `WorkloadIdentityCredential` a`ClientSecretCredential` to perform the authentication using
+/// This credential ultimately uses a `WorkloadIdentityCredential` or a`ClientSecretCredential` to perform the authentication using
 /// these details.
 /// Please consult the documentation of that class for more details.
 #[derive(Debug)]
 pub struct EnvironmentCredential {
-    credential: Box<dyn TokenCredential>,
+    source: EnvironmentCredentialEnum,
 }
 
 impl EnvironmentCredential {
@@ -69,10 +79,10 @@ impl EnvironmentCredential {
             options.set_authority_host(Url::parse(&authority_host)?);
         }
 
-        let credential: Box<dyn TokenCredential> = if let Ok(token) = federated_token {
+        let source: EnvironmentCredentialEnum = if let Ok(token) = federated_token {
             let credential: WorkloadIdentityCredential =
-                WorkloadIdentityCredential::new(options.clone(), tenant_id, client_id, token);
-            Box::new(credential)
+                WorkloadIdentityCredential::new(options, tenant_id, client_id, token);
+            EnvironmentCredentialEnum::WorkloadIdentity(credential)
         } else if let Ok(file) = federated_token_file {
             let token = std::fs::read_to_string(file.clone())
                 .with_context(ErrorKind::Credential, || {
@@ -80,11 +90,11 @@ impl EnvironmentCredential {
                 })?;
             let credential: WorkloadIdentityCredential =
                 WorkloadIdentityCredential::new(options, tenant_id, client_id, token);
-            Box::new(credential)
+            EnvironmentCredentialEnum::WorkloadIdentity(credential)
         } else if let Ok(client_secret) = client_secret {
             let credential =
                 ClientSecretCredential::new(options, tenant_id, client_id, client_secret);
-            Box::new(credential)
+            EnvironmentCredentialEnum::ClientSecret(credential)
         // } else if username.is_ok() && password.is_ok() {
         //     // Could use multiple if-let with #![feature(let_chains)] once stabilised - see https://github.com/rust-lang/rust/issues/53667
         //     // TODO: username & password credential
@@ -96,7 +106,12 @@ impl EnvironmentCredential {
                 "no valid environment credential providers",
             ));
         };
-        Ok(Self { credential })
+        Ok(Self { source })
+    }
+
+    #[cfg(test)]
+    pub(crate) fn source(&self) -> &EnvironmentCredentialEnum {
+        &self.source
     }
 }
 
@@ -104,10 +119,30 @@ impl EnvironmentCredential {
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 impl TokenCredential for EnvironmentCredential {
     async fn get_token(&self, scopes: &[&str]) -> azure_core::Result<AccessToken> {
-        self.credential.as_ref().get_token(scopes).await
+        match &self.source {
+            EnvironmentCredentialEnum::ClientSecret(credential) => {
+                credential.get_token(scopes).await
+            }
+            EnvironmentCredentialEnum::WorkloadIdentity(credential) => {
+                credential.get_token(scopes).await
+            }
+            #[cfg(feature = "client_certificate")]
+            EnvironmentCredentialEnum::ClientCertificate(credential) => {
+                credential.get_token(scopes).await
+            }
+        }
     }
 
     async fn clear_cache(&self) -> azure_core::Result<()> {
-        self.credential.as_ref().clear_cache().await
+        match &self.source {
+            EnvironmentCredentialEnum::ClientSecret(credential) => credential.clear_cache().await,
+            EnvironmentCredentialEnum::WorkloadIdentity(credential) => {
+                credential.clear_cache().await
+            }
+            #[cfg(feature = "client_certificate")]
+            EnvironmentCredentialEnum::ClientCertificate(credential) => {
+                credential.clear_cache().await
+            }
+        }
     }
 }

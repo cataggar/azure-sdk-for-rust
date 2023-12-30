@@ -325,7 +325,7 @@ fn format_aggregate_error(errors: &[Error]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{env::Env, SpecificAzureCredentialEnum};
+    use crate::{env::Env, EnvironmentCredentialEnum, SpecificAzureCredentialEnum};
 
     #[test]
     fn test_builder_included_credential_flags() {
@@ -476,7 +476,10 @@ mod tests {
         assert_eq!(credential.sources.len(), 1);
         match &credential.sources[0] {
             DefaultAzureCredentialEnum::Specific(credential) => match credential.source() {
-                SpecificAzureCredentialEnum::Environment(_credential) => {}
+                SpecificAzureCredentialEnum::Environment(credential) => match credential.source() {
+                    EnvironmentCredentialEnum::ClientSecret(_) => {}
+                    _ => panic!("expect client secret credential"),
+                },
                 _ => panic!("expected environment credential"),
             },
             _ => panic!("expected specific credential"),
