@@ -54,3 +54,12 @@ impl TokenCredentialOptions {
         &self.env
     }
 }
+
+impl From<Arc<dyn azure_core::HttpClient>> for TokenCredentialOptions {
+    fn from(http_client: Arc<dyn azure_core::HttpClient>) -> Self {
+        Self {
+            http_client,
+            ..Default::default()
+        }
+    }
+}
