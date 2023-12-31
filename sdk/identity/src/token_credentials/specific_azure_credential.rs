@@ -23,10 +23,6 @@ pub mod azure_credential_types {
     #[cfg(feature = "client_certificate")]
     pub const CLIENT_CERTIFICATE: &str = "clientcertificate";
     pub const USERNAME_PASSWORD: &str = "usernamepassword";
-    // pub const AZUREAUTH_CLI: &str = "azureauthcli";
-    // pub const SERVICE_FABRIC: &str = "servicefabric";
-    // pub const CLOUD_SHELL: &str = "cloudshell";
-    // pub const AZURE_ARC: &str = "azurearc";
 }
 
 #[derive(Debug)]
