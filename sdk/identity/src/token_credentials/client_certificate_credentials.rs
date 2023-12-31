@@ -2,7 +2,7 @@ use crate::{token_credentials::cache::TokenCache, TokenCredentialOptions};
 use azure_core::{
     auth::{AccessToken, Secret, TokenCredential},
     base64, content_type,
-    error::{Error, ErrorKind},
+    error::{Error, ErrorKind, ResultExt},
     headers, HttpClient, Method, Request,
 };
 use openssl::{
@@ -21,30 +21,41 @@ use url::{form_urlencoded, Url};
 /// Refresh time to use in seconds
 const DEFAULT_REFRESH_TIME: i64 = 300;
 
+const AZURE_TENANT_ID_ENV_KEY: &str = "AZURE_TENANT_ID";
+const AZURE_CLIENT_ID_ENV_KEY: &str = "AZURE_CLIENT_ID";
+const AZURE_CLIENT_CERTIFICATE_PATH_ENV_KEY: &str = "AZURE_CLIENT_CERTIFICATE_PATH";
+const AZURE_CLIENT_CERTIFICATE_PASSWORD_ENV_KEY: &str = "AZURE_CLIENT_CERTIFICATE_PASSWORD";
+const AZURE_CLIENT_SEND_CERTIFICATE_CHAIN_ENV_KEY: &str = "AZURE_CLIENT_SEND_CERTIFICATE_CHAIN";
+
 /// Provides options to configure how the Identity library makes authentication
 /// requests to Azure Active Directory.
 #[derive(Clone, Debug)]
-pub struct CertificateCredentialOptions {
+pub struct ClientCertificateCredentialOptions {
     options: TokenCredentialOptions,
     send_certificate_chain: bool,
 }
 
-impl From<TokenCredentialOptions> for CertificateCredentialOptions {
+impl From<TokenCredentialOptions> for ClientCertificateCredentialOptions {
     fn from(options: TokenCredentialOptions) -> Self {
+        let env = options.env();
+        let send_certificate_chain = env
+            .var(AZURE_CLIENT_SEND_CERTIFICATE_CHAIN_ENV_KEY)
+            .map(|s| s == "1" || s.to_lowercase() == "true")
+            .unwrap_or(false);
         Self {
             options,
-            send_certificate_chain: false,
+            send_certificate_chain,
         }
     }
 }
 
-impl Default for CertificateCredentialOptions {
+impl Default for ClientCertificateCredentialOptions {
     fn default() -> Self {
         Self::from(TokenCredentialOptions::default())
     }
 }
 
-impl CertificateCredentialOptions {
+impl ClientCertificateCredentialOptions {
     /// Create a new `TokenCredentialsOptions`. default() may also be used.
     pub fn new(options: impl Into<TokenCredentialOptions>, send_certificate_chain: bool) -> Self {
         Self {
@@ -97,7 +108,7 @@ impl ClientCertificateCredential {
         client_id: String,
         client_certificate: C,
         client_certificate_pass: P,
-        options: impl Into<CertificateCredentialOptions>,
+        options: impl Into<ClientCertificateCredentialOptions>,
     ) -> ClientCertificateCredential
     where
         C: Into<Secret>,
@@ -248,6 +259,41 @@ impl ClientCertificateCredential {
         Ok(AccessToken::new(
             response.access_token,
             OffsetDateTime::now_utc() + Duration::from_secs(response.expires_in),
+        ))
+    }
+
+    pub fn create(
+        options: impl Into<ClientCertificateCredentialOptions>,
+    ) -> azure_core::Result<Self> {
+        let options = options.into();
+        let env = options.options().env();
+        let tenant_id = env
+            .var(AZURE_TENANT_ID_ENV_KEY)
+            .map_kind(ErrorKind::Credential)?;
+        let client_id = env
+            .var(AZURE_CLIENT_ID_ENV_KEY)
+            .map_kind(ErrorKind::Credential)?;
+        let client_certificate_path = env
+            .var(AZURE_CLIENT_CERTIFICATE_PATH_ENV_KEY)
+            .map_kind(ErrorKind::Credential)?;
+        let client_certificate_password = env
+            .var(AZURE_CLIENT_CERTIFICATE_PASSWORD_ENV_KEY)
+            .map_kind(ErrorKind::Credential)?;
+
+        let client_certificate = std::fs::read_to_string(client_certificate_path.clone())
+            .with_context(ErrorKind::Credential, || {
+                format!(
+                    "failed to read client certificate from file {}",
+                    client_certificate_path.as_str()
+                )
+            })?;
+
+        Ok(ClientCertificateCredential::new(
+            tenant_id,
+            client_id,
+            client_certificate,
+            client_certificate_password,
+            options,
         ))
     }
 }

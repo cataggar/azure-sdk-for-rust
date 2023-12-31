@@ -49,6 +49,8 @@ impl EnvironmentCredential {
                 EnvironmentCredentialEnum::WorkloadIdentity(credential)
             } else if let Ok(credential) = ClientSecretCredential::create(options.clone()) {
                 EnvironmentCredentialEnum::ClientSecret(credential)
+            } else if let Ok(credential) = ClientCertificateCredential::create(options.clone()) {
+                EnvironmentCredentialEnum::ClientCertificate(credential)
             } else if let Ok(credential) = UsernamePasswordCredential::create(options.clone()) {
                 EnvironmentCredentialEnum::UsernamePassword(credential)
             } else {
