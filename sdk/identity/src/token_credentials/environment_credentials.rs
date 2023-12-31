@@ -42,20 +42,26 @@ impl EnvironmentCredential {
         options: impl Into<TokenCredentialOptions>,
     ) -> azure_core::Result<EnvironmentCredential> {
         let options = options.into();
-        let source: EnvironmentCredentialEnum =
-            if let Ok(credential) = WorkloadIdentityCredential::create(options.clone()) {
-                EnvironmentCredentialEnum::WorkloadIdentity(credential)
-            } else if let Ok(credential) = ClientSecretCredential::create(options.clone()) {
-                EnvironmentCredentialEnum::ClientSecret(credential)
-            } else if let Ok(credential) = ClientCertificateCredential::create(options.clone()) {
-                EnvironmentCredentialEnum::ClientCertificate(credential)
-            } else {
-                return Err(Error::message(
-                    ErrorKind::Credential,
-                    "no valid environment credential providers",
-                ));
-            };
-        Ok(Self { source })
+        if let Ok(credential) = WorkloadIdentityCredential::create(options.clone()) {
+            return Ok(Self {
+                source: EnvironmentCredentialEnum::WorkloadIdentity(credential),
+            });
+        }
+        if let Ok(credential) = ClientSecretCredential::create(options.clone()) {
+            return Ok(Self {
+                source: EnvironmentCredentialEnum::ClientSecret(credential),
+            });
+        }
+        #[cfg(feature = "client_certificate")]
+        if let Ok(credential) = ClientCertificateCredential::create(options.clone()) {
+            return Ok(Self {
+                source: EnvironmentCredentialEnum::ClientCertificate(credential),
+            });
+        }
+        Err(Error::message(
+            ErrorKind::Credential,
+            "no valid environment credential providers",
+        ))
     }
 
     #[cfg(test)]
