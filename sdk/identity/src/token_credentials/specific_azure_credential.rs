@@ -1,6 +1,9 @@
+#[cfg(feature = "client_certificate")]
+use crate::ClientCertificateCredential;
 use crate::{
-    AppServiceManagedIdentityCredential, AzureCliCredential, EnvironmentCredential,
-    TokenCredentialOptions, VirtualMachineManagedIdentityCredential,
+    AppServiceManagedIdentityCredential, AzureCliCredential, ClientSecretCredential,
+    EnvironmentCredential, TokenCredentialOptions, UsernamePasswordCredential,
+    VirtualMachineManagedIdentityCredential, WorkloadIdentityCredential,
 };
 use azure_core::{
     auth::{AccessToken, TokenCredential},
@@ -15,6 +18,11 @@ pub mod azure_credential_types {
     pub const AZURE_CLI: &str = "azurecli";
     pub const VIRTUAL_MACHINE: &str = "virtualmachine";
     pub const APP_SERVICE: &str = "appservice";
+    pub const CLIENT_SECRET: &str = "clientsecret";
+    pub const WORKLOAD_IDENTITY: &str = "workloadidentity";
+    #[cfg(feature = "client_certificate")]
+    pub const CLIENT_CERTIFICATE: &str = "clientcertificate";
+    pub const USERNAME_PASSWORD: &str = "usernamepassword";
     // pub const AZUREAUTH_CLI: &str = "azureauthcli";
     // pub const SERVICE_FABRIC: &str = "servicefabric";
     // pub const CLOUD_SHELL: &str = "cloudshell";
@@ -27,6 +35,11 @@ pub enum SpecificAzureCredentialEnum {
     AzureCli(AzureCliCredential),
     VirtualMachine(VirtualMachineManagedIdentityCredential),
     AppService(AppServiceManagedIdentityCredential),
+    ClientSecret(ClientSecretCredential),
+    WorkloadIdentity(WorkloadIdentityCredential),
+    #[cfg(feature = "client_certificate")]
+    ClientCertificate(ClientCertificateCredential),
+    UsernamePassword(UsernamePasswordCredential),
 }
 
 #[cfg_attr(target_arch = "wasm32", async_trait::async_trait(?Send))]
@@ -44,6 +57,19 @@ impl TokenCredential for SpecificAzureCredentialEnum {
             SpecificAzureCredentialEnum::AppService(credential) => {
                 credential.get_token(scopes).await
             }
+            SpecificAzureCredentialEnum::ClientSecret(credential) => {
+                credential.get_token(scopes).await
+            }
+            SpecificAzureCredentialEnum::WorkloadIdentity(credential) => {
+                credential.get_token(scopes).await
+            }
+            #[cfg(feature = "client_certificate")]
+            SpecificAzureCredentialEnum::ClientCertificate(credential) => {
+                credential.get_token(scopes).await
+            }
+            SpecificAzureCredentialEnum::UsernamePassword(credential) => {
+                credential.get_token(scopes).await
+            }
         }
     }
 
@@ -55,6 +81,17 @@ impl TokenCredential for SpecificAzureCredentialEnum {
                 credential.clear_cache().await
             }
             SpecificAzureCredentialEnum::AppService(credential) => credential.clear_cache().await,
+            SpecificAzureCredentialEnum::ClientSecret(credential) => credential.clear_cache().await,
+            SpecificAzureCredentialEnum::WorkloadIdentity(credential) => {
+                credential.clear_cache().await
+            }
+            #[cfg(feature = "client_certificate")]
+            SpecificAzureCredentialEnum::ClientCertificate(credential) => {
+                credential.clear_cache().await
+            }
+            SpecificAzureCredentialEnum::UsernamePassword(credential) => {
+                credential.clear_cache().await
+            }
         }
     }
 }
@@ -80,6 +117,21 @@ impl SpecificAzureCredential {
             ),
             azure_credential_types::AZURE_CLI => {
                 AzureCliCredential::create().map(SpecificAzureCredentialEnum::AzureCli)?
+            }
+            azure_credential_types::CLIENT_SECRET => ClientSecretCredential::create(options)
+                .map(SpecificAzureCredentialEnum::ClientSecret)?,
+            azure_credential_types::WORKLOAD_IDENTITY => {
+                WorkloadIdentityCredential::create(options)
+                    .map(SpecificAzureCredentialEnum::WorkloadIdentity)?
+            }
+            #[cfg(feature = "client_certificate")]
+            azure_credential_types::CLIENT_CERTIFICATE => {
+                ClientCertificateCredential::create(options)
+                    .map(SpecificAzureCredentialEnum::ClientCertificate)?
+            }
+            azure_credential_types::USERNAME_PASSWORD => {
+                UsernamePasswordCredential::create(options)
+                    .map(SpecificAzureCredentialEnum::UsernamePassword)?
             }
             _ => {
                 return Err(Error::with_message(ErrorKind::Credential, || {
