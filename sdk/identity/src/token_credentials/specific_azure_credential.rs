@@ -22,7 +22,6 @@ pub mod azure_credential_types {
     pub const WORKLOAD_IDENTITY: &str = "workloadidentity";
     #[cfg(feature = "client_certificate")]
     pub const CLIENT_CERTIFICATE: &str = "clientcertificate";
-    pub const USERNAME_PASSWORD: &str = "usernamepassword";
 }
 
 #[derive(Debug)]
