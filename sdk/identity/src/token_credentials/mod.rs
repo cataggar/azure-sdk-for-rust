@@ -18,7 +18,6 @@ mod environment_credentials;
 mod imds_managed_identity_credentials;
 mod options;
 mod specific_azure_credential;
-mod username_password_credential;
 mod virtual_machine_managed_identity_credential;
 mod workload_identity_credentials;
 
@@ -34,6 +33,5 @@ pub use environment_credentials::*;
 pub use imds_managed_identity_credentials::*;
 pub use options::*;
 pub use specific_azure_credential::*;
-pub use username_password_credential::*;
 pub use virtual_machine_managed_identity_credential::*;
 pub use workload_identity_credentials::*;

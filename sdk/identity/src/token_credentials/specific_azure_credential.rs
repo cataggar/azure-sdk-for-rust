@@ -2,8 +2,8 @@
 use crate::ClientCertificateCredential;
 use crate::{
     AppServiceManagedIdentityCredential, AzureCliCredential, ClientSecretCredential,
-    EnvironmentCredential, TokenCredentialOptions, UsernamePasswordCredential,
-    VirtualMachineManagedIdentityCredential, WorkloadIdentityCredential,
+    EnvironmentCredential, TokenCredentialOptions, VirtualMachineManagedIdentityCredential,
+    WorkloadIdentityCredential,
 };
 use azure_core::{
     auth::{AccessToken, TokenCredential},
@@ -35,7 +35,6 @@ pub enum SpecificAzureCredentialEnum {
     WorkloadIdentity(WorkloadIdentityCredential),
     #[cfg(feature = "client_certificate")]
     ClientCertificate(ClientCertificateCredential),
-    UsernamePassword(UsernamePasswordCredential),
 }
 
 #[cfg_attr(target_arch = "wasm32", async_trait::async_trait(?Send))]
@@ -63,9 +62,6 @@ impl TokenCredential for SpecificAzureCredentialEnum {
             SpecificAzureCredentialEnum::ClientCertificate(credential) => {
                 credential.get_token(scopes).await
             }
-            SpecificAzureCredentialEnum::UsernamePassword(credential) => {
-                credential.get_token(scopes).await
-            }
         }
     }
 
@@ -83,9 +79,6 @@ impl TokenCredential for SpecificAzureCredentialEnum {
             }
             #[cfg(feature = "client_certificate")]
             SpecificAzureCredentialEnum::ClientCertificate(credential) => {
-                credential.clear_cache().await
-            }
-            SpecificAzureCredentialEnum::UsernamePassword(credential) => {
                 credential.clear_cache().await
             }
         }
@@ -124,10 +117,6 @@ impl SpecificAzureCredential {
             azure_credential_types::CLIENT_CERTIFICATE => {
                 ClientCertificateCredential::create(options)
                     .map(SpecificAzureCredentialEnum::ClientCertificate)?
-            }
-            azure_credential_types::USERNAME_PASSWORD => {
-                UsernamePasswordCredential::create(options)
-                    .map(SpecificAzureCredentialEnum::UsernamePassword)?
             }
             _ => {
                 return Err(Error::with_message(ErrorKind::Credential, || {

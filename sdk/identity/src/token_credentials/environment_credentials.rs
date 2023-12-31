@@ -1,8 +1,7 @@
 #[cfg(feature = "client_certificate")]
 pub use crate::token_credentials::ClientCertificateCredential;
 use crate::token_credentials::{
-    ClientSecretCredential, TokenCredentialOptions, UsernamePasswordCredential,
-    WorkloadIdentityCredential,
+    ClientSecretCredential, TokenCredentialOptions, WorkloadIdentityCredential,
 };
 use azure_core::{
     auth::{AccessToken, TokenCredential},
@@ -15,7 +14,6 @@ pub enum EnvironmentCredentialEnum {
     WorkloadIdentity(WorkloadIdentityCredential),
     #[cfg(feature = "client_certificate")]
     ClientCertificate(ClientCertificateCredential),
-    UsernamePassword(UsernamePasswordCredential),
 }
 
 /// Enables authentication with Workflows Identity if either `AZURE_FEDERATED_TOKEN` or `AZURE_FEDERATED_TOKEN_FILE` is set,
@@ -51,8 +49,6 @@ impl EnvironmentCredential {
                 EnvironmentCredentialEnum::ClientSecret(credential)
             } else if let Ok(credential) = ClientCertificateCredential::create(options.clone()) {
                 EnvironmentCredentialEnum::ClientCertificate(credential)
-            } else if let Ok(credential) = UsernamePasswordCredential::create(options.clone()) {
-                EnvironmentCredentialEnum::UsernamePassword(credential)
             } else {
                 return Err(Error::message(
                     ErrorKind::Credential,
@@ -83,9 +79,6 @@ impl TokenCredential for EnvironmentCredential {
             EnvironmentCredentialEnum::ClientCertificate(credential) => {
                 credential.get_token(scopes).await
             }
-            EnvironmentCredentialEnum::UsernamePassword(credential) => {
-                credential.get_token(scopes).await
-            }
         }
     }
 
@@ -97,9 +90,6 @@ impl TokenCredential for EnvironmentCredential {
             }
             #[cfg(feature = "client_certificate")]
             EnvironmentCredentialEnum::ClientCertificate(credential) => {
-                credential.clear_cache().await
-            }
-            EnvironmentCredentialEnum::UsernamePassword(credential) => {
                 credential.clear_cache().await
             }
         }
