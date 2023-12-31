@@ -294,6 +294,11 @@ impl Default for DefaultAzureCredential {
     }
 }
 
+/// Returns a new `DefaultAzureCredential`.
+pub fn new_credential() -> std::sync::Arc<dyn TokenCredential> {
+    std::sync::Arc::new(DefaultAzureCredential::default())
+}
+
 #[cfg_attr(target_arch = "wasm32", async_trait::async_trait(?Send))]
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 impl TokenCredential for DefaultAzureCredential {
