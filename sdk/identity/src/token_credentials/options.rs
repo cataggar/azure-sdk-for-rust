@@ -3,6 +3,8 @@ use azure_core::authority_hosts::AZURE_PUBLIC_CLOUD;
 use std::sync::Arc;
 use url::Url;
 
+const AZURE_AUTHORITY_HOST_ENV_KEY: &str = "AZURE_AUTHORITY_HOST";
+
 /// Provides options to configure how the Identity library makes authentication
 /// requests to Azure Active Directory.
 #[derive(Debug, Clone)]
@@ -12,12 +14,21 @@ pub struct TokenCredentialOptions {
     authority_host: Url,
 }
 
+/// The default token credential options.
+/// The authority host is taken from the `AZURE_AUTHORITY_HOST` environment variable if set.
+/// If not, the default authority host is `https://login.microsoftonline.com` for the Azure public cloud.
 impl Default for TokenCredentialOptions {
     fn default() -> Self {
+        let env = Env::default();
+        let authority_host = env
+            .var(AZURE_AUTHORITY_HOST_ENV_KEY)
+            .map(|s| Url::parse(&s))
+            .unwrap_or_else(|_| Ok(AZURE_PUBLIC_CLOUD.to_owned()))
+            .unwrap_or_else(|_| AZURE_PUBLIC_CLOUD.to_owned());
         Self {
             env: Env::default(),
             http_client: azure_core::new_http_client(),
-            authority_host: AZURE_PUBLIC_CLOUD.to_owned(),
+            authority_host,
         }
     }
 }

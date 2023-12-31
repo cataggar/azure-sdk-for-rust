@@ -32,7 +32,6 @@ const AZURE_TENANT_ID_ENV_KEY: &str = "AZURE_TENANT_ID";
 const AZURE_CLIENT_ID_ENV_KEY: &str = "AZURE_CLIENT_ID";
 const AZURE_USERNAME_ENV_KEY: &str = "AZURE_USERNAME";
 const AZURE_PASSWORD_ENV_KEY: &str = "AZURE_PASSWORD";
-const AZURE_AUTHORITY_HOST: &str = "AZURE_AUTHORITY_HOST";
 
 impl UsernamePasswordCredential {
     /// Create a new `UsernamePasswordCredential`
@@ -74,11 +73,6 @@ impl UsernamePasswordCredential {
         let password = env
             .var(AZURE_PASSWORD_ENV_KEY)
             .map_kind(ErrorKind::Credential)?;
-
-        let authority_host = env.var(AZURE_AUTHORITY_HOST);
-        if let Ok(authority_host) = authority_host {
-            options.set_authority_host(Url::parse(&authority_host)?);
-        }
 
         // TODO Add UsernamePasswordCredential
         // https://github.com/Azure/azure-sdk-for-rust/issues/1528
