@@ -4,11 +4,16 @@ use crate::{
 use azure_core::{
     auth::{AccessToken, Secret, TokenCredential},
     error::{ErrorKind, ResultExt},
-    HttpClient,
+    Error, HttpClient,
 };
 use std::{str, sync::Arc, time::Duration};
 use time::OffsetDateTime;
 use url::Url;
+
+const AZURE_TENANT_ID_ENV_KEY: &str = "AZURE_TENANT_ID";
+const AZURE_CLIENT_ID_ENV_KEY: &str = "AZURE_CLIENT_ID";
+const AZURE_FEDERATED_TOKEN_FILE: &str = "AZURE_FEDERATED_TOKEN_FILE";
+const AZURE_FEDERATED_TOKEN: &str = "AZURE_FEDERATED_TOKEN";
 
 /// Enables authentication to Azure Active Directory using a client secret that was generated for an App Registration.
 ///
@@ -45,6 +50,51 @@ impl WorkloadIdentityCredential {
             token: token.into(),
             cache: TokenCache::new(),
         }
+    }
+
+    pub fn create(
+        options: impl Into<TokenCredentialOptions>,
+    ) -> azure_core::Result<WorkloadIdentityCredential> {
+        let options = options.into();
+        let env = options.env();
+        let tenant_id = env
+            .var(AZURE_TENANT_ID_ENV_KEY)
+            .map_kind(ErrorKind::Credential)?;
+        let client_id = env
+            .var(AZURE_CLIENT_ID_ENV_KEY)
+            .map_kind(ErrorKind::Credential)?;
+
+        if let Ok(token) = env
+            .var(AZURE_FEDERATED_TOKEN)
+            .map_kind(ErrorKind::Credential)
+        {
+            return Ok(WorkloadIdentityCredential::new(
+                options, tenant_id, client_id, token,
+            ));
+        }
+
+        if let Ok(token_file) = env
+            .var(AZURE_FEDERATED_TOKEN_FILE)
+            .map_kind(ErrorKind::Credential)
+        {
+            let token = std::fs::read_to_string(token_file.clone()).with_context(
+                ErrorKind::Credential,
+                || {
+                    format!(
+                        "failed to read federated token from file {}",
+                        token_file.as_str()
+                    )
+                },
+            )?;
+            return Ok(WorkloadIdentityCredential::new(
+                options, tenant_id, client_id, token,
+            ));
+        }
+
+        Err(Error::message(
+            ErrorKind::Credential,
+            "no valid working identity credential environment variables",
+        ))
     }
 
     async fn get_token(&self, scopes: &[&str]) -> azure_core::Result<AccessToken> {

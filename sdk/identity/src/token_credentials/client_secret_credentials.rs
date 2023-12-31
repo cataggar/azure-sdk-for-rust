@@ -10,6 +10,10 @@ use oauth2::{basic::BasicClient, AuthType, AuthUrl, Scope, TokenUrl};
 use std::{str, sync::Arc};
 use time::OffsetDateTime;
 
+const AZURE_TENANT_ID_ENV_KEY: &str = "AZURE_TENANT_ID";
+const AZURE_CLIENT_ID_ENV_KEY: &str = "AZURE_CLIENT_ID";
+const AZURE_CLIENT_SECRET_ENV_KEY: &str = "AZURE_CLIENT_SECRET";
+
 /// A list of tenant IDs
 pub mod tenant_ids {
     /// The tenant ID for multi-tenant apps
@@ -99,6 +103,29 @@ impl ClientSecretCredential {
             .context(ErrorKind::Credential, "request token error")?;
 
         Ok(token_result)
+    }
+
+    pub fn create(
+        options: impl Into<TokenCredentialOptions>,
+    ) -> azure_core::Result<ClientSecretCredential> {
+        let options = options.into();
+        let env = options.env();
+        let tenant_id = env
+            .var(AZURE_TENANT_ID_ENV_KEY)
+            .map_kind(ErrorKind::Credential)?;
+        let client_id = env
+            .var(AZURE_CLIENT_ID_ENV_KEY)
+            .map_kind(ErrorKind::Credential)?;
+        let client_secret = env
+            .var(AZURE_CLIENT_SECRET_ENV_KEY)
+            .map_kind(ErrorKind::Credential)?;
+
+        Ok(ClientSecretCredential::new(
+            options,
+            tenant_id,
+            client_id,
+            client_secret,
+        ))
     }
 }
 

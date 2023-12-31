@@ -1,22 +1,15 @@
 #[cfg(feature = "client_certificate")]
 pub use crate::token_credentials::ClientCertificateCredential;
 use crate::token_credentials::{
-    ClientSecretCredential, TokenCredentialOptions, WorkloadIdentityCredential,
+    ClientSecretCredential, TokenCredentialOptions, UsernamePasswordCredential,
+    WorkloadIdentityCredential,
 };
 use azure_core::{
     auth::{AccessToken, TokenCredential},
-    error::{Error, ErrorKind, ResultExt},
+    error::{Error, ErrorKind},
     Url,
 };
 
-const AZURE_TENANT_ID_ENV_KEY: &str = "AZURE_TENANT_ID";
-const AZURE_CLIENT_ID_ENV_KEY: &str = "AZURE_CLIENT_ID";
-const AZURE_CLIENT_SECRET_ENV_KEY: &str = "AZURE_CLIENT_SECRET";
-// const AZURE_USERNAME_ENV_KEY: &str = "AZURE_USERNAME";
-// const AZURE_PASSWORD_ENV_KEY: &str = "AZURE_PASSWORD";
-// const AZURE_CLIENT_CERTIFICATE_PATH_ENV_KEY: &str = "AZURE_CLIENT_CERTIFICATE_PATH";
-const AZURE_FEDERATED_TOKEN_FILE: &str = "AZURE_FEDERATED_TOKEN_FILE";
-const AZURE_FEDERATED_TOKEN: &str = "AZURE_FEDERATED_TOKEN";
 const AZURE_AUTHORITY_HOST: &str = "AZURE_AUTHORITY_HOST";
 
 #[derive(Debug)]
@@ -25,6 +18,7 @@ pub enum EnvironmentCredentialEnum {
     WorkloadIdentity(WorkloadIdentityCredential),
     #[cfg(feature = "client_certificate")]
     ClientCertificate(ClientCertificateCredential),
+    UsernamePassword(UsernamePasswordCredential),
 }
 
 /// Enables authentication with Workflows Identity if either `AZURE_FEDERATED_TOKEN` or `AZURE_FEDERATED_TOKEN_FILE` is set,
@@ -55,57 +49,25 @@ impl EnvironmentCredential {
     ) -> azure_core::Result<EnvironmentCredential> {
         let options = options.into();
         let env = options.env();
-        let tenant_id = env
-            .var(AZURE_TENANT_ID_ENV_KEY)
-            .with_context(ErrorKind::Credential, || {
-                format!("missing tenant id set in {AZURE_TENANT_ID_ENV_KEY} environment variable")
-            })?;
-        let client_id = env
-            .var(AZURE_CLIENT_ID_ENV_KEY)
-            .with_context(ErrorKind::Credential, || {
-                format!("missing client id set in {AZURE_CLIENT_ID_ENV_KEY} environment variable")
-            })?;
-
-        let client_secret = env.var(AZURE_CLIENT_SECRET_ENV_KEY);
-        // let username = env.var(AZURE_USERNAME_ENV_KEY);
-        // let password = env.var(AZURE_PASSWORD_ENV_KEY);
-        // let client_certificate_path = env.var(AZURE_CLIENT_CERTIFICATE_PATH_ENV_KEY);
-        let federated_token_file = env.var(AZURE_FEDERATED_TOKEN_FILE);
-        let federated_token = env.var(AZURE_FEDERATED_TOKEN);
         let authority_host = env.var(AZURE_AUTHORITY_HOST);
-
         let mut options = options.clone();
         if let Ok(authority_host) = authority_host {
             options.set_authority_host(Url::parse(&authority_host)?);
         }
 
-        let source: EnvironmentCredentialEnum = if let Ok(token) = federated_token {
-            let credential: WorkloadIdentityCredential =
-                WorkloadIdentityCredential::new(options, tenant_id, client_id, token);
-            EnvironmentCredentialEnum::WorkloadIdentity(credential)
-        } else if let Ok(file) = federated_token_file {
-            let token = std::fs::read_to_string(file.clone())
-                .with_context(ErrorKind::Credential, || {
-                    format!("failed to read federated token from file {}", file.as_str())
-                })?;
-            let credential: WorkloadIdentityCredential =
-                WorkloadIdentityCredential::new(options, tenant_id, client_id, token);
-            EnvironmentCredentialEnum::WorkloadIdentity(credential)
-        } else if let Ok(client_secret) = client_secret {
-            let credential =
-                ClientSecretCredential::new(options, tenant_id, client_id, client_secret);
-            EnvironmentCredentialEnum::ClientSecret(credential)
-        // } else if username.is_ok() && password.is_ok() {
-        //     // Could use multiple if-let with #![feature(let_chains)] once stabilised - see https://github.com/rust-lang/rust/issues/53667
-        //     // TODO: username & password credential
-        // } else if let Ok(_path) = client_certificate_path {
-        // TODO: client certificate credential
-        } else {
-            return Err(Error::message(
-                ErrorKind::Credential,
-                "no valid environment credential providers",
-            ));
-        };
+        let source: EnvironmentCredentialEnum =
+            if let Ok(credential) = WorkloadIdentityCredential::create(options.clone()) {
+                EnvironmentCredentialEnum::WorkloadIdentity(credential)
+            } else if let Ok(credential) = ClientSecretCredential::create(options.clone()) {
+                EnvironmentCredentialEnum::ClientSecret(credential)
+            } else if let Ok(credential) = UsernamePasswordCredential::create(options.clone()) {
+                EnvironmentCredentialEnum::UsernamePassword(credential)
+            } else {
+                return Err(Error::message(
+                    ErrorKind::Credential,
+                    "no valid environment credential providers",
+                ));
+            };
         Ok(Self { source })
     }
 
@@ -130,6 +92,9 @@ impl TokenCredential for EnvironmentCredential {
             EnvironmentCredentialEnum::ClientCertificate(credential) => {
                 credential.get_token(scopes).await
             }
+            EnvironmentCredentialEnum::UsernamePassword(credential) => {
+                credential.get_token(scopes).await
+            }
         }
     }
 
@@ -141,6 +106,9 @@ impl TokenCredential for EnvironmentCredential {
             }
             #[cfg(feature = "client_certificate")]
             EnvironmentCredentialEnum::ClientCertificate(credential) => {
+                credential.clear_cache().await
+            }
+            EnvironmentCredentialEnum::UsernamePassword(credential) => {
                 credential.clear_cache().await
             }
         }
