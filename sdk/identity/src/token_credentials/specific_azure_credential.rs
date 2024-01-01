@@ -143,3 +143,112 @@ impl TokenCredential for SpecificAzureCredential {
         self.source.clear_cache().await
     }
 }
+
+#[cfg(test)]
+pub fn test_options(env_vars: &[(&str, &str)]) -> TokenCredentialOptions {
+    let env = crate::env::Env::from(env_vars);
+    let http_client = azure_core::new_noop_client();
+    let options = TokenCredentialOptions::new(
+        env,
+        http_client,
+        azure_core::authority_hosts::AZURE_PUBLIC_CLOUD.to_owned(),
+    );
+    options
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::EnvironmentCredentialEnum;
+
+    /// test AZURE_CREDENTIAL_TYPE of "environment"
+    #[test]
+    fn test_environment() -> azure_core::Result<()> {
+        let credential = SpecificAzureCredential::create(test_options(
+            &[
+                ("AZURE_CREDENTIAL_TYPE", "environment"),
+                ("AZURE_TENANT_ID", "1"),
+                ("AZURE_CLIENT_ID", "2"),
+                ("AZURE_CLIENT_SECRET", "3"),
+            ][..],
+        ))?;
+        match credential.source() {
+            SpecificAzureCredentialEnum::Environment(credential) => match credential.source() {
+                EnvironmentCredentialEnum::ClientSecret(_) => {}
+                _ => panic!("expect client secret credential"),
+            },
+            _ => panic!("expected environment credential"),
+        }
+        Ok(())
+    }
+
+    /// test AZURE_CREDENTIAL_TYPE of "azurecli"
+    #[test]
+    fn test_azure_cli() -> azure_core::Result<()> {
+        let credential = SpecificAzureCredential::create(test_options(
+            &[("AZURE_CREDENTIAL_TYPE", "azurecli")][..],
+        ))?;
+        match credential.source() {
+            SpecificAzureCredentialEnum::AzureCli(_) => {}
+            _ => panic!("expected azure cli credential"),
+        }
+        Ok(())
+    }
+
+    /// test AZURE_CREDENTIAL_TYPE of "virtualmachine"
+    #[test]
+    fn test_virtual_machine() -> azure_core::Result<()> {
+        let credential = SpecificAzureCredential::create(test_options(
+            &[("AZURE_CREDENTIAL_TYPE", "virtualmachine")][..],
+        ))?;
+        match credential.source() {
+            SpecificAzureCredentialEnum::VirtualMachine(_) => {}
+            _ => panic!("expected virtual machine credential"),
+        }
+        Ok(())
+    }
+
+    /// test AZURE_CREDENTIAL_TYPE of "appservice"
+    #[test]
+    fn test_app_service() -> azure_core::Result<()> {
+        let credential = SpecificAzureCredential::create(test_options(
+            &[("AZURE_CREDENTIAL_TYPE", "appservice")][..],
+        ))?;
+        match credential.source() {
+            SpecificAzureCredentialEnum::AppService(_) => {}
+            _ => panic!("expected app service credential"),
+        }
+        Ok(())
+    }
+
+    /// test AZURE_CREDENTIAL_TYPE of "clientsecret"
+    #[test]
+    fn test_client_secret() -> azure_core::Result<()> {
+        let credential = SpecificAzureCredential::create(test_options(
+            &[
+                ("AZURE_CREDENTIAL_TYPE", "clientsecret"),
+                ("AZURE_TENANT_ID", "1"),
+                ("AZURE_CLIENT_ID", "2"),
+                ("AZURE_CLIENT_SECRET", "3"),
+            ][..],
+        ))?;
+        match credential.source() {
+            SpecificAzureCredentialEnum::ClientSecret(_) => {}
+            _ => panic!("expected client secret credential"),
+        }
+        Ok(())
+    }
+
+    /// test AZURE_CREDENTIAL_TYPE of "workloadidentity"
+    #[test]
+    fn test_workload_identity() -> azure_core::Result<()> {
+        let credential = SpecificAzureCredential::create(test_options(
+            &[("AZURE_CREDENTIAL_TYPE", "workloadidentity")][..],
+        ))?;
+        match credential.source() {
+            SpecificAzureCredentialEnum::WorkloadIdentity(_) => {}
+            _ => panic!("expected workload identity credential"),
+        }
+        Ok(())
+    }
+}

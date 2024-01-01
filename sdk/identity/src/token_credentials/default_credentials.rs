@@ -330,7 +330,7 @@ fn format_aggregate_error(errors: &[Error]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{env::Env, EnvironmentCredentialEnum, SpecificAzureCredentialEnum};
+    use crate::{test_options, EnvironmentCredentialEnum, SpecificAzureCredentialEnum};
 
     #[test]
     fn test_builder_included_credential_flags() {
@@ -458,25 +458,17 @@ mod tests {
         );
     }
 
-    // test specific environment credential
     #[test]
     fn test_specific_environment_credential() {
-        let env = Env::from(
-            &[
-                ("AZURE_CREDENTIAL_TYPE", "environment"),
-                ("AZURE_TENANT_ID", "1"),
-                ("AZURE_CLIENT_ID", "2"),
-                ("AZURE_CLIENT_SECRET", "3"),
-            ][..],
-        );
-        let http_client = azure_core::new_noop_client();
-        let options = TokenCredentialOptions::new(
-            env,
-            http_client,
-            azure_core::authority_hosts::AZURE_PUBLIC_CLOUD.to_owned(),
-        );
         let credential = DefaultAzureCredentialBuilder::new()
-            .with_options(options)
+            .with_options(test_options(
+                &[
+                    ("AZURE_CREDENTIAL_TYPE", "environment"),
+                    ("AZURE_TENANT_ID", "1"),
+                    ("AZURE_CLIENT_ID", "2"),
+                    ("AZURE_CLIENT_SECRET", "3"),
+                ][..],
+            ))
             .build();
         assert_eq!(credential.sources.len(), 1);
         match &credential.sources[0] {
