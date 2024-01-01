@@ -7,7 +7,7 @@ use crate::{
 };
 use azure_core::{
     auth::{AccessToken, TokenCredential},
-    error::ErrorKind,
+    error::{ErrorKind, ResultExt},
     Error,
 };
 
@@ -95,31 +95,60 @@ impl SpecificAzureCredential {
         let credential_type = env.var(AZURE_CREDENTIAL_TYPE)?;
         let source: SpecificAzureCredentialEnum = match credential_type.to_lowercase().as_str() {
             azure_credential_types::ENVIRONMENT => EnvironmentCredential::create(options)
-                .map(SpecificAzureCredentialEnum::Environment)?,
+                .map(SpecificAzureCredentialEnum::Environment)
+                .with_context(ErrorKind::Credential, || {
+                    format!(
+                        "unable to create AZURE_CREDENTIAL_TYPE of {}",
+                        azure_credential_types::ENVIRONMENT
+                    )
+                })?,
             azure_credential_types::APP_SERVICE => {
                 AppServiceManagedIdentityCredential::create(options)
-                    .map(SpecificAzureCredentialEnum::AppService)?
+                    .map(SpecificAzureCredentialEnum::AppService)
+                    .with_context(ErrorKind::Credential, || {
+                        format!(
+                            "unable to create AZURE_CREDENTIAL_TYPE of {}",
+                            azure_credential_types::APP_SERVICE
+                        )
+                    })?
             }
             azure_credential_types::VIRTUAL_MACHINE => SpecificAzureCredentialEnum::VirtualMachine(
                 VirtualMachineManagedIdentityCredential::new(options),
             ),
-            azure_credential_types::AZURE_CLI => {
-                AzureCliCredential::create().map(SpecificAzureCredentialEnum::AzureCli)?
-            }
+            azure_credential_types::AZURE_CLI => AzureCliCredential::create()
+                .map(SpecificAzureCredentialEnum::AzureCli)
+                .with_context(ErrorKind::Credential, || {
+                    format!(
+                        "unable to create AZURE_CREDENTIAL_TYPE of {}",
+                        azure_credential_types::AZURE_CLI
+                    )
+                })?,
             azure_credential_types::CLIENT_SECRET => ClientSecretCredential::create(options)
                 .map(SpecificAzureCredentialEnum::ClientSecret)?,
             azure_credential_types::WORKLOAD_IDENTITY => {
                 WorkloadIdentityCredential::create(options)
-                    .map(SpecificAzureCredentialEnum::WorkloadIdentity)?
+                    .map(SpecificAzureCredentialEnum::WorkloadIdentity)
+                    .with_context(ErrorKind::Credential, || {
+                        format!(
+                            "unable to create AZURE_CREDENTIAL_TYPE of {}",
+                            azure_credential_types::WORKLOAD_IDENTITY
+                        )
+                    })?
             }
             #[cfg(feature = "client_certificate")]
             azure_credential_types::CLIENT_CERTIFICATE => {
                 ClientCertificateCredential::create(options)
-                    .map(SpecificAzureCredentialEnum::ClientCertificate)?
+                    .map(SpecificAzureCredentialEnum::ClientCertificate)
+                    .with_context(ErrorKind::Credential, || {
+                        format!(
+                            "unable to create AZURE_CREDENTIAL_TYPE of {}",
+                            azure_credential_types::CLIENT_CERTIFICATE
+                        )
+                    })?
             }
             _ => {
                 return Err(Error::with_message(ErrorKind::Credential, || {
-                    format!("Unknown credential type: {}", credential_type)
+                    format!("unknown AZURE_CREDENTIAL_TYPE of {}", credential_type)
                 }))
             }
         };
@@ -212,7 +241,10 @@ mod tests {
     #[test]
     fn test_app_service() -> azure_core::Result<()> {
         let credential = SpecificAzureCredential::create(test_options(
-            &[("AZURE_CREDENTIAL_TYPE", "appservice")][..],
+            &[
+                ("AZURE_CREDENTIAL_TYPE", "appservice"),
+                ("IDENTITY_ENDPOINT", "https://identityendpoint/token"),
+            ][..],
         ))?;
         match credential.source() {
             SpecificAzureCredentialEnum::AppService(_) => {}
@@ -243,7 +275,12 @@ mod tests {
     #[test]
     fn test_workload_identity() -> azure_core::Result<()> {
         let credential = SpecificAzureCredential::create(test_options(
-            &[("AZURE_CREDENTIAL_TYPE", "workloadidentity")][..],
+            &[
+                ("AZURE_CREDENTIAL_TYPE", "workloadidentity"),
+                ("AZURE_TENANT_ID", "1"),
+                ("AZURE_CLIENT_ID", "2"),
+                ("AZURE_FEDERATED_TOKEN", "3"),
+            ][..],
         ))?;
         match credential.source() {
             SpecificAzureCredentialEnum::WorkloadIdentity(_) => {}

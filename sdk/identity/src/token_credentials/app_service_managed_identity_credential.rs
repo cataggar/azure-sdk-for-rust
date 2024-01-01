@@ -1,5 +1,6 @@
 use crate::{ImdsId, ImdsManagedIdentityCredential, TokenCredentialOptions};
 use azure_core::auth::{AccessToken, TokenCredential};
+use azure_core::error::{ErrorKind, ResultExt};
 use azure_core::headers::HeaderName;
 use azure_core::Url;
 
@@ -17,7 +18,20 @@ impl AppServiceManagedIdentityCredential {
     pub fn create(options: impl Into<TokenCredentialOptions>) -> azure_core::Result<Self> {
         let options = options.into();
         let env = options.env();
-        let endpoint = Url::parse(&env.var(ENDPOINT_ENV)?)?;
+        let endpoint = &env
+            .var(ENDPOINT_ENV)
+            .with_context(ErrorKind::Credential, || {
+                format!(
+                    "app service credential requires {} environment variable",
+                    ENDPOINT_ENV
+                )
+            })?;
+        let endpoint = Url::parse(endpoint).with_context(ErrorKind::Credential, || {
+            format!(
+                "app service credential {} environment variable must be a valid URL, but is '{endpoint}'",
+                ENDPOINT_ENV
+            )
+        })?;
         Ok(Self {
             credential: ImdsManagedIdentityCredential::new(
                 options,

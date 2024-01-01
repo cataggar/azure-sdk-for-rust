@@ -1,4 +1,7 @@
-use azure_core::error::{ErrorKind, ResultExt};
+use azure_core::{
+    error::{ErrorKind, ResultExt},
+    Error,
+};
 use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
@@ -40,7 +43,9 @@ pub struct ProcessEnv;
 
 impl ProcessEnv {
     fn var(&self, key: &str) -> azure_core::Result<String> {
-        std::env::var(key).map_kind(ErrorKind::Io)
+        std::env::var(key).with_context(ErrorKind::Io, || {
+            format!("environment variable {} not set", key)
+        })
     }
 }
 
@@ -52,10 +57,12 @@ pub struct MemEnv {
 
 impl MemEnv {
     fn var(&self, key: &str) -> azure_core::Result<String> {
-        self.vars
-            .get(key)
-            .cloned()
-            .ok_or_else(|| ErrorKind::Io.into())
+        self.vars.get(key).cloned().ok_or_else(|| {
+            Error::message(
+                ErrorKind::Io,
+                format!("environment variable {} not set", key),
+            )
+        })
     }
 }
 

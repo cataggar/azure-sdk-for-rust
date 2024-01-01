@@ -267,18 +267,38 @@ impl ClientCertificateCredential {
     ) -> azure_core::Result<Self> {
         let options = options.into();
         let env = options.options().env();
-        let tenant_id = env
-            .var(AZURE_TENANT_ID_ENV_KEY)
-            .map_kind(ErrorKind::Credential)?;
-        let client_id = env
-            .var(AZURE_CLIENT_ID_ENV_KEY)
-            .map_kind(ErrorKind::Credential)?;
+        let tenant_id =
+            env.var(AZURE_TENANT_ID_ENV_KEY)
+                .with_context(ErrorKind::Credential, || {
+                    format!(
+                        "client certificate credential requires {} environment variable",
+                        AZURE_TENANT_ID_ENV_KEY
+                    )
+                })?;
+        let client_id =
+            env.var(AZURE_CLIENT_ID_ENV_KEY)
+                .with_context(ErrorKind::Credential, || {
+                    format!(
+                        "client certificate credential requires {} environment variable",
+                        AZURE_CLIENT_ID_ENV_KEY
+                    )
+                })?;
         let client_certificate_path = env
             .var(AZURE_CLIENT_CERTIFICATE_PATH_ENV_KEY)
-            .map_kind(ErrorKind::Credential)?;
+            .with_context(ErrorKind::Credential, || {
+                format!(
+                    "client certificate credential requires {} environment variable",
+                    AZURE_CLIENT_CERTIFICATE_PATH_ENV_KEY
+                )
+            })?;
         let client_certificate_password = env
             .var(AZURE_CLIENT_CERTIFICATE_PASSWORD_ENV_KEY)
-            .map_kind(ErrorKind::Credential)?;
+            .with_context(ErrorKind::Credential, || {
+                format!(
+                    "client certificate credential requires {} environment variable",
+                    AZURE_CLIENT_CERTIFICATE_PASSWORD_ENV_KEY
+                )
+            })?;
 
         let client_certificate = std::fs::read_to_string(client_certificate_path.clone())
             .with_context(ErrorKind::Credential, || {

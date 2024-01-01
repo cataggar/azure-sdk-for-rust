@@ -110,15 +110,30 @@ impl ClientSecretCredential {
     ) -> azure_core::Result<ClientSecretCredential> {
         let options = options.into();
         let env = options.env();
-        let tenant_id = env
-            .var(AZURE_TENANT_ID_ENV_KEY)
-            .map_kind(ErrorKind::Credential)?;
-        let client_id = env
-            .var(AZURE_CLIENT_ID_ENV_KEY)
-            .map_kind(ErrorKind::Credential)?;
-        let client_secret = env
-            .var(AZURE_CLIENT_SECRET_ENV_KEY)
-            .map_kind(ErrorKind::Credential)?;
+        let tenant_id =
+            env.var(AZURE_TENANT_ID_ENV_KEY)
+                .with_context(ErrorKind::Credential, || {
+                    format!(
+                        "client secret credential requires {} environment variable",
+                        AZURE_TENANT_ID_ENV_KEY
+                    )
+                })?;
+        let client_id =
+            env.var(AZURE_CLIENT_ID_ENV_KEY)
+                .with_context(ErrorKind::Credential, || {
+                    format!(
+                        "client secret credential requires {} environment variable",
+                        AZURE_CLIENT_ID_ENV_KEY
+                    )
+                })?;
+        let client_secret =
+            env.var(AZURE_CLIENT_SECRET_ENV_KEY)
+                .with_context(ErrorKind::Credential, || {
+                    format!(
+                        "client secret credential requires {} environment variable",
+                        AZURE_CLIENT_SECRET_ENV_KEY
+                    )
+                })?;
 
         Ok(ClientSecretCredential::new(
             options,

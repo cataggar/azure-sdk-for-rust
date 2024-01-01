@@ -57,12 +57,22 @@ impl WorkloadIdentityCredential {
     ) -> azure_core::Result<WorkloadIdentityCredential> {
         let options = options.into();
         let env = options.env();
-        let tenant_id = env
-            .var(AZURE_TENANT_ID_ENV_KEY)
-            .map_kind(ErrorKind::Credential)?;
-        let client_id = env
-            .var(AZURE_CLIENT_ID_ENV_KEY)
-            .map_kind(ErrorKind::Credential)?;
+        let tenant_id =
+            env.var(AZURE_TENANT_ID_ENV_KEY)
+                .with_context(ErrorKind::Credential, || {
+                    format!(
+                        "working identity credential requires {} environment variable",
+                        AZURE_TENANT_ID_ENV_KEY
+                    )
+                })?;
+        let client_id =
+            env.var(AZURE_CLIENT_ID_ENV_KEY)
+                .with_context(ErrorKind::Credential, || {
+                    format!(
+                        "working identity credential requires {} environment variable",
+                        AZURE_CLIENT_ID_ENV_KEY
+                    )
+                })?;
 
         if let Ok(token) = env
             .var(AZURE_FEDERATED_TOKEN)
@@ -91,10 +101,9 @@ impl WorkloadIdentityCredential {
             ));
         }
 
-        Err(Error::message(
-            ErrorKind::Credential,
-            "no valid working identity credential environment variables",
-        ))
+        Err(Error::with_message(ErrorKind::Credential, || {
+            format!("working identity credential requires {AZURE_FEDERATED_TOKEN} or {AZURE_FEDERATED_TOKEN_FILE} environment variables")
+        }))
     }
 
     async fn get_token(&self, scopes: &[&str]) -> azure_core::Result<AccessToken> {
