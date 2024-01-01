@@ -1,37 +1,38 @@
 //! Azure Identity crate for the unofficial Microsoft Azure SDK for Rust. This crate is part of a collection of crates: for more information please refer to [https://github.com/azure/azure-sdk-for-rust](https://github.com/azure/azure-sdk-for-rust).
-//! This crate provides mechanisms for several ways to authenticate against Azure
+//! This crate provides mechanisms for several ways to authenticate against Azure.
 //!
 //! For example, to authenticate using the recommended `DefaultAzureCredential`, you can do the following:
 //!
 //! ```no_run
-//! use azure_core::{auth::TokenCredential, Url};
-//! use azure_identity::{DefaultAzureCredential};
+//!#[tokio::main]
+//!async fn main() -> Result<(), Box<dyn std::error::Error>> {
+//!    let subscription_id =
+//!        std::env::var("AZURE_SUBSCRIPTION_ID").expect("AZURE_SUBSCRIPTION_ID required");
 //!
-//! use std::env;
-//! use std::error::Error;
+//!    let credential = azure_identity::new_credential();
 //!
-//! #[tokio::main]
-//! async fn main() -> Result<(), Box<dyn Error>> {
-//!     let credential = DefaultAzureCredential::default();
-//!     let response = credential
-//!         .get_token(&["https://management.azure.com/.default"])
-//!         .await?;
+//!    // Let's enumerate the Azure storage accounts in the subscription using the REST API directly.
+//!    // This is just an example. It is easier to use the Azure SDK for Rust crates.
+//!    let url = url::Url::parse(&format!("https://management.azure.com/subscriptions/{subscription_id}/providers/Microsoft.Storage/storageAccounts?api-version=2019-06-01"))?;
 //!
-//!     let subscription_id = env::var("AZURE_SUBSCRIPTION_ID")?;
-//!     let url = Url::parse(&format!(
-//!         "https://management.azure.com/subscriptions/{}/providers/Microsoft.Storage/storageAccounts?api-version=2019-06-01",
-//!         subscription_id))?;
-//!     let response = reqwest::Client::new()
-//!         .get(url)
-//!         .header("Authorization", format!("Bearer {}", response.token.secret()))
-//!         .send()
-//!         .await?
-//!         .text()
-//!         .await?;
+//!    let access_token = credential
+//!        .get_token(&["https://management.azure.com/.default"])
+//!        .await?;
 //!
-//!     println!("{:?}", response);
-//!     Ok(())
-//! }
+//!    let response = reqwest::Client::new()
+//!        .get(url)
+//!        .header(
+//!            "Authorization",
+//!            format!("Bearer {}", access_token.token.secret()),
+//!        )
+//!        .send()
+//!        .await?
+//!        .text()
+//!        .await?;
+//!
+//!    println!("{response}");
+//!    Ok(())
+//!}
 //! ```
 //!
 //! The supported authentication flows are:
