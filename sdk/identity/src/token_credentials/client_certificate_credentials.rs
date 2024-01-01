@@ -35,6 +35,13 @@ pub struct ClientCertificateCredentialOptions {
     send_certificate_chain: bool,
 }
 
+// alias of CertificateCredentialOptions for backwards compatibility
+#[deprecated(
+    since = "0.19.0",
+    note = "Please use ClientCertificateCredentialOptions instead"
+)]
+pub type CertificateCredentialOptions = ClientCertificateCredentialOptions;
+
 impl From<TokenCredentialOptions> for ClientCertificateCredentialOptions {
     fn from(options: TokenCredentialOptions) -> Self {
         let env = options.env();
