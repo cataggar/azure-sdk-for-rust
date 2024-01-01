@@ -1,9 +1,9 @@
 # azure_identity
 
 Azure Identity crate for the unofficial Microsoft Azure SDK for Rust. This crate is part of a collection of crates: for more information please refer to [https://github.com/azure/azure-sdk-for-rust](https://github.com/azure/azure-sdk-for-rust).
-This crate provides mechanisms for several ways to authenticate against Azure.
 
-For example, to authenticate using the recommended `DefaultAzureCredential`, you can do the following:
+This crate provides several implementations of the [azure_core::auth::TokenCredential](https://docs.rs/azure_core/latest/azure_core/auth/trait.TokenCredential.html) trait.
+It is recommended to use `azure_identity::new_credential()`, which will create an instance of `DefaultAzureCredential`. It will in turn attempt to create and use several credential types. If you want to use a specific credential type, the `AZURE_CREDENTIAL_TYPE` environment variable may be set to a value from `azure_credential_types`, such as `azurecli` or `virtualmachine`.
 
 ```rust
 #[tokio::main]
@@ -41,7 +41,5 @@ The supported authentication flows are:
 * [Authorization code flow](https://docs.microsoft.com/azure/active-directory/develop/v2-oauth2-auth-code-flow).
 * [Client credentials flow](https://docs.microsoft.com/azure/active-directory/develop/v2-oauth2-client-creds-grant-flow).
 * [Device code flow](https://docs.microsoft.com/azure/active-directory/develop/v2-oauth2-device-code).
-
-This crate also includes utilities for handling refresh tokens and accessing token credentials from many different sources.
 
 License: MIT
