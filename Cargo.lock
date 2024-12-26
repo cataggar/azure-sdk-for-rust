@@ -454,6 +454,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "azure_mgmt_avs"
+version = "0.1.0"
+dependencies = [
+ "async-std",
+ "azure_core",
+ "futures",
+ "serde",
+ "serde_json",
+ "time",
+ "typespec_client_core",
+]
+
+[[package]]
 name = "azure_storage_blob"
 version = "0.1.0"
 dependencies = [
