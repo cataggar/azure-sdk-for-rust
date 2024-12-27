@@ -29,7 +29,7 @@ use std::collections::HashMap;
 use time::OffsetDateTime;
 
 /// An addon resource
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct Addon {
     /// Fully qualified resource ID for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
@@ -54,7 +54,7 @@ pub struct Addon {
 }
 
 /// The properties of an Arc addon
-#[derive(Clone, Debug, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct AddonArcProperties {
     /// The type of private cloud addon
@@ -71,7 +71,7 @@ pub struct AddonArcProperties {
 }
 
 /// The properties of an HCX addon
-#[derive(Clone, Debug, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct AddonHcxProperties {
     /// The type of private cloud addon
@@ -88,7 +88,7 @@ pub struct AddonHcxProperties {
 }
 
 /// The response of a Addon list operation.
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct AddonList {
     /// The link to the next page of items
@@ -101,7 +101,7 @@ pub struct AddonList {
 }
 
 /// The properties of an addon
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct AddonProperties {
     /// Addon type
@@ -114,7 +114,7 @@ pub struct AddonProperties {
 }
 
 /// The properties of a Site Recovery Manager (SRM) addon
-#[derive(Clone, Debug, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct AddonSrmProperties {
     /// The type of private cloud addon
@@ -131,7 +131,7 @@ pub struct AddonSrmProperties {
 }
 
 /// The properties of a vSphere Replication (VR) addon
-#[derive(Clone, Debug, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct AddonVrProperties {
     /// The type of private cloud addon
@@ -148,7 +148,7 @@ pub struct AddonVrProperties {
 }
 
 /// Administrative credentials for accessing vCenter and NSX-T
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct AdminCredentials {
     /// NSX-T Manager password
@@ -169,7 +169,7 @@ pub struct AdminCredentials {
 }
 
 /// Standard Azure Resource Manager operation status response
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct ArmOperationStatusResourceProvisioningState {
     /// Operation complete time
@@ -202,7 +202,7 @@ pub struct ArmOperationStatusResourceProvisioningState {
 }
 
 /// The properties describing private cloud availability zone distribution
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct AvailabilityProperties {
     /// The secondary availability zone for the private cloud
@@ -219,7 +219,7 @@ pub struct AvailabilityProperties {
 }
 
 /// An ExpressRoute Circuit
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct Circuit {
     /// Identifier of the ExpressRoute Circuit (Microsoft Colo only)
@@ -243,7 +243,7 @@ pub struct Circuit {
 }
 
 /// A cloud link resource
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct CloudLink {
     /// Fully qualified resource ID for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
@@ -268,7 +268,7 @@ pub struct CloudLink {
 }
 
 /// The response of a CloudLink list operation.
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct CloudLinkList {
     /// The link to the next page of items
@@ -281,7 +281,7 @@ pub struct CloudLinkList {
 }
 
 /// The properties of a cloud link.
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct CloudLinkProperties {
     /// Identifier of the other private cloud participating in the link.
@@ -298,7 +298,7 @@ pub struct CloudLinkProperties {
 }
 
 /// A cluster resource
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct Cluster {
     /// Fully qualified resource ID for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
@@ -327,7 +327,7 @@ pub struct Cluster {
 }
 
 /// The response of a Cluster list operation.
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct ClusterList {
     /// The link to the next page of items
@@ -340,7 +340,7 @@ pub struct ClusterList {
 }
 
 /// The properties of a cluster
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct ClusterProperties {
     /// The identity
@@ -365,7 +365,7 @@ pub struct ClusterProperties {
 }
 
 /// An update of a cluster resource
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct ClusterUpdate {
     /// The properties of a cluster resource that may be updated
@@ -378,7 +378,7 @@ pub struct ClusterUpdate {
 }
 
 /// The properties of a cluster that may be updated
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct ClusterUpdateProperties {
     /// The cluster size
@@ -391,7 +391,7 @@ pub struct ClusterUpdateProperties {
 }
 
 /// Zone and associated hosts info
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct ClusterZone {
     /// List of hosts belonging to the availability zone in a cluster
@@ -404,7 +404,7 @@ pub struct ClusterZone {
 }
 
 /// List of all zones and associated hosts for a cluster
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct ClusterZoneList {
     /// Zone and associated hosts info
@@ -413,7 +413,7 @@ pub struct ClusterZoneList {
 }
 
 /// A datastore resource
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct Datastore {
     /// Fully qualified resource ID for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
@@ -438,7 +438,7 @@ pub struct Datastore {
 }
 
 /// The response of a Datastore list operation.
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct DatastoreList {
     /// The link to the next page of items
@@ -451,7 +451,7 @@ pub struct DatastoreList {
 }
 
 /// The properties of a datastore
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct DatastoreProperties {
     /// An iSCSI volume
@@ -476,7 +476,7 @@ pub struct DatastoreProperties {
 }
 
 /// An iSCSI volume from Microsoft.StoragePool provider
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct DiskPoolVolume {
     /// Name of the LUN to be used for datastore
@@ -498,7 +498,7 @@ pub struct DiskPoolVolume {
 }
 
 /// An Elastic SAN volume from Microsoft.ElasticSan provider
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct ElasticSanVolume {
     /// Azure resource ID of the Elastic SAN Volume
@@ -507,7 +507,7 @@ pub struct ElasticSanVolume {
 }
 
 /// The properties of customer managed encryption key
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct Encryption {
     /// The key vault where the encryption key is stored
@@ -520,7 +520,7 @@ pub struct Encryption {
 }
 
 /// An Encryption Key
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct EncryptionKeyVaultProperties {
     /// The auto-detected version of the key if versionType is auto-detected.
@@ -552,7 +552,7 @@ pub struct EncryptionKeyVaultProperties {
 }
 
 /// Endpoint addresses
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct Endpoints {
     /// Endpoint FQDN for the HCX Cloud Manager
@@ -581,7 +581,7 @@ pub struct Endpoints {
 }
 
 /// ExpressRoute Circuit Authorization
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct ExpressRouteAuthorization {
     /// Fully qualified resource ID for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
@@ -606,7 +606,7 @@ pub struct ExpressRouteAuthorization {
 }
 
 /// The response of a ExpressRouteAuthorization list operation.
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct ExpressRouteAuthorizationList {
     /// The link to the next page of items
@@ -619,7 +619,7 @@ pub struct ExpressRouteAuthorizationList {
 }
 
 /// The properties of an ExpressRoute Circuit Authorization resource
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct ExpressRouteAuthorizationProperties {
     /// The ID of the ExpressRoute Circuit Authorization
@@ -646,7 +646,7 @@ pub struct ExpressRouteAuthorizationProperties {
 }
 
 /// A global reach connection resource
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct GlobalReachConnection {
     /// Fully qualified resource ID for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
@@ -671,7 +671,7 @@ pub struct GlobalReachConnection {
 }
 
 /// The response of a GlobalReachConnection list operation.
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct GlobalReachConnectionList {
     /// The link to the next page of items
@@ -684,7 +684,7 @@ pub struct GlobalReachConnectionList {
 }
 
 /// The properties of a global reach connection
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct GlobalReachConnectionProperties {
     /// The network used for global reach carved out from the original network block
@@ -723,7 +723,7 @@ pub struct GlobalReachConnectionProperties {
 }
 
 /// An HCX Enterprise Site resource
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct HcxEnterpriseSite {
     /// Fully qualified resource ID for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
@@ -748,7 +748,7 @@ pub struct HcxEnterpriseSite {
 }
 
 /// The response of a HcxEnterpriseSite list operation.
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct HcxEnterpriseSiteList {
     /// The link to the next page of items
@@ -761,7 +761,7 @@ pub struct HcxEnterpriseSiteList {
 }
 
 /// The properties of an HCX Enterprise Site
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct HcxEnterpriseSiteProperties {
     /// The activation key
@@ -778,7 +778,7 @@ pub struct HcxEnterpriseSiteProperties {
 }
 
 /// vCenter Single Sign On Identity Source
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct IdentitySource {
     /// The domain's NetBIOS name
@@ -825,7 +825,7 @@ pub struct IdentitySource {
 }
 
 /// An iSCSI path resource
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct IscsiPath {
     /// Fully qualified resource ID for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
@@ -850,7 +850,7 @@ pub struct IscsiPath {
 }
 
 /// The response of a IscsiPath list operation.
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct IscsiPathListResult {
     /// The link to the next page of items
@@ -863,7 +863,7 @@ pub struct IscsiPathListResult {
 }
 
 /// The properties of an iSCSI path resource
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct IscsiPathProperties {
     /// CIDR Block for iSCSI path.
@@ -876,7 +876,7 @@ pub struct IscsiPathProperties {
 }
 
 /// The properties of a management cluster
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct ManagementCluster {
     /// The identity
@@ -901,7 +901,7 @@ pub struct ManagementCluster {
 }
 
 /// An Azure NetApp Files volume from Microsoft.NetApp provider
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct NetAppVolume {
     /// Azure resource ID of the NetApp volume
@@ -910,7 +910,7 @@ pub struct NetAppVolume {
 }
 
 /// Details of a REST API operation, returned from the Resource Provider Operations API
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct Operation {
     /// Extensible enum. Indicates the action type. "Internal" refers to actions that are for internal only APIs.
@@ -938,7 +938,7 @@ pub struct Operation {
 }
 
 /// Localized display information for and operation.
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct OperationDisplay {
     /// The short, localized friendly description of the operation; suitable for tool tips and detailed views.
@@ -961,7 +961,7 @@ pub struct OperationDisplay {
 
 /// A list of REST API operations supported by an Azure Resource Provider. It contains an URL link to get the next set of
 /// results.
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct OperationListResult {
     /// The link to the next page of items
@@ -974,7 +974,7 @@ pub struct OperationListResult {
 }
 
 /// a powershell credential object
-#[derive(Clone, Debug, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct PSCredentialExecutionParameter {
     /// The parameter name
@@ -995,7 +995,7 @@ pub struct PSCredentialExecutionParameter {
 }
 
 /// The response of a PlacementPolicy list operation.
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct PlacementPoliciesList {
     /// The link to the next page of items
@@ -1008,7 +1008,7 @@ pub struct PlacementPoliciesList {
 }
 
 /// A vSphere Distributed Resource Scheduler (DRS) placement policy
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct PlacementPolicy {
     /// Fully qualified resource ID for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
@@ -1033,7 +1033,7 @@ pub struct PlacementPolicy {
 }
 
 /// Abstract placement policy properties
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct PlacementPolicyProperties {
     /// Display name of the placement policy
@@ -1054,7 +1054,7 @@ pub struct PlacementPolicyProperties {
 }
 
 /// An update of a DRS placement policy resource
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct PlacementPolicyUpdate {
     /// The properties of a placement policy resource that may be updated
@@ -1063,7 +1063,7 @@ pub struct PlacementPolicyUpdate {
 }
 
 /// The properties of a placement policy resource that may be updated
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct PlacementPolicyUpdateProperties {
     /// vm-host placement policy affinity strength (should/must)
@@ -1091,7 +1091,7 @@ pub struct PlacementPolicyUpdateProperties {
 }
 
 /// A private cloud resource
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct PrivateCloud {
     /// Fully qualified resource ID for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
@@ -1132,7 +1132,7 @@ pub struct PrivateCloud {
 }
 
 /// The response of a PrivateCloud list operation.
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct PrivateCloudList {
     /// The link to the next page of items
@@ -1145,7 +1145,7 @@ pub struct PrivateCloudList {
 }
 
 /// The properties of a private cloud resource
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct PrivateCloudProperties {
     /// Properties describing how the cloud is distributed across availability zones
@@ -1260,7 +1260,7 @@ pub struct PrivateCloudProperties {
 }
 
 /// An update to a private cloud resource
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct PrivateCloudUpdate {
     /// The managed service identities assigned to this resource.
@@ -1281,7 +1281,7 @@ pub struct PrivateCloudUpdate {
 }
 
 /// The properties of a private cloud resource that may be updated
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct PrivateCloudUpdateProperties {
     /// Properties describing how the cloud is distributed across availability zones
@@ -1320,7 +1320,7 @@ pub struct PrivateCloudUpdateProperties {
 }
 
 /// Subscription quotas
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct Quota {
     /// Remaining hosts quota by sku type
@@ -1333,7 +1333,7 @@ pub struct Quota {
 }
 
 /// A cmdlet available for script execution
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct ScriptCmdlet {
     /// Fully qualified resource ID for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
@@ -1358,7 +1358,7 @@ pub struct ScriptCmdlet {
 }
 
 /// Properties of a pre-canned script
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct ScriptCmdletProperties {
     /// Specifies whether a script cmdlet is intended to be invoked only through automation or visible to customers
@@ -1383,7 +1383,7 @@ pub struct ScriptCmdletProperties {
 }
 
 /// The response of a ScriptCmdlet list operation.
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct ScriptCmdletsList {
     /// The link to the next page of items
@@ -1396,7 +1396,7 @@ pub struct ScriptCmdletsList {
 }
 
 /// An instance of a script executed by a user - custom or AVS
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct ScriptExecution {
     /// Fully qualified resource ID for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
@@ -1421,7 +1421,7 @@ pub struct ScriptExecution {
 }
 
 /// The arguments passed in to the execution
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct ScriptExecutionParameter {
     /// The parameter name
@@ -1434,7 +1434,7 @@ pub struct ScriptExecutionParameter {
 }
 
 /// Properties of a user-invoked script
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct ScriptExecutionProperties {
     /// Standard error output stream from the powershell execution
@@ -1500,12 +1500,12 @@ pub struct ScriptExecutionProperties {
     pub warnings: Option<Vec<String>>,
 }
 
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct ScriptExecutionPropertiesNamedOutput {}
 
 /// The response of a ScriptExecution list operation.
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct ScriptExecutionsList {
     /// The link to the next page of items
@@ -1518,7 +1518,7 @@ pub struct ScriptExecutionsList {
 }
 
 /// Script Package resources available for execution
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct ScriptPackage {
     /// Fully qualified resource ID for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
@@ -1543,7 +1543,7 @@ pub struct ScriptPackage {
 }
 
 /// Properties of a Script Package subresource
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct ScriptPackageProperties {
     /// Company that created and supports the package
@@ -1568,7 +1568,7 @@ pub struct ScriptPackageProperties {
 }
 
 /// The response of a ScriptPackage list operation.
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct ScriptPackagesList {
     /// The link to the next page of items
@@ -1581,7 +1581,7 @@ pub struct ScriptPackagesList {
 }
 
 /// An parameter that the script will accept
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct ScriptParameter {
     /// User friendly description of the parameter
@@ -1608,7 +1608,7 @@ pub struct ScriptParameter {
 }
 
 /// a plain text value execution parameter
-#[derive(Clone, Debug, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct ScriptSecureStringExecutionParameter {
     /// The parameter name
@@ -1625,7 +1625,7 @@ pub struct ScriptSecureStringExecutionParameter {
 }
 
 /// a plain text value execution parameter
-#[derive(Clone, Debug, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct ScriptStringExecutionParameter {
     /// The parameter name
@@ -1642,7 +1642,7 @@ pub struct ScriptStringExecutionParameter {
 }
 
 /// The resource model definition representing SKU
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct Sku {
     /// If the SKU supports scale out/in then the capacity integer should be included. If scale out/in is not possible for the
@@ -1669,7 +1669,7 @@ pub struct Sku {
 }
 
 /// Managed service identity (either system assigned, or none)
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct SystemAssignedServiceIdentity {
     /// The service principal ID of the system assigned identity. This property will only be provided for a system assigned identity.
@@ -1686,7 +1686,7 @@ pub struct SystemAssignedServiceIdentity {
 }
 
 /// Metadata pertaining to creation and last modification of the resource.
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct SystemData {
     /// The timestamp of resource creation (UTC).
@@ -1715,7 +1715,7 @@ pub struct SystemData {
 }
 
 /// Subscription trial availability
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct Trial {
     /// Number of trial hosts available
@@ -1728,7 +1728,7 @@ pub struct Trial {
 }
 
 /// Virtual Machine
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct VirtualMachine {
     /// Fully qualified resource ID for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
@@ -1753,7 +1753,7 @@ pub struct VirtualMachine {
 }
 
 /// Virtual Machine Properties
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct VirtualMachineProperties {
     /// Display name of the VM.
@@ -1778,7 +1778,7 @@ pub struct VirtualMachineProperties {
 }
 
 /// Set VM DRS-driven movement to restricted (enabled) or not (disabled)
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct VirtualMachineRestrictMovement {
     /// Whether VM DRS-driven movement is restricted (enabled) or not (disabled)
@@ -1787,7 +1787,7 @@ pub struct VirtualMachineRestrictMovement {
 }
 
 /// The response of a VirtualMachine list operation.
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct VirtualMachinesList {
     /// The link to the next page of items
@@ -1800,7 +1800,7 @@ pub struct VirtualMachinesList {
 }
 
 /// VM-Host placement policy properties
-#[derive(Clone, Debug, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct VmHostPlacementPolicyProperties {
     /// vm-host placement policy affinity strength (should/must)
@@ -1844,7 +1844,7 @@ pub struct VmHostPlacementPolicyProperties {
 }
 
 /// VM-VM placement policy properties
-#[derive(Clone, Debug, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct VmVmPlacementPolicyProperties {
     /// placement policy affinity type
@@ -1873,7 +1873,7 @@ pub struct VmVmPlacementPolicyProperties {
 }
 
 /// Workload Network
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct WorkloadNetwork {
     /// Fully qualified resource ID for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
@@ -1898,7 +1898,7 @@ pub struct WorkloadNetwork {
 }
 
 /// NSX DHCP
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct WorkloadNetworkDhcp {
     /// Fully qualified resource ID for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
@@ -1924,7 +1924,7 @@ pub struct WorkloadNetworkDhcp {
 
 /// Base class for WorkloadNetworkDhcpServer and WorkloadNetworkDhcpRelay to
 /// inherit from
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct WorkloadNetworkDhcpEntity {
     /// Type of DHCP: SERVER or RELAY.
@@ -1949,7 +1949,7 @@ pub struct WorkloadNetworkDhcpEntity {
 }
 
 /// The response of a WorkloadNetworkDhcp list operation.
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct WorkloadNetworkDhcpList {
     /// The link to the next page of items
@@ -1962,7 +1962,7 @@ pub struct WorkloadNetworkDhcpList {
 }
 
 /// NSX DHCP Relay
-#[derive(Clone, Debug, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct WorkloadNetworkDhcpRelay {
     /// Type of DHCP: SERVER or RELAY.
@@ -1991,7 +1991,7 @@ pub struct WorkloadNetworkDhcpRelay {
 }
 
 /// NSX DHCP Server
-#[derive(Clone, Debug, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct WorkloadNetworkDhcpServer {
     /// Type of DHCP: SERVER or RELAY.
@@ -2024,7 +2024,7 @@ pub struct WorkloadNetworkDhcpServer {
 }
 
 /// NSX DNS Service
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct WorkloadNetworkDnsService {
     /// Fully qualified resource ID for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
@@ -2049,7 +2049,7 @@ pub struct WorkloadNetworkDnsService {
 }
 
 /// NSX DNS Service Properties
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct WorkloadNetworkDnsServiceProperties {
     /// Default DNS zone of the DNS Service.
@@ -2086,7 +2086,7 @@ pub struct WorkloadNetworkDnsServiceProperties {
 }
 
 /// The response of a WorkloadNetworkDnsService list operation.
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct WorkloadNetworkDnsServicesList {
     /// The link to the next page of items
@@ -2099,7 +2099,7 @@ pub struct WorkloadNetworkDnsServicesList {
 }
 
 /// NSX DNS Zone
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct WorkloadNetworkDnsZone {
     /// Fully qualified resource ID for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
@@ -2124,7 +2124,7 @@ pub struct WorkloadNetworkDnsZone {
 }
 
 /// NSX DNS Zone Properties
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct WorkloadNetworkDnsZoneProperties {
     /// Display name of the DNS Zone.
@@ -2157,7 +2157,7 @@ pub struct WorkloadNetworkDnsZoneProperties {
 }
 
 /// The response of a WorkloadNetworkDnsZone list operation.
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct WorkloadNetworkDnsZonesList {
     /// The link to the next page of items
@@ -2170,7 +2170,7 @@ pub struct WorkloadNetworkDnsZonesList {
 }
 
 /// NSX Gateway.
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct WorkloadNetworkGateway {
     /// Fully qualified resource ID for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
@@ -2195,7 +2195,7 @@ pub struct WorkloadNetworkGateway {
 }
 
 /// The response of a WorkloadNetworkGateway list operation.
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct WorkloadNetworkGatewayList {
     /// The link to the next page of items
@@ -2208,7 +2208,7 @@ pub struct WorkloadNetworkGatewayList {
 }
 
 /// Properties of a NSX Gateway.
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct WorkloadNetworkGatewayProperties {
     /// Display name of the DHCP entity.
@@ -2225,7 +2225,7 @@ pub struct WorkloadNetworkGatewayProperties {
 }
 
 /// The response of a WorkloadNetwork list operation.
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct WorkloadNetworkList {
     /// The link to the next page of items
@@ -2238,7 +2238,7 @@ pub struct WorkloadNetworkList {
 }
 
 /// NSX Port Mirroring
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct WorkloadNetworkPortMirroring {
     /// Fully qualified resource ID for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
@@ -2263,7 +2263,7 @@ pub struct WorkloadNetworkPortMirroring {
 }
 
 /// The response of a WorkloadNetworkPortMirroring list operation.
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct WorkloadNetworkPortMirroringList {
     /// The link to the next page of items
@@ -2276,7 +2276,7 @@ pub struct WorkloadNetworkPortMirroringList {
 }
 
 /// NSX Port Mirroring Properties
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct WorkloadNetworkPortMirroringProperties {
     /// Destination VM Group.
@@ -2309,7 +2309,7 @@ pub struct WorkloadNetworkPortMirroringProperties {
 }
 
 /// The properties of a workload network
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct WorkloadNetworkProperties {
     /// The provisioning state of the resource.
@@ -2318,7 +2318,7 @@ pub struct WorkloadNetworkProperties {
 }
 
 /// NSX Public IP Block
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct WorkloadNetworkPublicIP {
     /// Fully qualified resource ID for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
@@ -2343,7 +2343,7 @@ pub struct WorkloadNetworkPublicIP {
 }
 
 /// NSX Public IP Block Properties
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct WorkloadNetworkPublicIPProperties {
     /// Display name of the Public IP Block.
@@ -2364,7 +2364,7 @@ pub struct WorkloadNetworkPublicIPProperties {
 }
 
 /// The response of a WorkloadNetworkPublicIP list operation.
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct WorkloadNetworkPublicIPsList {
     /// The link to the next page of items
@@ -2377,7 +2377,7 @@ pub struct WorkloadNetworkPublicIPsList {
 }
 
 /// NSX Segment
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct WorkloadNetworkSegment {
     /// Fully qualified resource ID for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
@@ -2402,7 +2402,7 @@ pub struct WorkloadNetworkSegment {
 }
 
 /// Ports and any VIF attached to segment.
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct WorkloadNetworkSegmentPortVif {
     /// Name of port or VIF attached to segment.
@@ -2411,7 +2411,7 @@ pub struct WorkloadNetworkSegmentPortVif {
 }
 
 /// NSX Segment Properties
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct WorkloadNetworkSegmentProperties {
     /// Gateway which to connect segment to.
@@ -2444,7 +2444,7 @@ pub struct WorkloadNetworkSegmentProperties {
 }
 
 /// Subnet configuration for segment
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct WorkloadNetworkSegmentSubnet {
     /// DHCP Range assigned for subnet.
@@ -2457,7 +2457,7 @@ pub struct WorkloadNetworkSegmentSubnet {
 }
 
 /// The response of a WorkloadNetworkSegment list operation.
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct WorkloadNetworkSegmentsList {
     /// The link to the next page of items
@@ -2470,7 +2470,7 @@ pub struct WorkloadNetworkSegmentsList {
 }
 
 /// NSX VM Group
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct WorkloadNetworkVMGroup {
     /// Fully qualified resource ID for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
@@ -2495,7 +2495,7 @@ pub struct WorkloadNetworkVMGroup {
 }
 
 /// NSX VM Group Properties
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct WorkloadNetworkVMGroupProperties {
     /// Display name of the VM group.
@@ -2520,7 +2520,7 @@ pub struct WorkloadNetworkVMGroupProperties {
 }
 
 /// The response of a WorkloadNetworkVMGroup list operation.
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct WorkloadNetworkVMGroupsList {
     /// The link to the next page of items
@@ -2533,7 +2533,7 @@ pub struct WorkloadNetworkVMGroupsList {
 }
 
 /// NSX Virtual Machine
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct WorkloadNetworkVirtualMachine {
     /// Fully qualified resource ID for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
@@ -2558,7 +2558,7 @@ pub struct WorkloadNetworkVirtualMachine {
 }
 
 /// NSX Virtual Machine Properties
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct WorkloadNetworkVirtualMachineProperties {
     /// Display name of the VM.
@@ -2575,7 +2575,7 @@ pub struct WorkloadNetworkVirtualMachineProperties {
 }
 
 /// The response of a WorkloadNetworkVirtualMachine list operation.
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, typespec_macros::Model)]
 #[non_exhaustive]
 pub struct WorkloadNetworkVirtualMachinesList {
     /// The link to the next page of items
