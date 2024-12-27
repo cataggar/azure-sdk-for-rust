@@ -464,7 +464,6 @@ dependencies = [
  "serde_json",
  "time",
  "typespec_client_core",
- "typespec_macros",
 ]
 
 [[package]]
