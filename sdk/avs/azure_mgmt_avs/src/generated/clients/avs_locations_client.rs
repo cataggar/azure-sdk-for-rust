@@ -58,9 +58,9 @@ impl AVSLocationsClient {
             .append_pair("api-version", &self.api_version);
         let mut request = Request::new(url, Method::Post);
         request.insert_header("accept", "application/json");
-        if let Some(content_type) = options.content_type {
-            request.insert_header("content-type", "application/json");
-        }
+        // if let Some(content_type) = options.content_type {
+        //     request.insert_header("content-type", "application/json");
+        // }
         if let Some(sku) = options.sku {
             request.set_body(sku);
         }
@@ -75,7 +75,7 @@ pub struct AVSLocationsClientCheckQuotaAvailabilityOptions<'a> {
 
 #[derive(Clone, Debug, Default)]
 pub struct AVSLocationsClientCheckTrialAvailabilityOptions<'a> {
-    pub content_type: undefined,
+    // pub content_type: undefined,
     pub method_options: ClientMethodOptions<'a>,
     pub sku: Option<RequestContent<Sku>>,
 }

@@ -120,9 +120,9 @@ impl AVSScriptExecutionsClient {
             .append_pair("api-version", &self.api_version);
         let mut request = Request::new(url, Method::Post);
         request.insert_header("accept", "application/json");
-        if let Some(content_type) = options.content_type {
-            request.insert_header("content-type", "application/json");
-        }
+        // if let Some(content_type) = options.content_type {
+        //     request.insert_header("content-type", "application/json");
+        // }
         if let Some(script_output_stream_type) = options.script_output_stream_type {
             request.set_body(script_output_stream_type);
         }
@@ -191,7 +191,7 @@ pub struct AVSScriptExecutionsClientGetOptions<'a> {
 
 #[derive(Clone, Debug, Default)]
 pub struct AVSScriptExecutionsClientGetExecutionLogsOptions<'a> {
-    pub content_type: undefined,
+    // pub content_type: undefined,
     pub method_options: ClientMethodOptions<'a>,
     pub script_output_stream_type: Option<RequestContent<Vec<ScriptOutputStreamType>>>,
 }
