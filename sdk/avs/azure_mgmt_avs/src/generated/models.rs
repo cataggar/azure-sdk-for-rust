@@ -54,12 +54,12 @@ pub struct Addon {
 }
 
 /// The properties of an Arc addon
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Deserialize, Serialize, azure_core::Model)]
 #[non_exhaustive]
 pub struct AddonArcProperties {
     /// The type of private cloud addon
     #[serde(rename = "addonType")]
-    pub addon_type: undefined,
+    pub addon_type: AddonType,
 
     /// The state of the addon provisioning
     #[serde(rename = "provisioningState", skip_serializing_if = "Option::is_none")]
@@ -71,12 +71,12 @@ pub struct AddonArcProperties {
 }
 
 /// The properties of an HCX addon
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Deserialize, Serialize, azure_core::Model)]
 #[non_exhaustive]
 pub struct AddonHcxProperties {
     /// The type of private cloud addon
     #[serde(rename = "addonType")]
-    pub addon_type: undefined,
+    pub addon_type: AddonType,
 
     /// The HCX offer, example VMware MaaS Cloud Provider (Enterprise)
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -114,12 +114,12 @@ pub struct AddonProperties {
 }
 
 /// The properties of a Site Recovery Manager (SRM) addon
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Deserialize, Serialize, azure_core::Model)]
 #[non_exhaustive]
 pub struct AddonSrmProperties {
     /// The type of private cloud addon
     #[serde(rename = "addonType")]
-    pub addon_type: undefined,
+    pub addon_type: AddonType,
 
     /// The Site Recovery Manager (SRM) license
     #[serde(rename = "licenseKey", skip_serializing_if = "Option::is_none")]
@@ -131,12 +131,12 @@ pub struct AddonSrmProperties {
 }
 
 /// The properties of a vSphere Replication (VR) addon
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Deserialize, Serialize, azure_core::Model)]
 #[non_exhaustive]
 pub struct AddonVrProperties {
     /// The type of private cloud addon
     #[serde(rename = "addonType")]
-    pub addon_type: undefined,
+    pub addon_type: AddonType,
 
     /// The state of the addon provisioning
     #[serde(rename = "provisioningState", skip_serializing_if = "Option::is_none")]
@@ -177,8 +177,8 @@ pub struct ArmOperationStatusResourceProvisioningState {
     pub end_time: Option<OffsetDateTime>,
 
     /// Errors that occurred if the operation ended with Canceled or Failed status
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub error: Option<ErrorDetail>,
+    // #[serde(skip_serializing_if = "Option::is_none")]
+    // pub error: Option<ErrorDetail>,
 
     /// The unique identifier for the operationStatus resource
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -974,7 +974,7 @@ pub struct OperationListResult {
 }
 
 /// a powershell credential object
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Deserialize, Serialize, azure_core::Model)]
 #[non_exhaustive]
 pub struct PSCredentialExecutionParameter {
     /// The parameter name
@@ -987,7 +987,7 @@ pub struct PSCredentialExecutionParameter {
 
     /// The type of execution parameter
     #[serde(rename = "type")]
-    pub type_prop: undefined,
+    pub type_prop: ScriptExecutionParameterType,
 
     /// username for login
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -1608,7 +1608,7 @@ pub struct ScriptParameter {
 }
 
 /// a plain text value execution parameter
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Deserialize, Serialize, azure_core::Model)]
 #[non_exhaustive]
 pub struct ScriptSecureStringExecutionParameter {
     /// The parameter name
@@ -1621,11 +1621,11 @@ pub struct ScriptSecureStringExecutionParameter {
 
     /// The type of execution parameter
     #[serde(rename = "type")]
-    pub type_prop: undefined,
+    pub type_prop: ScriptExecutionParameterType,
 }
 
 /// a plain text value execution parameter
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Deserialize, Serialize, azure_core::Model)]
 #[non_exhaustive]
 pub struct ScriptStringExecutionParameter {
     /// The parameter name
@@ -1634,7 +1634,7 @@ pub struct ScriptStringExecutionParameter {
 
     /// The type of execution parameter
     #[serde(rename = "type")]
-    pub type_prop: undefined,
+    pub type_prop: ScriptExecutionParameterType,
 
     /// The value for the passed parameter
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -1800,7 +1800,7 @@ pub struct VirtualMachinesList {
 }
 
 /// VM-Host placement policy properties
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Deserialize, Serialize, azure_core::Model)]
 #[non_exhaustive]
 pub struct VmHostPlacementPolicyProperties {
     /// vm-host placement policy affinity strength (should/must)
@@ -1836,7 +1836,7 @@ pub struct VmHostPlacementPolicyProperties {
 
     /// placement policy type
     #[serde(rename = "type")]
-    pub type_prop: undefined,
+    pub type_prop: PlacementPolicyType,
 
     /// Virtual machine members list
     #[serde(rename = "vmMembers", skip_serializing_if = "Option::is_none")]
@@ -1844,7 +1844,7 @@ pub struct VmHostPlacementPolicyProperties {
 }
 
 /// VM-VM placement policy properties
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Deserialize, Serialize, azure_core::Model)]
 #[non_exhaustive]
 pub struct VmVmPlacementPolicyProperties {
     /// placement policy affinity type
@@ -1865,7 +1865,7 @@ pub struct VmVmPlacementPolicyProperties {
 
     /// placement policy type
     #[serde(rename = "type")]
-    pub type_prop: undefined,
+    pub type_prop: PlacementPolicyType,
 
     /// Virtual machine members list
     #[serde(rename = "vmMembers", skip_serializing_if = "Option::is_none")]
@@ -1962,12 +1962,12 @@ pub struct WorkloadNetworkDhcpList {
 }
 
 /// NSX DHCP Relay
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Deserialize, Serialize, azure_core::Model)]
 #[non_exhaustive]
 pub struct WorkloadNetworkDhcpRelay {
     /// Type of DHCP: SERVER or RELAY.
     #[serde(rename = "dhcpType")]
-    pub dhcp_type: undefined,
+    pub dhcp_type: DhcpTypeEnum,
 
     /// Display name of the DHCP entity.
     #[serde(rename = "displayName", skip_serializing_if = "Option::is_none")]
@@ -1991,12 +1991,12 @@ pub struct WorkloadNetworkDhcpRelay {
 }
 
 /// NSX DHCP Server
-#[derive(Clone, Debug, Default, Deserialize, Serialize, azure_core::Model)]
+#[derive(Clone, Debug, Deserialize, Serialize, azure_core::Model)]
 #[non_exhaustive]
 pub struct WorkloadNetworkDhcpServer {
     /// Type of DHCP: SERVER or RELAY.
     #[serde(rename = "dhcpType")]
-    pub dhcp_type: undefined,
+    pub dhcp_type: DhcpTypeEnum,
 
     /// Display name of the DHCP entity.
     #[serde(rename = "displayName", skip_serializing_if = "Option::is_none")]
