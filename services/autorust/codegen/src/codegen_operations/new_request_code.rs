@@ -3,7 +3,7 @@ use quote::{quote, ToTokens};
 
 use crate::spec::WebVerb;
 
-/// Calls `azure_core::Request::new` and set the authentication.
+/// Calls `azure_core::http::Request::new` and set the authentication.
 pub struct NewRequestCode {
     pub auth: AuthCode,
     pub verb: WebVerb,
@@ -15,7 +15,7 @@ impl ToTokens for NewRequestCode {
         let auth = &self.auth;
         let verb = verb_to_tokens(&self.verb);
         tokens.extend(quote! {
-            let mut req = azure_core::Request::new(url, #verb);
+            let mut req = azure_core::http::Request::new(url, #verb);
             #auth
         })
     }
@@ -30,7 +30,7 @@ impl ToTokens for AuthCode {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         tokens.extend(quote! {
             let bearer_token = this.client.bearer_token().await?;
-            req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+            req.insert_header(azure_core::http::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
         })
     }
 }

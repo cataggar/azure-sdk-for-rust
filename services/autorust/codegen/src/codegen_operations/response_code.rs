@@ -87,7 +87,7 @@ impl ToTokens for ResponseCode {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         tokens.extend(quote! {
             #[derive(Debug)]
-            pub struct Response(azure_core::Response);
+            pub struct Response(azure_core::http::Response);
         });
         let body_fn = if let Some(response_type) = self.response_type() {
             let deserialize_body = if response_type.is_bytes() {
@@ -124,21 +124,21 @@ impl ToTokens for ResponseCode {
         tokens.extend(quote! {
             impl Response {
                 #body_fn
-                pub fn into_raw_response(self) -> azure_core::Response {
+                pub fn into_raw_response(self) -> azure_core::http::Response {
                     self.0
                 }
-                pub fn as_raw_response(&self) -> &azure_core::Response {
+                pub fn as_raw_response(&self) -> &azure_core::http::Response {
                     &self.0
                 }
                 #headers_fn
             }
-            impl From<Response> for azure_core::Response {
+            impl From<Response> for azure_core::http::Response {
                 fn from(rsp: Response) -> Self {
                     rsp.into_raw_response()
                 }
             }
-            impl AsRef<azure_core::Response> for Response {
-                fn as_ref(&self) -> &azure_core::Response {
+            impl AsRef<azure_core::http::Response> for Response {
+                fn as_ref(&self) -> &azure_core::http::Response {
                     self.as_raw_response()
                 }
             }

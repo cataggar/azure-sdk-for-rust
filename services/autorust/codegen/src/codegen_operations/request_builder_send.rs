@@ -61,7 +61,7 @@ impl ToTokens for RequestBuilderSendCode {
         let urlfn = if self.request_builder.has_param_api_version {
             let api_version = &self.request_builder.api_version;
             quote! {
-                fn url(&self) -> azure_core::Result<azure_core::Url> {
+                fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                     let mut url = self.client.endpoint().clone();
                     url.set_path(#fpath_expr);
 
@@ -74,7 +74,7 @@ impl ToTokens for RequestBuilderSendCode {
             }
         } else {
             quote! {
-                fn url(&self) -> azure_core::Result<azure_core::Url> {
+                fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                     let mut url = self.client.endpoint().clone();
                     url.set_path(#fpath_expr);
 
@@ -125,7 +125,7 @@ impl ToTokens for RequestBuilderSendCode {
                 if request_builder.has_param_x_ms_version {
                     let api_version = &request_builder.api_version;
                     stream_api_version.extend(quote! {
-                        req.insert_header(azure_core::headers::VERSION, #api_version);
+                        req.insert_header(azure_core::http::headers::VERSION, #api_version);
                     });
                 }
                 let response_type = self.response_code.response_type().expect("pageable response has a body");
