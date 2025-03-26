@@ -41,10 +41,21 @@ pub struct AddonHcxProperties {
     pub addon_properties: AddonProperties,
     #[doc = "The HCX offer, example VMware MaaS Cloud Provider (Enterprise)"]
     pub offer: String,
+    #[doc = "HCX management network."]
+    #[serde(rename = "managementNetwork", default, skip_serializing_if = "Option::is_none")]
+    pub management_network: Option<String>,
+    #[doc = "HCX uplink network"]
+    #[serde(rename = "uplinkNetwork", default, skip_serializing_if = "Option::is_none")]
+    pub uplink_network: Option<String>,
 }
 impl AddonHcxProperties {
     pub fn new(addon_properties: AddonProperties, offer: String) -> Self {
-        Self { addon_properties, offer }
+        Self {
+            addon_properties,
+            offer,
+            management_network: None,
+            uplink_network: None,
+        }
     }
 }
 #[doc = "The response of a Addon list operation."]
@@ -366,6 +377,7 @@ impl Serialize for AvailabilityStrategy {
         }
     }
 }
+pub type AzureCoreAzureLocation = String;
 #[doc = "Azure Hybrid Benefit type"]
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(remote = "AzureHybridBenefitType")]
@@ -789,6 +801,9 @@ pub struct DatastoreProperties {
     #[doc = "An Elastic SAN volume from Microsoft.ElasticSan provider"]
     #[serde(rename = "elasticSanVolume", default, skip_serializing_if = "Option::is_none")]
     pub elastic_san_volume: Option<ElasticSanVolume>,
+    #[doc = "A Pure Storage volume from PureStorage.Block provider"]
+    #[serde(rename = "pureStorageVolume", default, skip_serializing_if = "Option::is_none")]
+    pub pure_storage_volume: Option<PureStorageVolume>,
     #[doc = "datastore status"]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub status: Option<DatastoreStatus>,
@@ -1484,6 +1499,17 @@ impl Serialize for ExpressRouteAuthorizationProvisioningState {
         }
     }
 }
+#[doc = "The properties of a general host."]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct GeneralHostProperties {
+    #[serde(flatten)]
+    pub host_properties: HostProperties,
+}
+impl GeneralHostProperties {
+    pub fn new(host_properties: HostProperties) -> Self {
+        Self { host_properties }
+    }
+}
 #[doc = "A global reach connection resource"]
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
 pub struct GlobalReachConnection {
@@ -1757,6 +1783,203 @@ impl Serialize for HcxEnterpriseSiteStatus {
         }
     }
 }
+#[doc = "A host resource"]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+pub struct Host {
+    #[serde(flatten)]
+    pub proxy_resource: ProxyResource,
+    #[doc = "The properties of a host."]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub properties: Option<HostPropertiesUnion>,
+    #[doc = "The availability zones."]
+    #[serde(
+        default,
+        deserialize_with = "azure_core::util::deserialize_null_as_default",
+        skip_serializing_if = "Vec::is_empty"
+    )]
+    pub zones: Vec<String>,
+    #[doc = "The resource model definition representing SKU"]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sku: Option<Sku>,
+}
+impl Host {
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+#[doc = "The kind of host."]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(remote = "HostKind")]
+pub enum HostKind {
+    General,
+    Specialized,
+    #[serde(skip_deserializing)]
+    UnknownValue(String),
+}
+impl FromStr for HostKind {
+    type Err = value::Error;
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        Self::deserialize(s.into_deserializer())
+    }
+}
+impl<'de> Deserialize<'de> for HostKind {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        let deserialized = Self::from_str(&s).unwrap_or(Self::UnknownValue(s));
+        Ok(deserialized)
+    }
+}
+impl Serialize for HostKind {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match self {
+            Self::General => serializer.serialize_unit_variant("HostKind", 0u32, "General"),
+            Self::Specialized => serializer.serialize_unit_variant("HostKind", 1u32, "Specialized"),
+            Self::UnknownValue(s) => serializer.serialize_str(s.as_str()),
+        }
+    }
+}
+#[doc = "The response of a Host list operation."]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct HostListResult {
+    #[doc = "The Host items on this page"]
+    pub value: Vec<Host>,
+    #[doc = "The link to the next page of items"]
+    #[serde(rename = "nextLink", default, skip_serializing_if = "Option::is_none")]
+    pub next_link: Option<String>,
+}
+impl azure_core::Continuable for HostListResult {
+    type Continuation = String;
+    fn continuation(&self) -> Option<Self::Continuation> {
+        self.next_link.clone().filter(|value| !value.is_empty())
+    }
+}
+impl HostListResult {
+    pub fn new(value: Vec<Host>) -> Self {
+        Self { value, next_link: None }
+    }
+}
+#[doc = "The reason for host maintenance."]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(remote = "HostMaintenance")]
+pub enum HostMaintenance {
+    Replacement,
+    Upgrade,
+    #[serde(skip_deserializing)]
+    UnknownValue(String),
+}
+impl FromStr for HostMaintenance {
+    type Err = value::Error;
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        Self::deserialize(s.into_deserializer())
+    }
+}
+impl<'de> Deserialize<'de> for HostMaintenance {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        let deserialized = Self::from_str(&s).unwrap_or(Self::UnknownValue(s));
+        Ok(deserialized)
+    }
+}
+impl Serialize for HostMaintenance {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match self {
+            Self::Replacement => serializer.serialize_unit_variant("HostMaintenance", 0u32, "Replacement"),
+            Self::Upgrade => serializer.serialize_unit_variant("HostMaintenance", 1u32, "Upgrade"),
+            Self::UnknownValue(s) => serializer.serialize_str(s.as_str()),
+        }
+    }
+}
+#[doc = "The properties of a host."]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct HostProperties {
+    #[doc = "provisioning state of the host"]
+    #[serde(rename = "provisioningState", default, skip_serializing_if = "Option::is_none")]
+    pub provisioning_state: Option<HostProvisioningState>,
+    #[doc = "Display name of the host in VMware vCenter."]
+    #[serde(rename = "displayName", default, skip_serializing_if = "Option::is_none")]
+    pub display_name: Option<String>,
+    #[doc = "vCenter managed object reference ID of the host."]
+    #[serde(rename = "moRefId", default, skip_serializing_if = "Option::is_none")]
+    pub mo_ref_id: Option<String>,
+    #[doc = "Fully qualified domain name of the host."]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub fqdn: Option<String>,
+    #[doc = "The reason for host maintenance."]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub maintenance: Option<HostMaintenance>,
+    #[serde(rename = "faultDomain", default, skip_serializing_if = "Option::is_none")]
+    pub fault_domain: Option<String>,
+}
+impl HostProperties {
+    pub fn new() -> Self {
+        Self {
+            provisioning_state: None,
+            display_name: None,
+            mo_ref_id: None,
+            fqdn: None,
+            maintenance: None,
+            fault_domain: None,
+        }
+    }
+}
+#[doc = "The kind of host."]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "kind")]
+pub enum HostPropertiesUnion {
+    General(GeneralHostProperties),
+    Specialized(SpecializedHostProperties),
+}
+#[doc = "provisioning state of the host"]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(remote = "HostProvisioningState")]
+pub enum HostProvisioningState {
+    Succeeded,
+    Failed,
+    Canceled,
+    #[serde(skip_deserializing)]
+    UnknownValue(String),
+}
+impl FromStr for HostProvisioningState {
+    type Err = value::Error;
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        Self::deserialize(s.into_deserializer())
+    }
+}
+impl<'de> Deserialize<'de> for HostProvisioningState {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        let deserialized = Self::from_str(&s).unwrap_or(Self::UnknownValue(s));
+        Ok(deserialized)
+    }
+}
+impl Serialize for HostProvisioningState {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match self {
+            Self::Succeeded => serializer.serialize_unit_variant("HostProvisioningState", 0u32, "Succeeded"),
+            Self::Failed => serializer.serialize_unit_variant("HostProvisioningState", 1u32, "Failed"),
+            Self::Canceled => serializer.serialize_unit_variant("HostProvisioningState", 2u32, "Canceled"),
+            Self::UnknownValue(s) => serializer.serialize_str(s.as_str()),
+        }
+    }
+}
 #[doc = "vCenter Single Sign On Identity Source"]
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
 pub struct IdentitySource {
@@ -1766,7 +1989,7 @@ pub struct IdentitySource {
     #[doc = "The domain's NetBIOS name"]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub alias: Option<String>,
-    #[doc = "The domain's dns name"]
+    #[doc = "The domain's DNS name"]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub domain: Option<String>,
     #[doc = "The base distinguished name for users"]
@@ -2216,6 +2439,26 @@ impl PsCredentialExecutionParameter {
         }
     }
 }
+#[doc = "Paged collection of ResourceSku items"]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct PagedResourceSku {
+    #[doc = "The ResourceSku items on this page"]
+    pub value: Vec<ResourceSku>,
+    #[doc = "The link to the next page of items"]
+    #[serde(rename = "nextLink", default, skip_serializing_if = "Option::is_none")]
+    pub next_link: Option<String>,
+}
+impl azure_core::Continuable for PagedResourceSku {
+    type Continuation = String;
+    fn continuation(&self) -> Option<Self::Continuation> {
+        self.next_link.clone().filter(|value| !value.is_empty())
+    }
+}
+impl PagedResourceSku {
+    pub fn new(value: Vec<ResourceSku>) -> Self {
+        Self { value, next_link: None }
+    }
+}
 #[doc = "The response of a PlacementPolicy list operation."]
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct PlacementPoliciesList {
@@ -2538,6 +2781,13 @@ pub struct PrivateCloud {
     #[doc = "Managed service identity (either system assigned, or none)"]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub identity: Option<SystemAssignedServiceIdentity>,
+    #[doc = "The availability zones."]
+    #[serde(
+        default,
+        deserialize_with = "azure_core::util::deserialize_null_as_default",
+        skip_serializing_if = "Vec::is_empty"
+    )]
+    pub zones: Vec<String>,
 }
 impl PrivateCloud {
     pub fn new(tracked_resource: TrackedResource, sku: Sku) -> Self {
@@ -2546,6 +2796,7 @@ impl PrivateCloud {
             properties: None,
             sku,
             identity: None,
+            zones: Vec::new(),
         }
     }
 }
@@ -2837,6 +3088,151 @@ impl PrivateCloudUpdateProperties {
         Self::default()
     }
 }
+#[doc = "A provisioned network resource"]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+pub struct ProvisionedNetwork {
+    #[serde(flatten)]
+    pub proxy_resource: ProxyResource,
+    #[doc = "The properties of a provisioned network."]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub properties: Option<ProvisionedNetworkProperties>,
+}
+impl ProvisionedNetwork {
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+#[doc = "The response of a ProvisionedNetwork list operation."]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct ProvisionedNetworkListResult {
+    #[doc = "The ProvisionedNetwork items on this page"]
+    pub value: Vec<ProvisionedNetwork>,
+    #[doc = "The link to the next page of items"]
+    #[serde(rename = "nextLink", default, skip_serializing_if = "Option::is_none")]
+    pub next_link: Option<String>,
+}
+impl azure_core::Continuable for ProvisionedNetworkListResult {
+    type Continuation = String;
+    fn continuation(&self) -> Option<Self::Continuation> {
+        self.next_link.clone().filter(|value| !value.is_empty())
+    }
+}
+impl ProvisionedNetworkListResult {
+    pub fn new(value: Vec<ProvisionedNetwork>) -> Self {
+        Self { value, next_link: None }
+    }
+}
+#[doc = "The properties of a provisioned network."]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+pub struct ProvisionedNetworkProperties {
+    #[doc = "provisioned network provisioning state"]
+    #[serde(rename = "provisioningState", default, skip_serializing_if = "Option::is_none")]
+    pub provisioning_state: Option<ProvisionedNetworkProvisioningState>,
+    #[doc = "The address prefixes of the provisioned network in CIDR notation."]
+    #[serde(rename = "addressPrefix", default, skip_serializing_if = "Option::is_none")]
+    pub address_prefix: Option<String>,
+    #[doc = "The type of network provisioned."]
+    #[serde(rename = "networkType", default, skip_serializing_if = "Option::is_none")]
+    pub network_type: Option<ProvisionedNetworkTypes>,
+}
+impl ProvisionedNetworkProperties {
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+#[doc = "provisioned network provisioning state"]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(remote = "ProvisionedNetworkProvisioningState")]
+pub enum ProvisionedNetworkProvisioningState {
+    Succeeded,
+    Failed,
+    Canceled,
+    #[serde(skip_deserializing)]
+    UnknownValue(String),
+}
+impl FromStr for ProvisionedNetworkProvisioningState {
+    type Err = value::Error;
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        Self::deserialize(s.into_deserializer())
+    }
+}
+impl<'de> Deserialize<'de> for ProvisionedNetworkProvisioningState {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        let deserialized = Self::from_str(&s).unwrap_or(Self::UnknownValue(s));
+        Ok(deserialized)
+    }
+}
+impl Serialize for ProvisionedNetworkProvisioningState {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match self {
+            Self::Succeeded => serializer.serialize_unit_variant("ProvisionedNetworkProvisioningState", 0u32, "Succeeded"),
+            Self::Failed => serializer.serialize_unit_variant("ProvisionedNetworkProvisioningState", 1u32, "Failed"),
+            Self::Canceled => serializer.serialize_unit_variant("ProvisionedNetworkProvisioningState", 2u32, "Canceled"),
+            Self::UnknownValue(s) => serializer.serialize_str(s.as_str()),
+        }
+    }
+}
+#[doc = "The type of network provisioned."]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(remote = "ProvisionedNetworkTypes")]
+pub enum ProvisionedNetworkTypes {
+    #[serde(rename = "esxManagement")]
+    EsxManagement,
+    #[serde(rename = "esxReplication")]
+    EsxReplication,
+    #[serde(rename = "hcxManagement")]
+    HcxManagement,
+    #[serde(rename = "hcxUplink")]
+    HcxUplink,
+    #[serde(rename = "vcenterManagement")]
+    VcenterManagement,
+    #[serde(rename = "vmotion")]
+    Vmotion,
+    #[serde(rename = "vsan")]
+    Vsan,
+    #[serde(skip_deserializing)]
+    UnknownValue(String),
+}
+impl FromStr for ProvisionedNetworkTypes {
+    type Err = value::Error;
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        Self::deserialize(s.into_deserializer())
+    }
+}
+impl<'de> Deserialize<'de> for ProvisionedNetworkTypes {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        let deserialized = Self::from_str(&s).unwrap_or(Self::UnknownValue(s));
+        Ok(deserialized)
+    }
+}
+impl Serialize for ProvisionedNetworkTypes {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match self {
+            Self::EsxManagement => serializer.serialize_unit_variant("ProvisionedNetworkTypes", 0u32, "esxManagement"),
+            Self::EsxReplication => serializer.serialize_unit_variant("ProvisionedNetworkTypes", 1u32, "esxReplication"),
+            Self::HcxManagement => serializer.serialize_unit_variant("ProvisionedNetworkTypes", 2u32, "hcxManagement"),
+            Self::HcxUplink => serializer.serialize_unit_variant("ProvisionedNetworkTypes", 3u32, "hcxUplink"),
+            Self::VcenterManagement => serializer.serialize_unit_variant("ProvisionedNetworkTypes", 4u32, "vcenterManagement"),
+            Self::Vmotion => serializer.serialize_unit_variant("ProvisionedNetworkTypes", 5u32, "vmotion"),
+            Self::Vsan => serializer.serialize_unit_variant("ProvisionedNetworkTypes", 6u32, "vsan"),
+            Self::UnknownValue(s) => serializer.serialize_str(s.as_str()),
+        }
+    }
+}
 #[doc = "The resource model definition for a Azure Resource Manager proxy resource. It will not have tags and a location"]
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
 pub struct ProxyResource {
@@ -2846,6 +3242,120 @@ pub struct ProxyResource {
 impl ProxyResource {
     pub fn new() -> Self {
         Self::default()
+    }
+}
+#[doc = "An instance describing a Pure Storage Policy Based Management policy"]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+pub struct PureStoragePolicy {
+    #[serde(flatten)]
+    pub proxy_resource: ProxyResource,
+    #[doc = "Properties of a Pure Storage Policy Based Management policy"]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub properties: Option<PureStoragePolicyProperties>,
+}
+impl PureStoragePolicy {
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+#[doc = "The response of a PureStoragePolicy list operation."]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct PureStoragePolicyListResult {
+    #[doc = "The PureStoragePolicy items on this page"]
+    pub value: Vec<PureStoragePolicy>,
+    #[doc = "The link to the next page of items"]
+    #[serde(rename = "nextLink", default, skip_serializing_if = "Option::is_none")]
+    pub next_link: Option<String>,
+}
+impl azure_core::Continuable for PureStoragePolicyListResult {
+    type Continuation = String;
+    fn continuation(&self) -> Option<Self::Continuation> {
+        self.next_link.clone().filter(|value| !value.is_empty())
+    }
+}
+impl PureStoragePolicyListResult {
+    pub fn new(value: Vec<PureStoragePolicy>) -> Self {
+        Self { value, next_link: None }
+    }
+}
+#[doc = "Properties of a Pure Storage Policy Based Management policy"]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct PureStoragePolicyProperties {
+    #[doc = "Definition of a Pure Storage Policy Based Management policy"]
+    #[serde(rename = "storagePolicyDefinition")]
+    pub storage_policy_definition: String,
+    #[doc = "Azure resource ID of the Pure Storage Pool associated with the storage policy"]
+    #[serde(rename = "storagePoolId")]
+    pub storage_pool_id: String,
+    #[doc = "Pure Storage Policy Based Management policy provisioning state"]
+    #[serde(rename = "provisioningState", default, skip_serializing_if = "Option::is_none")]
+    pub provisioning_state: Option<PureStoragePolicyProvisioningState>,
+}
+impl PureStoragePolicyProperties {
+    pub fn new(storage_policy_definition: String, storage_pool_id: String) -> Self {
+        Self {
+            storage_policy_definition,
+            storage_pool_id,
+            provisioning_state: None,
+        }
+    }
+}
+#[doc = "Pure Storage Policy Based Management policy provisioning state"]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(remote = "PureStoragePolicyProvisioningState")]
+pub enum PureStoragePolicyProvisioningState {
+    Succeeded,
+    Failed,
+    Canceled,
+    Deleting,
+    Updating,
+    #[serde(skip_deserializing)]
+    UnknownValue(String),
+}
+impl FromStr for PureStoragePolicyProvisioningState {
+    type Err = value::Error;
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        Self::deserialize(s.into_deserializer())
+    }
+}
+impl<'de> Deserialize<'de> for PureStoragePolicyProvisioningState {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        let deserialized = Self::from_str(&s).unwrap_or(Self::UnknownValue(s));
+        Ok(deserialized)
+    }
+}
+impl Serialize for PureStoragePolicyProvisioningState {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match self {
+            Self::Succeeded => serializer.serialize_unit_variant("PureStoragePolicyProvisioningState", 0u32, "Succeeded"),
+            Self::Failed => serializer.serialize_unit_variant("PureStoragePolicyProvisioningState", 1u32, "Failed"),
+            Self::Canceled => serializer.serialize_unit_variant("PureStoragePolicyProvisioningState", 2u32, "Canceled"),
+            Self::Deleting => serializer.serialize_unit_variant("PureStoragePolicyProvisioningState", 3u32, "Deleting"),
+            Self::Updating => serializer.serialize_unit_variant("PureStoragePolicyProvisioningState", 4u32, "Updating"),
+            Self::UnknownValue(s) => serializer.serialize_str(s.as_str()),
+        }
+    }
+}
+#[doc = "A Pure Storage volume from PureStorage.Block provider"]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct PureStorageVolume {
+    #[doc = "Azure resource ID of the Pure Storage Pool"]
+    #[serde(rename = "storagePoolId")]
+    pub storage_pool_id: String,
+    #[doc = "Volume size to be used to create a Virtual Volumes (vVols) datastore"]
+    #[serde(rename = "sizeGb")]
+    pub size_gb: i32,
+}
+impl PureStorageVolume {
+    pub fn new(storage_pool_id: String, size_gb: i32) -> Self {
+        Self { storage_pool_id, size_gb }
     }
 }
 #[doc = "Subscription quotas"]
@@ -2919,6 +3429,268 @@ pub struct Resource {
 impl Resource {
     pub fn new() -> Self {
         Self::default()
+    }
+}
+#[doc = "A SKU for a resource."]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct ResourceSku {
+    #[doc = "Describes the type of resource the SKU applies to."]
+    #[serde(rename = "resourceType")]
+    pub resource_type: ResourceSkuResourceType,
+    #[doc = "The name of the SKU."]
+    pub name: String,
+    #[doc = "The tier of virtual machines in a scale set"]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tier: Option<String>,
+    #[doc = "The size of the SKU."]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub size: Option<String>,
+    #[doc = "The family of the SKU."]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub family: Option<String>,
+    #[doc = "The set of locations that the SKU is available."]
+    pub locations: Vec<AzureCoreAzureLocation>,
+    #[doc = "A list of locations and availability zones in those locations where the SKU is available"]
+    #[serde(rename = "locationInfo")]
+    pub location_info: Vec<ResourceSkuLocationInfo>,
+    #[doc = "Name value pairs to describe the capability."]
+    #[serde(
+        default,
+        deserialize_with = "azure_core::util::deserialize_null_as_default",
+        skip_serializing_if = "Vec::is_empty"
+    )]
+    pub capabilities: Vec<ResourceSkuCapabilities>,
+    #[doc = "The restrictions of the SKU."]
+    pub restrictions: Vec<ResourceSkuRestrictions>,
+}
+impl ResourceSku {
+    pub fn new(
+        resource_type: ResourceSkuResourceType,
+        name: String,
+        locations: Vec<AzureCoreAzureLocation>,
+        location_info: Vec<ResourceSkuLocationInfo>,
+        restrictions: Vec<ResourceSkuRestrictions>,
+    ) -> Self {
+        Self {
+            resource_type,
+            name,
+            tier: None,
+            size: None,
+            family: None,
+            locations,
+            location_info,
+            capabilities: Vec::new(),
+            restrictions,
+        }
+    }
+}
+#[doc = "Describes The SKU capabilities object."]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct ResourceSkuCapabilities {
+    #[doc = "The name of the SKU capability."]
+    pub name: String,
+    #[doc = "The value of the SKU capability."]
+    pub value: String,
+}
+impl ResourceSkuCapabilities {
+    pub fn new(name: String, value: String) -> Self {
+        Self { name, value }
+    }
+}
+#[doc = "Describes an available Compute SKU Location Information."]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct ResourceSkuLocationInfo {
+    #[doc = "Represents an Azure geography region where supported resource providers live."]
+    pub location: AzureCoreAzureLocation,
+    #[doc = "List of availability zones where the SKU is supported."]
+    pub zones: Vec<String>,
+    #[doc = "Gets details of capabilities available to a SKU in specific zones."]
+    #[serde(rename = "zoneDetails")]
+    pub zone_details: Vec<ResourceSkuZoneDetails>,
+}
+impl ResourceSkuLocationInfo {
+    pub fn new(location: AzureCoreAzureLocation, zones: Vec<String>, zone_details: Vec<ResourceSkuZoneDetails>) -> Self {
+        Self {
+            location,
+            zones,
+            zone_details,
+        }
+    }
+}
+#[doc = "Describes the type of resource the SKU applies to."]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(remote = "ResourceSkuResourceType")]
+pub enum ResourceSkuResourceType {
+    #[serde(rename = "privateClouds")]
+    PrivateClouds,
+    #[serde(rename = "privateClouds/clusters")]
+    PrivateCloudsClusters,
+    #[serde(skip_deserializing)]
+    UnknownValue(String),
+}
+impl FromStr for ResourceSkuResourceType {
+    type Err = value::Error;
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        Self::deserialize(s.into_deserializer())
+    }
+}
+impl<'de> Deserialize<'de> for ResourceSkuResourceType {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        let deserialized = Self::from_str(&s).unwrap_or(Self::UnknownValue(s));
+        Ok(deserialized)
+    }
+}
+impl Serialize for ResourceSkuResourceType {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match self {
+            Self::PrivateClouds => serializer.serialize_unit_variant("ResourceSkuResourceType", 0u32, "privateClouds"),
+            Self::PrivateCloudsClusters => serializer.serialize_unit_variant("ResourceSkuResourceType", 1u32, "privateClouds/clusters"),
+            Self::UnknownValue(s) => serializer.serialize_str(s.as_str()),
+        }
+    }
+}
+#[doc = "Describes an available Compute SKU Restriction Information."]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+pub struct ResourceSkuRestrictionInfo {
+    #[doc = "Locations where the SKU is restricted"]
+    #[serde(
+        default,
+        deserialize_with = "azure_core::util::deserialize_null_as_default",
+        skip_serializing_if = "Vec::is_empty"
+    )]
+    pub locations: Vec<AzureCoreAzureLocation>,
+    #[doc = "List of availability zones where the SKU is restricted."]
+    #[serde(
+        default,
+        deserialize_with = "azure_core::util::deserialize_null_as_default",
+        skip_serializing_if = "Vec::is_empty"
+    )]
+    pub zones: Vec<String>,
+}
+impl ResourceSkuRestrictionInfo {
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+#[doc = "The restrictions of the SKU."]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct ResourceSkuRestrictions {
+    #[doc = "Describes the kind of SKU restrictions that can exist"]
+    #[serde(rename = "type", default, skip_serializing_if = "Option::is_none")]
+    pub type_: Option<ResourceSkuRestrictionsType>,
+    #[doc = "The value of restrictions. If the restriction type is set to location. This would be different locations where the SKU is restricted."]
+    pub values: Vec<String>,
+    #[doc = "Describes an available Compute SKU Restriction Information."]
+    #[serde(rename = "restrictionInfo")]
+    pub restriction_info: ResourceSkuRestrictionInfo,
+    #[doc = "Describes the reason for SKU restriction."]
+    #[serde(rename = "reasonCode", default, skip_serializing_if = "Option::is_none")]
+    pub reason_code: Option<ResourceSkuRestrictionsReasonCode>,
+}
+impl ResourceSkuRestrictions {
+    pub fn new(values: Vec<String>, restriction_info: ResourceSkuRestrictionInfo) -> Self {
+        Self {
+            type_: None,
+            values,
+            restriction_info,
+            reason_code: None,
+        }
+    }
+}
+#[doc = "Describes the reason for SKU restriction."]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(remote = "ResourceSkuRestrictionsReasonCode")]
+pub enum ResourceSkuRestrictionsReasonCode {
+    QuotaId,
+    NotAvailableForSubscription,
+    #[serde(skip_deserializing)]
+    UnknownValue(String),
+}
+impl FromStr for ResourceSkuRestrictionsReasonCode {
+    type Err = value::Error;
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        Self::deserialize(s.into_deserializer())
+    }
+}
+impl<'de> Deserialize<'de> for ResourceSkuRestrictionsReasonCode {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        let deserialized = Self::from_str(&s).unwrap_or(Self::UnknownValue(s));
+        Ok(deserialized)
+    }
+}
+impl Serialize for ResourceSkuRestrictionsReasonCode {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match self {
+            Self::QuotaId => serializer.serialize_unit_variant("ResourceSkuRestrictionsReasonCode", 0u32, "QuotaId"),
+            Self::NotAvailableForSubscription => {
+                serializer.serialize_unit_variant("ResourceSkuRestrictionsReasonCode", 1u32, "NotAvailableForSubscription")
+            }
+            Self::UnknownValue(s) => serializer.serialize_str(s.as_str()),
+        }
+    }
+}
+#[doc = "Describes the kind of SKU restrictions that can exist"]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(remote = "ResourceSkuRestrictionsType")]
+pub enum ResourceSkuRestrictionsType {
+    Location,
+    Zone,
+    #[serde(skip_deserializing)]
+    UnknownValue(String),
+}
+impl FromStr for ResourceSkuRestrictionsType {
+    type Err = value::Error;
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        Self::deserialize(s.into_deserializer())
+    }
+}
+impl<'de> Deserialize<'de> for ResourceSkuRestrictionsType {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        let deserialized = Self::from_str(&s).unwrap_or(Self::UnknownValue(s));
+        Ok(deserialized)
+    }
+}
+impl Serialize for ResourceSkuRestrictionsType {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match self {
+            Self::Location => serializer.serialize_unit_variant("ResourceSkuRestrictionsType", 0u32, "Location"),
+            Self::Zone => serializer.serialize_unit_variant("ResourceSkuRestrictionsType", 1u32, "Zone"),
+            Self::UnknownValue(s) => serializer.serialize_str(s.as_str()),
+        }
+    }
+}
+#[doc = "Describes The zonal capabilities of a SKU."]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct ResourceSkuZoneDetails {
+    #[doc = "Gets the set of zones that the SKU is available in with the specified capabilities."]
+    pub name: Vec<String>,
+    #[doc = "A list of capabilities that are available for the SKU in the specified list of zones."]
+    pub capabilities: Vec<ResourceSkuCapabilities>,
+}
+impl ResourceSkuZoneDetails {
+    pub fn new(name: Vec<String>, capabilities: Vec<ResourceSkuCapabilities>) -> Self {
+        Self { name, capabilities }
     }
 }
 #[doc = "A cmdlet available for script execution"]
@@ -3611,6 +4383,17 @@ pub enum SkuTier {
     Standard,
     Premium,
 }
+#[doc = "The properties of a specialized host."]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct SpecializedHostProperties {
+    #[serde(flatten)]
+    pub host_properties: HostProperties,
+}
+impl SpecializedHostProperties {
+    pub fn new(host_properties: HostProperties) -> Self {
+        Self { host_properties }
+    }
+}
 #[doc = "Whether SSL is enabled or disabled"]
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(remote = "SslEnum")]
@@ -3885,7 +4668,7 @@ pub struct VirtualMachineProperties {
     #[doc = "Display name of the VM."]
     #[serde(rename = "displayName", default, skip_serializing_if = "Option::is_none")]
     pub display_name: Option<String>,
-    #[doc = "Virtual machine managed object reference id"]
+    #[doc = "vCenter managed object reference ID of the virtual machine"]
     #[serde(rename = "moRefId", default, skip_serializing_if = "Option::is_none")]
     pub mo_ref_id: Option<String>,
     #[doc = "Path to virtual machine's folder starting from datacenter virtual machine folder"]

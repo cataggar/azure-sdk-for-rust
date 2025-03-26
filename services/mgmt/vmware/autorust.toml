@@ -2,3 +2,4 @@
 # The two previews are old and not supported.
 # Previews are not being used for this service going forward.
 deny_contains_preview = true
+allow = ["package-2024-09-01"]
