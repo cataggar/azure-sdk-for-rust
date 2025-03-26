@@ -1,8 +1,8 @@
-#[cfg(feature = "package-2023-03-01")]
+#[cfg(feature = "package-2024-09-01")]
 #[test]
 fn test_list_dhcp_configurations_deserialization() -> anyhow::Result<()> {
     use anyhow::{bail, ensure};
-    use azure_mgmt_vmware::package_2023_03_01::models::*;
+    use azure_mgmt_vmware::package_2024_09_01::models::*;
     // copied from specification\vmware\resource-manager\Microsoft.AVS\stable\2023-03-01\examples\WorkloadNetworks_ListDhcpConfigurations.json
     let json = br#"
     {
