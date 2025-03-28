@@ -4,7 +4,7 @@ use serde::de::{value, Deserializer, IntoDeserializer};
 use serde::{Deserialize, Serialize, Serializer};
 use std::str::FromStr;
 #[doc = "An addon resource"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct Addon {
     #[serde(flatten)]
     pub proxy_resource: ProxyResource,
@@ -18,7 +18,7 @@ impl Addon {
     }
 }
 #[doc = "The properties of an Arc addon"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model)]
 pub struct AddonArcProperties {
     #[serde(flatten)]
     pub addon_properties: AddonProperties,
@@ -35,7 +35,7 @@ impl AddonArcProperties {
     }
 }
 #[doc = "The properties of an HCX addon"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model)]
 pub struct AddonHcxProperties {
     #[serde(flatten)]
     pub addon_properties: AddonProperties,
@@ -59,7 +59,7 @@ impl AddonHcxProperties {
     }
 }
 #[doc = "The response of a Addon list operation."]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model)]
 pub struct AddonList {
     #[doc = "The Addon items on this page"]
     pub value: Vec<Addon>,
@@ -67,7 +67,7 @@ pub struct AddonList {
     #[serde(rename = "nextLink", default, skip_serializing_if = "Option::is_none")]
     pub next_link: Option<String>,
 }
-impl azure_core::Continuable for AddonList {
+impl azure_openapi_core::Continuable for AddonList {
     type Continuation = String;
     fn continuation(&self) -> Option<Self::Continuation> {
         self.next_link.clone().filter(|value| !value.is_empty())
@@ -79,7 +79,7 @@ impl AddonList {
     }
 }
 #[doc = "The properties of an addon"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model)]
 pub struct AddonProperties {
     #[doc = "Addon provisioning state"]
     #[serde(rename = "provisioningState", default, skip_serializing_if = "Option::is_none")]
@@ -150,7 +150,7 @@ impl Serialize for AddonProvisioningState {
     }
 }
 #[doc = "The properties of a Site Recovery Manager (SRM) addon"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model)]
 pub struct AddonSrmProperties {
     #[serde(flatten)]
     pub addon_properties: AddonProperties,
@@ -211,7 +211,7 @@ impl Serialize for AddonType {
     }
 }
 #[doc = "The properties of a vSphere Replication (VR) addon"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model)]
 pub struct AddonVrProperties {
     #[serde(flatten)]
     pub addon_properties: AddonProperties,
@@ -228,7 +228,7 @@ impl AddonVrProperties {
     }
 }
 #[doc = "Administrative credentials for accessing vCenter and NSX-T"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct AdminCredentials {
     #[doc = "NSX-T Manager username"]
     #[serde(rename = "nsxtUsername", default, skip_serializing_if = "Option::is_none")]
@@ -323,7 +323,7 @@ impl Serialize for AffinityType {
     }
 }
 #[doc = "The properties describing private cloud availability zone distribution"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct AvailabilityProperties {
     #[doc = "Whether the private clouds is available in a single zone or two zones"]
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -416,7 +416,7 @@ impl Serialize for AzureHybridBenefitType {
     }
 }
 #[doc = "An ExpressRoute Circuit"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct Circuit {
     #[doc = "CIDR of primary subnet"]
     #[serde(rename = "primarySubnet", default, skip_serializing_if = "Option::is_none")]
@@ -437,7 +437,7 @@ impl Circuit {
     }
 }
 #[doc = "A cloud link resource"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct CloudLink {
     #[serde(flatten)]
     pub proxy_resource: ProxyResource,
@@ -451,7 +451,7 @@ impl CloudLink {
     }
 }
 #[doc = "The response of a CloudLink list operation."]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model)]
 pub struct CloudLinkList {
     #[doc = "The CloudLink items on this page"]
     pub value: Vec<CloudLink>,
@@ -459,7 +459,7 @@ pub struct CloudLinkList {
     #[serde(rename = "nextLink", default, skip_serializing_if = "Option::is_none")]
     pub next_link: Option<String>,
 }
-impl azure_core::Continuable for CloudLinkList {
+impl azure_openapi_core::Continuable for CloudLinkList {
     type Continuation = String;
     fn continuation(&self) -> Option<Self::Continuation> {
         self.next_link.clone().filter(|value| !value.is_empty())
@@ -471,7 +471,7 @@ impl CloudLinkList {
     }
 }
 #[doc = "The properties of a cloud link."]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct CloudLinkProperties {
     #[doc = "cloud link provisioning state"]
     #[serde(rename = "provisioningState", default, skip_serializing_if = "Option::is_none")]
@@ -571,7 +571,7 @@ impl Serialize for CloudLinkStatus {
     }
 }
 #[doc = "A cluster resource"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model)]
 pub struct Cluster {
     #[serde(flatten)]
     pub proxy_resource: ProxyResource,
@@ -591,7 +591,7 @@ impl Cluster {
     }
 }
 #[doc = "The response of a Cluster list operation."]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model)]
 pub struct ClusterList {
     #[doc = "The Cluster items on this page"]
     pub value: Vec<Cluster>,
@@ -599,7 +599,7 @@ pub struct ClusterList {
     #[serde(rename = "nextLink", default, skip_serializing_if = "Option::is_none")]
     pub next_link: Option<String>,
 }
-impl azure_core::Continuable for ClusterList {
+impl azure_openapi_core::Continuable for ClusterList {
     type Continuation = String;
     fn continuation(&self) -> Option<Self::Continuation> {
         self.next_link.clone().filter(|value| !value.is_empty())
@@ -611,7 +611,7 @@ impl ClusterList {
     }
 }
 #[doc = "The properties of a cluster"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct ClusterProperties {
     #[doc = "The cluster size"]
     #[serde(rename = "clusterSize", default, skip_serializing_if = "Option::is_none")]
@@ -625,7 +625,7 @@ pub struct ClusterProperties {
     #[doc = "The hosts"]
     #[serde(
         default,
-        deserialize_with = "azure_core::util::deserialize_null_as_default",
+        deserialize_with = "azure_openapi_core::util::deserialize_null_as_default",
         skip_serializing_if = "Vec::is_empty"
     )]
     pub hosts: Vec<String>,
@@ -684,7 +684,7 @@ impl Serialize for ClusterProvisioningState {
     }
 }
 #[doc = "An update of a cluster resource"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct ClusterUpdate {
     #[doc = "The resource model definition representing SKU"]
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -699,7 +699,7 @@ impl ClusterUpdate {
     }
 }
 #[doc = "The properties of a cluster that may be updated"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct ClusterUpdateProperties {
     #[doc = "The cluster size"]
     #[serde(rename = "clusterSize", default, skip_serializing_if = "Option::is_none")]
@@ -707,7 +707,7 @@ pub struct ClusterUpdateProperties {
     #[doc = "The hosts"]
     #[serde(
         default,
-        deserialize_with = "azure_core::util::deserialize_null_as_default",
+        deserialize_with = "azure_openapi_core::util::deserialize_null_as_default",
         skip_serializing_if = "Vec::is_empty"
     )]
     pub hosts: Vec<String>,
@@ -718,12 +718,12 @@ impl ClusterUpdateProperties {
     }
 }
 #[doc = "Zone and associated hosts info"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct ClusterZone {
     #[doc = "List of hosts belonging to the availability zone in a cluster"]
     #[serde(
         default,
-        deserialize_with = "azure_core::util::deserialize_null_as_default",
+        deserialize_with = "azure_openapi_core::util::deserialize_null_as_default",
         skip_serializing_if = "Vec::is_empty"
     )]
     pub hosts: Vec<String>,
@@ -737,12 +737,12 @@ impl ClusterZone {
     }
 }
 #[doc = "List of all zones and associated hosts for a cluster"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct ClusterZoneList {
     #[doc = "Zone and associated hosts info"]
     #[serde(
         default,
-        deserialize_with = "azure_core::util::deserialize_null_as_default",
+        deserialize_with = "azure_openapi_core::util::deserialize_null_as_default",
         skip_serializing_if = "Vec::is_empty"
     )]
     pub zones: Vec<ClusterZone>,
@@ -753,7 +753,7 @@ impl ClusterZoneList {
     }
 }
 #[doc = "A datastore resource"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct Datastore {
     #[serde(flatten)]
     pub proxy_resource: ProxyResource,
@@ -767,7 +767,7 @@ impl Datastore {
     }
 }
 #[doc = "The response of a Datastore list operation."]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model)]
 pub struct DatastoreList {
     #[doc = "The Datastore items on this page"]
     pub value: Vec<Datastore>,
@@ -775,7 +775,7 @@ pub struct DatastoreList {
     #[serde(rename = "nextLink", default, skip_serializing_if = "Option::is_none")]
     pub next_link: Option<String>,
 }
-impl azure_core::Continuable for DatastoreList {
+impl azure_openapi_core::Continuable for DatastoreList {
     type Continuation = String;
     fn continuation(&self) -> Option<Self::Continuation> {
         self.next_link.clone().filter(|value| !value.is_empty())
@@ -787,7 +787,7 @@ impl DatastoreList {
     }
 }
 #[doc = "The properties of a datastore"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct DatastoreProperties {
     #[doc = "datastore provisioning state"]
     #[serde(rename = "provisioningState", default, skip_serializing_if = "Option::is_none")]
@@ -949,7 +949,7 @@ impl Serialize for DhcpTypeEnum {
     }
 }
 #[doc = "An iSCSI volume from Microsoft.StoragePool provider"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model)]
 pub struct DiskPoolVolume {
     #[doc = "Azure resource ID of the iSCSI target"]
     #[serde(rename = "targetId")]
@@ -1146,7 +1146,7 @@ impl Serialize for DnsZoneType {
     }
 }
 #[doc = "An Elastic SAN volume from Microsoft.ElasticSan provider"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model)]
 pub struct ElasticSanVolume {
     #[doc = "Azure resource ID of the Elastic SAN Volume"]
     #[serde(rename = "targetId")]
@@ -1158,7 +1158,7 @@ impl ElasticSanVolume {
     }
 }
 #[doc = "The properties of customer managed encryption key"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct Encryption {
     #[doc = "Whether encryption is enabled or disabled"]
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -1210,7 +1210,7 @@ impl Serialize for EncryptionKeyStatus {
     }
 }
 #[doc = "An Encryption Key"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct EncryptionKeyVaultProperties {
     #[doc = "The name of the key."]
     #[serde(rename = "keyName", default, skip_serializing_if = "Option::is_none")]
@@ -1311,7 +1311,7 @@ impl Serialize for EncryptionVersionType {
     }
 }
 #[doc = "Endpoint addresses"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct Endpoints {
     #[doc = "Endpoint FQDN for the NSX-T Data Center manager"]
     #[serde(rename = "nsxtManager", default, skip_serializing_if = "Option::is_none")]
@@ -1338,7 +1338,7 @@ impl Endpoints {
     }
 }
 #[doc = "The resource management error additional info."]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct ErrorAdditionalInfo {
     #[doc = "The additional info type."]
     #[serde(rename = "type", default, skip_serializing_if = "Option::is_none")]
@@ -1353,7 +1353,7 @@ impl ErrorAdditionalInfo {
     }
 }
 #[doc = "The error detail."]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct ErrorDetail {
     #[doc = "The error code."]
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -1367,7 +1367,7 @@ pub struct ErrorDetail {
     #[doc = "The error details."]
     #[serde(
         default,
-        deserialize_with = "azure_core::util::deserialize_null_as_default",
+        deserialize_with = "azure_openapi_core::util::deserialize_null_as_default",
         skip_serializing_if = "Vec::is_empty"
     )]
     pub details: Vec<ErrorDetail>,
@@ -1375,7 +1375,7 @@ pub struct ErrorDetail {
     #[serde(
         rename = "additionalInfo",
         default,
-        deserialize_with = "azure_core::util::deserialize_null_as_default",
+        deserialize_with = "azure_openapi_core::util::deserialize_null_as_default",
         skip_serializing_if = "Vec::is_empty"
     )]
     pub additional_info: Vec<ErrorAdditionalInfo>,
@@ -1386,13 +1386,13 @@ impl ErrorDetail {
     }
 }
 #[doc = "Common error response for all Azure Resource Manager APIs to return error details for failed operations. (This also follows the OData error response format.)."]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct ErrorResponse {
     #[doc = "The error detail."]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub error: Option<ErrorDetail>,
 }
-impl azure_core::Continuable for ErrorResponse {
+impl azure_openapi_core::Continuable for ErrorResponse {
     type Continuation = String;
     fn continuation(&self) -> Option<Self::Continuation> {
         None
@@ -1404,7 +1404,7 @@ impl ErrorResponse {
     }
 }
 #[doc = "ExpressRoute Circuit Authorization"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct ExpressRouteAuthorization {
     #[serde(flatten)]
     pub proxy_resource: ProxyResource,
@@ -1418,7 +1418,7 @@ impl ExpressRouteAuthorization {
     }
 }
 #[doc = "The response of a ExpressRouteAuthorization list operation."]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model)]
 pub struct ExpressRouteAuthorizationList {
     #[doc = "The ExpressRouteAuthorization items on this page"]
     pub value: Vec<ExpressRouteAuthorization>,
@@ -1426,7 +1426,7 @@ pub struct ExpressRouteAuthorizationList {
     #[serde(rename = "nextLink", default, skip_serializing_if = "Option::is_none")]
     pub next_link: Option<String>,
 }
-impl azure_core::Continuable for ExpressRouteAuthorizationList {
+impl azure_openapi_core::Continuable for ExpressRouteAuthorizationList {
     type Continuation = String;
     fn continuation(&self) -> Option<Self::Continuation> {
         self.next_link.clone().filter(|value| !value.is_empty())
@@ -1438,7 +1438,7 @@ impl ExpressRouteAuthorizationList {
     }
 }
 #[doc = "The properties of an ExpressRoute Circuit Authorization resource"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct ExpressRouteAuthorizationProperties {
     #[doc = "Express Route Circuit Authorization provisioning state"]
     #[serde(rename = "provisioningState", default, skip_serializing_if = "Option::is_none")]
@@ -1500,7 +1500,7 @@ impl Serialize for ExpressRouteAuthorizationProvisioningState {
     }
 }
 #[doc = "The properties of a general host."]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model)]
 pub struct GeneralHostProperties {
     #[serde(flatten)]
     pub host_properties: HostProperties,
@@ -1511,7 +1511,7 @@ impl GeneralHostProperties {
     }
 }
 #[doc = "A global reach connection resource"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct GlobalReachConnection {
     #[serde(flatten)]
     pub proxy_resource: ProxyResource,
@@ -1525,7 +1525,7 @@ impl GlobalReachConnection {
     }
 }
 #[doc = "The response of a GlobalReachConnection list operation."]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model)]
 pub struct GlobalReachConnectionList {
     #[doc = "The GlobalReachConnection items on this page"]
     pub value: Vec<GlobalReachConnection>,
@@ -1533,7 +1533,7 @@ pub struct GlobalReachConnectionList {
     #[serde(rename = "nextLink", default, skip_serializing_if = "Option::is_none")]
     pub next_link: Option<String>,
 }
-impl azure_core::Continuable for GlobalReachConnectionList {
+impl azure_openapi_core::Continuable for GlobalReachConnectionList {
     type Continuation = String;
     fn continuation(&self) -> Option<Self::Continuation> {
         self.next_link.clone().filter(|value| !value.is_empty())
@@ -1545,7 +1545,7 @@ impl GlobalReachConnectionList {
     }
 }
 #[doc = "The properties of a global reach connection"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct GlobalReachConnectionProperties {
     #[doc = "Global Reach Connection provisioning state"]
     #[serde(rename = "provisioningState", default, skip_serializing_if = "Option::is_none")]
@@ -1652,7 +1652,7 @@ impl Serialize for GlobalReachConnectionStatus {
     }
 }
 #[doc = "An HCX Enterprise Site resource"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct HcxEnterpriseSite {
     #[serde(flatten)]
     pub proxy_resource: ProxyResource,
@@ -1666,7 +1666,7 @@ impl HcxEnterpriseSite {
     }
 }
 #[doc = "The response of a HcxEnterpriseSite list operation."]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model)]
 pub struct HcxEnterpriseSiteList {
     #[doc = "The HcxEnterpriseSite items on this page"]
     pub value: Vec<HcxEnterpriseSite>,
@@ -1674,7 +1674,7 @@ pub struct HcxEnterpriseSiteList {
     #[serde(rename = "nextLink", default, skip_serializing_if = "Option::is_none")]
     pub next_link: Option<String>,
 }
-impl azure_core::Continuable for HcxEnterpriseSiteList {
+impl azure_openapi_core::Continuable for HcxEnterpriseSiteList {
     type Continuation = String;
     fn continuation(&self) -> Option<Self::Continuation> {
         self.next_link.clone().filter(|value| !value.is_empty())
@@ -1686,7 +1686,7 @@ impl HcxEnterpriseSiteList {
     }
 }
 #[doc = "The properties of an HCX Enterprise Site"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct HcxEnterpriseSiteProperties {
     #[doc = "HCX Enterprise Site provisioning state"]
     #[serde(rename = "provisioningState", default, skip_serializing_if = "Option::is_none")]
@@ -1784,7 +1784,7 @@ impl Serialize for HcxEnterpriseSiteStatus {
     }
 }
 #[doc = "A host resource"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct Host {
     #[serde(flatten)]
     pub proxy_resource: ProxyResource,
@@ -1794,7 +1794,7 @@ pub struct Host {
     #[doc = "The availability zones."]
     #[serde(
         default,
-        deserialize_with = "azure_core::util::deserialize_null_as_default",
+        deserialize_with = "azure_openapi_core::util::deserialize_null_as_default",
         skip_serializing_if = "Vec::is_empty"
     )]
     pub zones: Vec<String>,
@@ -1845,7 +1845,7 @@ impl Serialize for HostKind {
     }
 }
 #[doc = "The response of a Host list operation."]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model)]
 pub struct HostListResult {
     #[doc = "The Host items on this page"]
     pub value: Vec<Host>,
@@ -1853,7 +1853,7 @@ pub struct HostListResult {
     #[serde(rename = "nextLink", default, skip_serializing_if = "Option::is_none")]
     pub next_link: Option<String>,
 }
-impl azure_core::Continuable for HostListResult {
+impl azure_openapi_core::Continuable for HostListResult {
     type Continuation = String;
     fn continuation(&self) -> Option<Self::Continuation> {
         self.next_link.clone().filter(|value| !value.is_empty())
@@ -1902,7 +1902,7 @@ impl Serialize for HostMaintenance {
     }
 }
 #[doc = "The properties of a host."]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model)]
 pub struct HostProperties {
     #[doc = "provisioning state of the host"]
     #[serde(rename = "provisioningState", default, skip_serializing_if = "Option::is_none")]
@@ -1981,7 +1981,7 @@ impl Serialize for HostProvisioningState {
     }
 }
 #[doc = "vCenter Single Sign On Identity Source"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct IdentitySource {
     #[doc = "The name of the identity source"]
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -2057,7 +2057,7 @@ impl Serialize for InternetEnum {
     }
 }
 #[doc = "An iSCSI path resource"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct IscsiPath {
     #[serde(flatten)]
     pub proxy_resource: ProxyResource,
@@ -2071,7 +2071,7 @@ impl IscsiPath {
     }
 }
 #[doc = "The response of a IscsiPath list operation."]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model)]
 pub struct IscsiPathListResult {
     #[doc = "The IscsiPath items on this page"]
     pub value: Vec<IscsiPath>,
@@ -2079,7 +2079,7 @@ pub struct IscsiPathListResult {
     #[serde(rename = "nextLink", default, skip_serializing_if = "Option::is_none")]
     pub next_link: Option<String>,
 }
-impl azure_core::Continuable for IscsiPathListResult {
+impl azure_openapi_core::Continuable for IscsiPathListResult {
     type Continuation = String;
     fn continuation(&self) -> Option<Self::Continuation> {
         self.next_link.clone().filter(|value| !value.is_empty())
@@ -2091,7 +2091,7 @@ impl IscsiPathListResult {
     }
 }
 #[doc = "The properties of an iSCSI path resource"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model)]
 pub struct IscsiPathProperties {
     #[doc = "private cloud provisioning state"]
     #[serde(rename = "provisioningState", default, skip_serializing_if = "Option::is_none")]
@@ -2156,7 +2156,7 @@ impl Serialize for IscsiPathProvisioningState {
     }
 }
 #[doc = "The properties of a management cluster"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct ManagementCluster {
     #[doc = "The cluster size"]
     #[serde(rename = "clusterSize", default, skip_serializing_if = "Option::is_none")]
@@ -2170,7 +2170,7 @@ pub struct ManagementCluster {
     #[doc = "The hosts"]
     #[serde(
         default,
-        deserialize_with = "azure_core::util::deserialize_null_as_default",
+        deserialize_with = "azure_openapi_core::util::deserialize_null_as_default",
         skip_serializing_if = "Vec::is_empty"
     )]
     pub hosts: Vec<String>,
@@ -2184,7 +2184,7 @@ impl ManagementCluster {
     }
 }
 #[doc = "An Azure NetApp Files volume from Microsoft.NetApp provider"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model)]
 pub struct NetAppVolume {
     #[doc = "Azure resource ID of the NetApp volume"]
     pub id: String,
@@ -2232,7 +2232,7 @@ impl Serialize for NsxPublicIpQuotaRaisedEnum {
     }
 }
 #[doc = "Details of a REST API operation, returned from the Resource Provider Operations API"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct Operation {
     #[doc = "The name of the operation, as per Resource-Based Access Control (RBAC). Examples: \"Microsoft.Compute/virtualMachines/write\", \"Microsoft.Compute/virtualMachines/capture/action\""]
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -2258,7 +2258,7 @@ impl Operation {
 pub mod operation {
     use super::*;
     #[doc = "Localized display information for this particular operation."]
-    #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+    #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
     pub struct Display {
         #[doc = "The localized friendly form of the resource provider name, e.g. \"Microsoft Monitoring Insights\" or \"Microsoft Compute\"."]
         #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -2357,12 +2357,12 @@ pub mod operation {
     }
 }
 #[doc = "A list of REST API operations supported by an Azure Resource Provider. It contains an URL link to get the next set of results."]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct OperationListResult {
     #[doc = "List of operations supported by the resource provider"]
     #[serde(
         default,
-        deserialize_with = "azure_core::util::deserialize_null_as_default",
+        deserialize_with = "azure_openapi_core::util::deserialize_null_as_default",
         skip_serializing_if = "Vec::is_empty"
     )]
     pub value: Vec<Operation>,
@@ -2370,7 +2370,7 @@ pub struct OperationListResult {
     #[serde(rename = "nextLink", default, skip_serializing_if = "Option::is_none")]
     pub next_link: Option<String>,
 }
-impl azure_core::Continuable for OperationListResult {
+impl azure_openapi_core::Continuable for OperationListResult {
     type Continuation = String;
     fn continuation(&self) -> Option<Self::Continuation> {
         self.next_link.clone().filter(|value| !value.is_empty())
@@ -2419,7 +2419,7 @@ impl Serialize for OptionalParamEnum {
     }
 }
 #[doc = "a powershell credential object"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model)]
 pub struct PsCredentialExecutionParameter {
     #[serde(flatten)]
     pub script_execution_parameter: ScriptExecutionParameter,
@@ -2440,7 +2440,7 @@ impl PsCredentialExecutionParameter {
     }
 }
 #[doc = "Paged collection of ResourceSku items"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model)]
 pub struct PagedResourceSku {
     #[doc = "The ResourceSku items on this page"]
     pub value: Vec<ResourceSku>,
@@ -2448,7 +2448,7 @@ pub struct PagedResourceSku {
     #[serde(rename = "nextLink", default, skip_serializing_if = "Option::is_none")]
     pub next_link: Option<String>,
 }
-impl azure_core::Continuable for PagedResourceSku {
+impl azure_openapi_core::Continuable for PagedResourceSku {
     type Continuation = String;
     fn continuation(&self) -> Option<Self::Continuation> {
         self.next_link.clone().filter(|value| !value.is_empty())
@@ -2460,7 +2460,7 @@ impl PagedResourceSku {
     }
 }
 #[doc = "The response of a PlacementPolicy list operation."]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model)]
 pub struct PlacementPoliciesList {
     #[doc = "The PlacementPolicy items on this page"]
     pub value: Vec<PlacementPolicy>,
@@ -2468,7 +2468,7 @@ pub struct PlacementPoliciesList {
     #[serde(rename = "nextLink", default, skip_serializing_if = "Option::is_none")]
     pub next_link: Option<String>,
 }
-impl azure_core::Continuable for PlacementPoliciesList {
+impl azure_openapi_core::Continuable for PlacementPoliciesList {
     type Continuation = String;
     fn continuation(&self) -> Option<Self::Continuation> {
         self.next_link.clone().filter(|value| !value.is_empty())
@@ -2480,7 +2480,7 @@ impl PlacementPoliciesList {
     }
 }
 #[doc = "A vSphere Distributed Resource Scheduler (DRS) placement policy"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct PlacementPolicy {
     #[serde(flatten)]
     pub proxy_resource: ProxyResource,
@@ -2494,7 +2494,7 @@ impl PlacementPolicy {
     }
 }
 #[doc = "Abstract placement policy properties"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model)]
 pub struct PlacementPolicyProperties {
     #[doc = "Placement Policy state"]
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -2642,7 +2642,7 @@ impl Serialize for PlacementPolicyType {
     }
 }
 #[doc = "An update of a DRS placement policy resource"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct PlacementPolicyUpdate {
     #[doc = "The properties of a placement policy resource that may be updated"]
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -2654,7 +2654,7 @@ impl PlacementPolicyUpdate {
     }
 }
 #[doc = "The properties of a placement policy resource that may be updated"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct PlacementPolicyUpdateProperties {
     #[doc = "Placement Policy state"]
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -2663,7 +2663,7 @@ pub struct PlacementPolicyUpdateProperties {
     #[serde(
         rename = "vmMembers",
         default,
-        deserialize_with = "azure_core::util::deserialize_null_as_default",
+        deserialize_with = "azure_openapi_core::util::deserialize_null_as_default",
         skip_serializing_if = "Vec::is_empty"
     )]
     pub vm_members: Vec<String>,
@@ -2671,7 +2671,7 @@ pub struct PlacementPolicyUpdateProperties {
     #[serde(
         rename = "hostMembers",
         default,
-        deserialize_with = "azure_core::util::deserialize_null_as_default",
+        deserialize_with = "azure_openapi_core::util::deserialize_null_as_default",
         skip_serializing_if = "Vec::is_empty"
     )]
     pub host_members: Vec<String>,
@@ -2769,7 +2769,7 @@ impl Serialize for PortMirroringStatusEnum {
     }
 }
 #[doc = "A private cloud resource"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model)]
 pub struct PrivateCloud {
     #[serde(flatten)]
     pub tracked_resource: TrackedResource,
@@ -2784,7 +2784,7 @@ pub struct PrivateCloud {
     #[doc = "The availability zones."]
     #[serde(
         default,
-        deserialize_with = "azure_core::util::deserialize_null_as_default",
+        deserialize_with = "azure_openapi_core::util::deserialize_null_as_default",
         skip_serializing_if = "Vec::is_empty"
     )]
     pub zones: Vec<String>,
@@ -2801,7 +2801,7 @@ impl PrivateCloud {
     }
 }
 #[doc = "The response of a PrivateCloud list operation."]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model)]
 pub struct PrivateCloudList {
     #[doc = "The PrivateCloud items on this page"]
     pub value: Vec<PrivateCloud>,
@@ -2809,7 +2809,7 @@ pub struct PrivateCloudList {
     #[serde(rename = "nextLink", default, skip_serializing_if = "Option::is_none")]
     pub next_link: Option<String>,
 }
-impl azure_core::Continuable for PrivateCloudList {
+impl azure_openapi_core::Continuable for PrivateCloudList {
     type Continuation = String;
     fn continuation(&self) -> Option<Self::Continuation> {
         self.next_link.clone().filter(|value| !value.is_empty())
@@ -2821,7 +2821,7 @@ impl PrivateCloudList {
     }
 }
 #[doc = "The properties of a private cloud resource"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model)]
 pub struct PrivateCloudProperties {
     #[doc = "The properties of a management cluster"]
     #[serde(rename = "managementCluster")]
@@ -2833,7 +2833,7 @@ pub struct PrivateCloudProperties {
     #[serde(
         rename = "identitySources",
         default,
-        deserialize_with = "azure_core::util::deserialize_null_as_default",
+        deserialize_with = "azure_openapi_core::util::deserialize_null_as_default",
         skip_serializing_if = "Vec::is_empty"
     )]
     pub identity_sources: Vec<IdentitySource>,
@@ -2847,7 +2847,7 @@ pub struct PrivateCloudProperties {
     #[serde(
         rename = "extendedNetworkBlocks",
         default,
-        deserialize_with = "azure_core::util::deserialize_null_as_default",
+        deserialize_with = "azure_openapi_core::util::deserialize_null_as_default",
         skip_serializing_if = "Vec::is_empty"
     )]
     pub extended_network_blocks: Vec<String>,
@@ -2888,7 +2888,7 @@ pub struct PrivateCloudProperties {
     #[serde(
         rename = "externalCloudLinks",
         default,
-        deserialize_with = "azure_core::util::deserialize_null_as_default",
+        deserialize_with = "azure_openapi_core::util::deserialize_null_as_default",
         skip_serializing_if = "Vec::is_empty"
     )]
     pub external_cloud_links: Vec<String>,
@@ -3028,7 +3028,7 @@ impl Serialize for PrivateCloudProvisioningState {
     }
 }
 #[doc = "An update to a private cloud resource"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct PrivateCloudUpdate {
     #[doc = "Resource tags."]
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -3049,7 +3049,7 @@ impl PrivateCloudUpdate {
     }
 }
 #[doc = "The properties of a private cloud resource that may be updated"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct PrivateCloudUpdateProperties {
     #[doc = "The properties of a management cluster"]
     #[serde(rename = "managementCluster", default, skip_serializing_if = "Option::is_none")]
@@ -3061,7 +3061,7 @@ pub struct PrivateCloudUpdateProperties {
     #[serde(
         rename = "identitySources",
         default,
-        deserialize_with = "azure_core::util::deserialize_null_as_default",
+        deserialize_with = "azure_openapi_core::util::deserialize_null_as_default",
         skip_serializing_if = "Vec::is_empty"
     )]
     pub identity_sources: Vec<IdentitySource>,
@@ -3075,7 +3075,7 @@ pub struct PrivateCloudUpdateProperties {
     #[serde(
         rename = "extendedNetworkBlocks",
         default,
-        deserialize_with = "azure_core::util::deserialize_null_as_default",
+        deserialize_with = "azure_openapi_core::util::deserialize_null_as_default",
         skip_serializing_if = "Vec::is_empty"
     )]
     pub extended_network_blocks: Vec<String>,
@@ -3089,7 +3089,7 @@ impl PrivateCloudUpdateProperties {
     }
 }
 #[doc = "A provisioned network resource"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct ProvisionedNetwork {
     #[serde(flatten)]
     pub proxy_resource: ProxyResource,
@@ -3103,7 +3103,7 @@ impl ProvisionedNetwork {
     }
 }
 #[doc = "The response of a ProvisionedNetwork list operation."]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model)]
 pub struct ProvisionedNetworkListResult {
     #[doc = "The ProvisionedNetwork items on this page"]
     pub value: Vec<ProvisionedNetwork>,
@@ -3111,7 +3111,7 @@ pub struct ProvisionedNetworkListResult {
     #[serde(rename = "nextLink", default, skip_serializing_if = "Option::is_none")]
     pub next_link: Option<String>,
 }
-impl azure_core::Continuable for ProvisionedNetworkListResult {
+impl azure_openapi_core::Continuable for ProvisionedNetworkListResult {
     type Continuation = String;
     fn continuation(&self) -> Option<Self::Continuation> {
         self.next_link.clone().filter(|value| !value.is_empty())
@@ -3123,7 +3123,7 @@ impl ProvisionedNetworkListResult {
     }
 }
 #[doc = "The properties of a provisioned network."]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct ProvisionedNetworkProperties {
     #[doc = "provisioned network provisioning state"]
     #[serde(rename = "provisioningState", default, skip_serializing_if = "Option::is_none")]
@@ -3234,7 +3234,7 @@ impl Serialize for ProvisionedNetworkTypes {
     }
 }
 #[doc = "The resource model definition for a Azure Resource Manager proxy resource. It will not have tags and a location"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct ProxyResource {
     #[serde(flatten)]
     pub resource: Resource,
@@ -3245,7 +3245,7 @@ impl ProxyResource {
     }
 }
 #[doc = "An instance describing a Pure Storage Policy Based Management policy"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct PureStoragePolicy {
     #[serde(flatten)]
     pub proxy_resource: ProxyResource,
@@ -3259,7 +3259,7 @@ impl PureStoragePolicy {
     }
 }
 #[doc = "The response of a PureStoragePolicy list operation."]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model)]
 pub struct PureStoragePolicyListResult {
     #[doc = "The PureStoragePolicy items on this page"]
     pub value: Vec<PureStoragePolicy>,
@@ -3267,7 +3267,7 @@ pub struct PureStoragePolicyListResult {
     #[serde(rename = "nextLink", default, skip_serializing_if = "Option::is_none")]
     pub next_link: Option<String>,
 }
-impl azure_core::Continuable for PureStoragePolicyListResult {
+impl azure_openapi_core::Continuable for PureStoragePolicyListResult {
     type Continuation = String;
     fn continuation(&self) -> Option<Self::Continuation> {
         self.next_link.clone().filter(|value| !value.is_empty())
@@ -3279,7 +3279,7 @@ impl PureStoragePolicyListResult {
     }
 }
 #[doc = "Properties of a Pure Storage Policy Based Management policy"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model)]
 pub struct PureStoragePolicyProperties {
     #[doc = "Definition of a Pure Storage Policy Based Management policy"]
     #[serde(rename = "storagePolicyDefinition")]
@@ -3344,7 +3344,7 @@ impl Serialize for PureStoragePolicyProvisioningState {
     }
 }
 #[doc = "A Pure Storage volume from PureStorage.Block provider"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model)]
 pub struct PureStorageVolume {
     #[doc = "Azure resource ID of the Pure Storage Pool"]
     #[serde(rename = "storagePoolId")]
@@ -3359,7 +3359,7 @@ impl PureStorageVolume {
     }
 }
 #[doc = "Subscription quotas"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct Quota {
     #[doc = "Remaining hosts quota by sku type"]
     #[serde(rename = "hostsRemaining", default, skip_serializing_if = "Option::is_none")]
@@ -3411,7 +3411,7 @@ impl Serialize for QuotaEnabled {
     }
 }
 #[doc = "Common fields that are returned in the response for all Azure Resource Manager resources"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct Resource {
     #[doc = "Fully qualified resource ID for the resource. E.g. \"/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}\""]
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -3432,7 +3432,7 @@ impl Resource {
     }
 }
 #[doc = "A SKU for a resource."]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model)]
 pub struct ResourceSku {
     #[doc = "Describes the type of resource the SKU applies to."]
     #[serde(rename = "resourceType")]
@@ -3456,7 +3456,7 @@ pub struct ResourceSku {
     #[doc = "Name value pairs to describe the capability."]
     #[serde(
         default,
-        deserialize_with = "azure_core::util::deserialize_null_as_default",
+        deserialize_with = "azure_openapi_core::util::deserialize_null_as_default",
         skip_serializing_if = "Vec::is_empty"
     )]
     pub capabilities: Vec<ResourceSkuCapabilities>,
@@ -3485,7 +3485,7 @@ impl ResourceSku {
     }
 }
 #[doc = "Describes The SKU capabilities object."]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model)]
 pub struct ResourceSkuCapabilities {
     #[doc = "The name of the SKU capability."]
     pub name: String,
@@ -3498,7 +3498,7 @@ impl ResourceSkuCapabilities {
     }
 }
 #[doc = "Describes an available Compute SKU Location Information."]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model)]
 pub struct ResourceSkuLocationInfo {
     #[doc = "Represents an Azure geography region where supported resource providers live."]
     pub location: AzureCoreAzureLocation,
@@ -3557,19 +3557,19 @@ impl Serialize for ResourceSkuResourceType {
     }
 }
 #[doc = "Describes an available Compute SKU Restriction Information."]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct ResourceSkuRestrictionInfo {
     #[doc = "Locations where the SKU is restricted"]
     #[serde(
         default,
-        deserialize_with = "azure_core::util::deserialize_null_as_default",
+        deserialize_with = "azure_openapi_core::util::deserialize_null_as_default",
         skip_serializing_if = "Vec::is_empty"
     )]
     pub locations: Vec<AzureCoreAzureLocation>,
     #[doc = "List of availability zones where the SKU is restricted."]
     #[serde(
         default,
-        deserialize_with = "azure_core::util::deserialize_null_as_default",
+        deserialize_with = "azure_openapi_core::util::deserialize_null_as_default",
         skip_serializing_if = "Vec::is_empty"
     )]
     pub zones: Vec<String>,
@@ -3580,7 +3580,7 @@ impl ResourceSkuRestrictionInfo {
     }
 }
 #[doc = "The restrictions of the SKU."]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model)]
 pub struct ResourceSkuRestrictions {
     #[doc = "Describes the kind of SKU restrictions that can exist"]
     #[serde(rename = "type", default, skip_serializing_if = "Option::is_none")]
@@ -3681,7 +3681,7 @@ impl Serialize for ResourceSkuRestrictionsType {
     }
 }
 #[doc = "Describes The zonal capabilities of a SKU."]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model)]
 pub struct ResourceSkuZoneDetails {
     #[doc = "Gets the set of zones that the SKU is available in with the specified capabilities."]
     pub name: Vec<String>,
@@ -3694,7 +3694,7 @@ impl ResourceSkuZoneDetails {
     }
 }
 #[doc = "A cmdlet available for script execution"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct ScriptCmdlet {
     #[serde(flatten)]
     pub proxy_resource: ProxyResource,
@@ -3745,7 +3745,7 @@ impl Serialize for ScriptCmdletAudience {
     }
 }
 #[doc = "Properties of a pre-canned script"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct ScriptCmdletProperties {
     #[doc = "A script cmdlet provisioning state"]
     #[serde(rename = "provisioningState", default, skip_serializing_if = "Option::is_none")]
@@ -3762,7 +3762,7 @@ pub struct ScriptCmdletProperties {
     #[doc = "Parameters the script will accept"]
     #[serde(
         default,
-        deserialize_with = "azure_core::util::deserialize_null_as_default",
+        deserialize_with = "azure_openapi_core::util::deserialize_null_as_default",
         skip_serializing_if = "Vec::is_empty"
     )]
     pub parameters: Vec<ScriptParameter>,
@@ -3812,7 +3812,7 @@ impl Serialize for ScriptCmdletProvisioningState {
     }
 }
 #[doc = "The response of a ScriptCmdlet list operation."]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model)]
 pub struct ScriptCmdletsList {
     #[doc = "The ScriptCmdlet items on this page"]
     pub value: Vec<ScriptCmdlet>,
@@ -3820,7 +3820,7 @@ pub struct ScriptCmdletsList {
     #[serde(rename = "nextLink", default, skip_serializing_if = "Option::is_none")]
     pub next_link: Option<String>,
 }
-impl azure_core::Continuable for ScriptCmdletsList {
+impl azure_openapi_core::Continuable for ScriptCmdletsList {
     type Continuation = String;
     fn continuation(&self) -> Option<Self::Continuation> {
         self.next_link.clone().filter(|value| !value.is_empty())
@@ -3832,7 +3832,7 @@ impl ScriptCmdletsList {
     }
 }
 #[doc = "An instance of a script executed by a user - custom or AVS"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct ScriptExecution {
     #[serde(flatten)]
     pub proxy_resource: ProxyResource,
@@ -3846,7 +3846,7 @@ impl ScriptExecution {
     }
 }
 #[doc = "The arguments passed in to the execution"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model)]
 pub struct ScriptExecutionParameter {
     #[doc = "The parameter name"]
     pub name: String,
@@ -3904,7 +3904,7 @@ impl Serialize for ScriptExecutionParameterType {
     }
 }
 #[doc = "Properties of a user-invoked script"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model)]
 pub struct ScriptExecutionProperties {
     #[doc = "A reference to the script cmdlet resource if user is running a AVS script"]
     #[serde(rename = "scriptCmdletId", default, skip_serializing_if = "Option::is_none")]
@@ -3912,7 +3912,7 @@ pub struct ScriptExecutionProperties {
     #[doc = "Parameters the script will accept"]
     #[serde(
         default,
-        deserialize_with = "azure_core::util::deserialize_null_as_default",
+        deserialize_with = "azure_openapi_core::util::deserialize_null_as_default",
         skip_serializing_if = "Vec::is_empty"
     )]
     pub parameters: Vec<ScriptExecutionParameterUnion>,
@@ -3920,7 +3920,7 @@ pub struct ScriptExecutionProperties {
     #[serde(
         rename = "hiddenParameters",
         default,
-        deserialize_with = "azure_core::util::deserialize_null_as_default",
+        deserialize_with = "azure_openapi_core::util::deserialize_null_as_default",
         skip_serializing_if = "Vec::is_empty"
     )]
     pub hidden_parameters: Vec<ScriptExecutionParameterUnion>,
@@ -3947,7 +3947,7 @@ pub struct ScriptExecutionProperties {
     #[doc = "Standard output stream from the powershell execution"]
     #[serde(
         default,
-        deserialize_with = "azure_core::util::deserialize_null_as_default",
+        deserialize_with = "azure_openapi_core::util::deserialize_null_as_default",
         skip_serializing_if = "Vec::is_empty"
     )]
     pub output: Vec<String>,
@@ -3957,21 +3957,21 @@ pub struct ScriptExecutionProperties {
     #[doc = "Standard information out stream from the powershell execution"]
     #[serde(
         default,
-        deserialize_with = "azure_core::util::deserialize_null_as_default",
+        deserialize_with = "azure_openapi_core::util::deserialize_null_as_default",
         skip_serializing_if = "Vec::is_empty"
     )]
     pub information: Vec<String>,
     #[doc = "Standard warning out stream from the powershell execution"]
     #[serde(
         default,
-        deserialize_with = "azure_core::util::deserialize_null_as_default",
+        deserialize_with = "azure_openapi_core::util::deserialize_null_as_default",
         skip_serializing_if = "Vec::is_empty"
     )]
     pub warnings: Vec<String>,
     #[doc = "Standard error output stream from the powershell execution"]
     #[serde(
         default,
-        deserialize_with = "azure_core::util::deserialize_null_as_default",
+        deserialize_with = "azure_openapi_core::util::deserialize_null_as_default",
         skip_serializing_if = "Vec::is_empty"
     )]
     pub errors: Vec<String>,
@@ -4047,7 +4047,7 @@ impl Serialize for ScriptExecutionProvisioningState {
     }
 }
 #[doc = "The response of a ScriptExecution list operation."]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model)]
 pub struct ScriptExecutionsList {
     #[doc = "The ScriptExecution items on this page"]
     pub value: Vec<ScriptExecution>,
@@ -4055,7 +4055,7 @@ pub struct ScriptExecutionsList {
     #[serde(rename = "nextLink", default, skip_serializing_if = "Option::is_none")]
     pub next_link: Option<String>,
 }
-impl azure_core::Continuable for ScriptExecutionsList {
+impl azure_openapi_core::Continuable for ScriptExecutionsList {
     type Continuation = String;
     fn continuation(&self) -> Option<Self::Continuation> {
         self.next_link.clone().filter(|value| !value.is_empty())
@@ -4108,7 +4108,7 @@ impl Serialize for ScriptOutputStreamType {
     }
 }
 #[doc = "Script Package resources available for execution"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct ScriptPackage {
     #[serde(flatten)]
     pub proxy_resource: ProxyResource,
@@ -4122,7 +4122,7 @@ impl ScriptPackage {
     }
 }
 #[doc = "Properties of a Script Package subresource"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct ScriptPackageProperties {
     #[doc = "Script Package provisioning state"]
     #[serde(rename = "provisioningState", default, skip_serializing_if = "Option::is_none")]
@@ -4185,7 +4185,7 @@ impl Serialize for ScriptPackageProvisioningState {
     }
 }
 #[doc = "The response of a ScriptPackage list operation."]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model)]
 pub struct ScriptPackagesList {
     #[doc = "The ScriptPackage items on this page"]
     pub value: Vec<ScriptPackage>,
@@ -4193,7 +4193,7 @@ pub struct ScriptPackagesList {
     #[serde(rename = "nextLink", default, skip_serializing_if = "Option::is_none")]
     pub next_link: Option<String>,
 }
-impl azure_core::Continuable for ScriptPackagesList {
+impl azure_openapi_core::Continuable for ScriptPackagesList {
     type Continuation = String;
     fn continuation(&self) -> Option<Self::Continuation> {
         self.next_link.clone().filter(|value| !value.is_empty())
@@ -4205,7 +4205,7 @@ impl ScriptPackagesList {
     }
 }
 #[doc = "An parameter that the script will accept"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct ScriptParameter {
     #[doc = "Script Parameter types"]
     #[serde(rename = "type", default, skip_serializing_if = "Option::is_none")]
@@ -4274,7 +4274,7 @@ impl Serialize for ScriptParameterTypes {
     }
 }
 #[doc = "a plain text value execution parameter"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model)]
 pub struct ScriptSecureStringExecutionParameter {
     #[serde(flatten)]
     pub script_execution_parameter: ScriptExecutionParameter,
@@ -4291,7 +4291,7 @@ impl ScriptSecureStringExecutionParameter {
     }
 }
 #[doc = "a plain text value execution parameter"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model)]
 pub struct ScriptStringExecutionParameter {
     #[serde(flatten)]
     pub script_execution_parameter: ScriptExecutionParameter,
@@ -4347,7 +4347,7 @@ impl Serialize for SegmentStatusEnum {
     }
 }
 #[doc = "The resource model definition representing SKU"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model)]
 pub struct Sku {
     #[doc = "The name of the SKU. E.g. P3. It is typically a letter+number code"]
     pub name: String,
@@ -4384,7 +4384,7 @@ pub enum SkuTier {
     Premium,
 }
 #[doc = "The properties of a specialized host."]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model)]
 pub struct SpecializedHostProperties {
     #[serde(flatten)]
     pub host_properties: HostProperties,
@@ -4432,7 +4432,7 @@ impl Serialize for SslEnum {
     }
 }
 #[doc = "Managed service identity (either system assigned, or none)"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model)]
 pub struct SystemAssignedServiceIdentity {
     #[doc = "The service principal ID of the system assigned identity. This property will only be provided for a system assigned identity."]
     #[serde(rename = "principalId", default, skip_serializing_if = "Option::is_none")]
@@ -4491,7 +4491,7 @@ impl Serialize for SystemAssignedServiceIdentityType {
     }
 }
 #[doc = "The resource model definition for an Azure Resource Manager tracked top level resource which has 'tags' and a 'location'"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model)]
 pub struct TrackedResource {
     #[serde(flatten)]
     pub resource: Resource,
@@ -4511,7 +4511,7 @@ impl TrackedResource {
     }
 }
 #[doc = "Subscription trial availability"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct Trial {
     #[doc = "trial status"]
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -4646,7 +4646,7 @@ impl Serialize for VmTypeEnum {
     }
 }
 #[doc = "Virtual Machine"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct VirtualMachine {
     #[serde(flatten)]
     pub proxy_resource: ProxyResource,
@@ -4660,7 +4660,7 @@ impl VirtualMachine {
     }
 }
 #[doc = "Virtual Machine Properties"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct VirtualMachineProperties {
     #[doc = "Virtual Machine provisioning state"]
     #[serde(rename = "provisioningState", default, skip_serializing_if = "Option::is_none")]
@@ -4723,7 +4723,7 @@ impl Serialize for VirtualMachineProvisioningState {
     }
 }
 #[doc = "Set VM DRS-driven movement to restricted (enabled) or not (disabled)"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct VirtualMachineRestrictMovement {
     #[doc = "Virtual Machine Restrict Movement state"]
     #[serde(rename = "restrictMovement", default, skip_serializing_if = "Option::is_none")]
@@ -4772,7 +4772,7 @@ impl Serialize for VirtualMachineRestrictMovementState {
     }
 }
 #[doc = "The response of a VirtualMachine list operation."]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model)]
 pub struct VirtualMachinesList {
     #[doc = "The VirtualMachine items on this page"]
     pub value: Vec<VirtualMachine>,
@@ -4780,7 +4780,7 @@ pub struct VirtualMachinesList {
     #[serde(rename = "nextLink", default, skip_serializing_if = "Option::is_none")]
     pub next_link: Option<String>,
 }
-impl azure_core::Continuable for VirtualMachinesList {
+impl azure_openapi_core::Continuable for VirtualMachinesList {
     type Continuation = String;
     fn continuation(&self) -> Option<Self::Continuation> {
         self.next_link.clone().filter(|value| !value.is_empty())
@@ -4829,7 +4829,7 @@ impl Serialize for VisibilityParameterEnum {
     }
 }
 #[doc = "VM-Host placement policy properties"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model)]
 pub struct VmHostPlacementPolicyProperties {
     #[serde(flatten)]
     pub placement_policy_properties: PlacementPolicyProperties,
@@ -4867,7 +4867,7 @@ impl VmHostPlacementPolicyProperties {
     }
 }
 #[doc = "VM-VM placement policy properties"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model)]
 pub struct VmVmPlacementPolicyProperties {
     #[serde(flatten)]
     pub placement_policy_properties: PlacementPolicyProperties,
@@ -4888,7 +4888,7 @@ impl VmVmPlacementPolicyProperties {
     }
 }
 #[doc = "Workload Network"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct WorkloadNetwork {
     #[serde(flatten)]
     pub proxy_resource: ProxyResource,
@@ -4902,7 +4902,7 @@ impl WorkloadNetwork {
     }
 }
 #[doc = "NSX DHCP"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct WorkloadNetworkDhcp {
     #[serde(flatten)]
     pub proxy_resource: ProxyResource,
@@ -4916,7 +4916,7 @@ impl WorkloadNetworkDhcp {
     }
 }
 #[doc = "Base class for WorkloadNetworkDhcpServer and WorkloadNetworkDhcpRelay to\ninherit from"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model)]
 pub struct WorkloadNetworkDhcpEntity {
     #[doc = "Display name of the DHCP entity."]
     #[serde(rename = "displayName", default, skip_serializing_if = "Option::is_none")]
@@ -4924,7 +4924,7 @@ pub struct WorkloadNetworkDhcpEntity {
     #[doc = "NSX Segments consuming DHCP."]
     #[serde(
         default,
-        deserialize_with = "azure_core::util::deserialize_null_as_default",
+        deserialize_with = "azure_openapi_core::util::deserialize_null_as_default",
         skip_serializing_if = "Vec::is_empty"
     )]
     pub segments: Vec<String>,
@@ -4955,7 +4955,7 @@ pub enum WorkloadNetworkDhcpEntityUnion {
     Server(WorkloadNetworkDhcpServer),
 }
 #[doc = "The response of a WorkloadNetworkDhcp list operation."]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model)]
 pub struct WorkloadNetworkDhcpList {
     #[doc = "The WorkloadNetworkDhcp items on this page"]
     pub value: Vec<WorkloadNetworkDhcp>,
@@ -4963,7 +4963,7 @@ pub struct WorkloadNetworkDhcpList {
     #[serde(rename = "nextLink", default, skip_serializing_if = "Option::is_none")]
     pub next_link: Option<String>,
 }
-impl azure_core::Continuable for WorkloadNetworkDhcpList {
+impl azure_openapi_core::Continuable for WorkloadNetworkDhcpList {
     type Continuation = String;
     fn continuation(&self) -> Option<Self::Continuation> {
         self.next_link.clone().filter(|value| !value.is_empty())
@@ -5020,7 +5020,7 @@ impl Serialize for WorkloadNetworkDhcpProvisioningState {
     }
 }
 #[doc = "NSX DHCP Relay"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model)]
 pub struct WorkloadNetworkDhcpRelay {
     #[serde(flatten)]
     pub workload_network_dhcp_entity: WorkloadNetworkDhcpEntity,
@@ -5028,7 +5028,7 @@ pub struct WorkloadNetworkDhcpRelay {
     #[serde(
         rename = "serverAddresses",
         default,
-        deserialize_with = "azure_core::util::deserialize_null_as_default",
+        deserialize_with = "azure_openapi_core::util::deserialize_null_as_default",
         skip_serializing_if = "Vec::is_empty"
     )]
     pub server_addresses: Vec<String>,
@@ -5042,7 +5042,7 @@ impl WorkloadNetworkDhcpRelay {
     }
 }
 #[doc = "NSX DHCP Server"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model)]
 pub struct WorkloadNetworkDhcpServer {
     #[serde(flatten)]
     pub workload_network_dhcp_entity: WorkloadNetworkDhcpEntity,
@@ -5063,7 +5063,7 @@ impl WorkloadNetworkDhcpServer {
     }
 }
 #[doc = "NSX DNS Service"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct WorkloadNetworkDnsService {
     #[serde(flatten)]
     pub proxy_resource: ProxyResource,
@@ -5077,7 +5077,7 @@ impl WorkloadNetworkDnsService {
     }
 }
 #[doc = "NSX DNS Service Properties"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct WorkloadNetworkDnsServiceProperties {
     #[doc = "Display name of the DNS Service."]
     #[serde(rename = "displayName", default, skip_serializing_if = "Option::is_none")]
@@ -5092,7 +5092,7 @@ pub struct WorkloadNetworkDnsServiceProperties {
     #[serde(
         rename = "fqdnZones",
         default,
-        deserialize_with = "azure_core::util::deserialize_null_as_default",
+        deserialize_with = "azure_openapi_core::util::deserialize_null_as_default",
         skip_serializing_if = "Vec::is_empty"
     )]
     pub fqdn_zones: Vec<String>,
@@ -5160,7 +5160,7 @@ impl Serialize for WorkloadNetworkDnsServiceProvisioningState {
     }
 }
 #[doc = "The response of a WorkloadNetworkDnsService list operation."]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model)]
 pub struct WorkloadNetworkDnsServicesList {
     #[doc = "The WorkloadNetworkDnsService items on this page"]
     pub value: Vec<WorkloadNetworkDnsService>,
@@ -5168,7 +5168,7 @@ pub struct WorkloadNetworkDnsServicesList {
     #[serde(rename = "nextLink", default, skip_serializing_if = "Option::is_none")]
     pub next_link: Option<String>,
 }
-impl azure_core::Continuable for WorkloadNetworkDnsServicesList {
+impl azure_openapi_core::Continuable for WorkloadNetworkDnsServicesList {
     type Continuation = String;
     fn continuation(&self) -> Option<Self::Continuation> {
         self.next_link.clone().filter(|value| !value.is_empty())
@@ -5180,7 +5180,7 @@ impl WorkloadNetworkDnsServicesList {
     }
 }
 #[doc = "NSX DNS Zone"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct WorkloadNetworkDnsZone {
     #[serde(flatten)]
     pub proxy_resource: ProxyResource,
@@ -5194,7 +5194,7 @@ impl WorkloadNetworkDnsZone {
     }
 }
 #[doc = "NSX DNS Zone Properties"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct WorkloadNetworkDnsZoneProperties {
     #[doc = "Display name of the DNS Zone."]
     #[serde(rename = "displayName", default, skip_serializing_if = "Option::is_none")]
@@ -5202,7 +5202,7 @@ pub struct WorkloadNetworkDnsZoneProperties {
     #[doc = "Domain names of the DNS Zone."]
     #[serde(
         default,
-        deserialize_with = "azure_core::util::deserialize_null_as_default",
+        deserialize_with = "azure_openapi_core::util::deserialize_null_as_default",
         skip_serializing_if = "Vec::is_empty"
     )]
     pub domain: Vec<String>,
@@ -5210,7 +5210,7 @@ pub struct WorkloadNetworkDnsZoneProperties {
     #[serde(
         rename = "dnsServerIps",
         default,
-        deserialize_with = "azure_core::util::deserialize_null_as_default",
+        deserialize_with = "azure_openapi_core::util::deserialize_null_as_default",
         skip_serializing_if = "Vec::is_empty"
     )]
     pub dns_server_ips: Vec<String>,
@@ -5278,7 +5278,7 @@ impl Serialize for WorkloadNetworkDnsZoneProvisioningState {
     }
 }
 #[doc = "The response of a WorkloadNetworkDnsZone list operation."]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model)]
 pub struct WorkloadNetworkDnsZonesList {
     #[doc = "The WorkloadNetworkDnsZone items on this page"]
     pub value: Vec<WorkloadNetworkDnsZone>,
@@ -5286,7 +5286,7 @@ pub struct WorkloadNetworkDnsZonesList {
     #[serde(rename = "nextLink", default, skip_serializing_if = "Option::is_none")]
     pub next_link: Option<String>,
 }
-impl azure_core::Continuable for WorkloadNetworkDnsZonesList {
+impl azure_openapi_core::Continuable for WorkloadNetworkDnsZonesList {
     type Continuation = String;
     fn continuation(&self) -> Option<Self::Continuation> {
         self.next_link.clone().filter(|value| !value.is_empty())
@@ -5298,7 +5298,7 @@ impl WorkloadNetworkDnsZonesList {
     }
 }
 #[doc = "NSX Gateway."]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct WorkloadNetworkGateway {
     #[serde(flatten)]
     pub proxy_resource: ProxyResource,
@@ -5312,7 +5312,7 @@ impl WorkloadNetworkGateway {
     }
 }
 #[doc = "The response of a WorkloadNetworkGateway list operation."]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model)]
 pub struct WorkloadNetworkGatewayList {
     #[doc = "The WorkloadNetworkGateway items on this page"]
     pub value: Vec<WorkloadNetworkGateway>,
@@ -5320,7 +5320,7 @@ pub struct WorkloadNetworkGatewayList {
     #[serde(rename = "nextLink", default, skip_serializing_if = "Option::is_none")]
     pub next_link: Option<String>,
 }
-impl azure_core::Continuable for WorkloadNetworkGatewayList {
+impl azure_openapi_core::Continuable for WorkloadNetworkGatewayList {
     type Continuation = String;
     fn continuation(&self) -> Option<Self::Continuation> {
         self.next_link.clone().filter(|value| !value.is_empty())
@@ -5332,7 +5332,7 @@ impl WorkloadNetworkGatewayList {
     }
 }
 #[doc = "Properties of a NSX Gateway."]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct WorkloadNetworkGatewayProperties {
     #[doc = "base Workload Network provisioning state"]
     #[serde(rename = "provisioningState", default, skip_serializing_if = "Option::is_none")]
@@ -5350,7 +5350,7 @@ impl WorkloadNetworkGatewayProperties {
     }
 }
 #[doc = "The response of a WorkloadNetwork list operation."]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model)]
 pub struct WorkloadNetworkList {
     #[doc = "The WorkloadNetwork items on this page"]
     pub value: Vec<WorkloadNetwork>,
@@ -5358,7 +5358,7 @@ pub struct WorkloadNetworkList {
     #[serde(rename = "nextLink", default, skip_serializing_if = "Option::is_none")]
     pub next_link: Option<String>,
 }
-impl azure_core::Continuable for WorkloadNetworkList {
+impl azure_openapi_core::Continuable for WorkloadNetworkList {
     type Continuation = String;
     fn continuation(&self) -> Option<Self::Continuation> {
         self.next_link.clone().filter(|value| !value.is_empty())
@@ -5370,7 +5370,7 @@ impl WorkloadNetworkList {
     }
 }
 #[doc = "NSX Port Mirroring"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct WorkloadNetworkPortMirroring {
     #[serde(flatten)]
     pub proxy_resource: ProxyResource,
@@ -5384,7 +5384,7 @@ impl WorkloadNetworkPortMirroring {
     }
 }
 #[doc = "The response of a WorkloadNetworkPortMirroring list operation."]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model)]
 pub struct WorkloadNetworkPortMirroringList {
     #[doc = "The WorkloadNetworkPortMirroring items on this page"]
     pub value: Vec<WorkloadNetworkPortMirroring>,
@@ -5392,7 +5392,7 @@ pub struct WorkloadNetworkPortMirroringList {
     #[serde(rename = "nextLink", default, skip_serializing_if = "Option::is_none")]
     pub next_link: Option<String>,
 }
-impl azure_core::Continuable for WorkloadNetworkPortMirroringList {
+impl azure_openapi_core::Continuable for WorkloadNetworkPortMirroringList {
     type Continuation = String;
     fn continuation(&self) -> Option<Self::Continuation> {
         self.next_link.clone().filter(|value| !value.is_empty())
@@ -5404,7 +5404,7 @@ impl WorkloadNetworkPortMirroringList {
     }
 }
 #[doc = "NSX Port Mirroring Properties"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct WorkloadNetworkPortMirroringProperties {
     #[doc = "Display name of the port mirroring profile."]
     #[serde(rename = "displayName", default, skip_serializing_if = "Option::is_none")]
@@ -5479,7 +5479,7 @@ impl Serialize for WorkloadNetworkPortMirroringProvisioningState {
     }
 }
 #[doc = "The properties of a workload network"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct WorkloadNetworkProperties {
     #[doc = "base Workload Network provisioning state"]
     #[serde(rename = "provisioningState", default, skip_serializing_if = "Option::is_none")]
@@ -5536,7 +5536,7 @@ impl Serialize for WorkloadNetworkProvisioningState {
     }
 }
 #[doc = "NSX Public IP Block"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct WorkloadNetworkPublicIp {
     #[serde(flatten)]
     pub proxy_resource: ProxyResource,
@@ -5550,7 +5550,7 @@ impl WorkloadNetworkPublicIp {
     }
 }
 #[doc = "NSX Public IP Block Properties"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct WorkloadNetworkPublicIpProperties {
     #[doc = "Display name of the Public IP Block."]
     #[serde(rename = "displayName", default, skip_serializing_if = "Option::is_none")]
@@ -5616,7 +5616,7 @@ impl Serialize for WorkloadNetworkPublicIpProvisioningState {
     }
 }
 #[doc = "The response of a WorkloadNetworkPublicIP list operation."]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model)]
 pub struct WorkloadNetworkPublicIPsList {
     #[doc = "The WorkloadNetworkPublicIP items on this page"]
     pub value: Vec<WorkloadNetworkPublicIp>,
@@ -5624,7 +5624,7 @@ pub struct WorkloadNetworkPublicIPsList {
     #[serde(rename = "nextLink", default, skip_serializing_if = "Option::is_none")]
     pub next_link: Option<String>,
 }
-impl azure_core::Continuable for WorkloadNetworkPublicIPsList {
+impl azure_openapi_core::Continuable for WorkloadNetworkPublicIPsList {
     type Continuation = String;
     fn continuation(&self) -> Option<Self::Continuation> {
         self.next_link.clone().filter(|value| !value.is_empty())
@@ -5636,7 +5636,7 @@ impl WorkloadNetworkPublicIPsList {
     }
 }
 #[doc = "NSX Segment"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct WorkloadNetworkSegment {
     #[serde(flatten)]
     pub proxy_resource: ProxyResource,
@@ -5650,7 +5650,7 @@ impl WorkloadNetworkSegment {
     }
 }
 #[doc = "Ports and any VIF attached to segment."]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct WorkloadNetworkSegmentPortVif {
     #[doc = "Name of port or VIF attached to segment."]
     #[serde(rename = "portName", default, skip_serializing_if = "Option::is_none")]
@@ -5662,7 +5662,7 @@ impl WorkloadNetworkSegmentPortVif {
     }
 }
 #[doc = "NSX Segment Properties"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct WorkloadNetworkSegmentProperties {
     #[doc = "Display name of the segment."]
     #[serde(rename = "displayName", default, skip_serializing_if = "Option::is_none")]
@@ -5677,7 +5677,7 @@ pub struct WorkloadNetworkSegmentProperties {
     #[serde(
         rename = "portVif",
         default,
-        deserialize_with = "azure_core::util::deserialize_null_as_default",
+        deserialize_with = "azure_openapi_core::util::deserialize_null_as_default",
         skip_serializing_if = "Vec::is_empty"
     )]
     pub port_vif: Vec<WorkloadNetworkSegmentPortVif>,
@@ -5742,13 +5742,13 @@ impl Serialize for WorkloadNetworkSegmentProvisioningState {
     }
 }
 #[doc = "Subnet configuration for segment"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct WorkloadNetworkSegmentSubnet {
     #[doc = "DHCP Range assigned for subnet."]
     #[serde(
         rename = "dhcpRanges",
         default,
-        deserialize_with = "azure_core::util::deserialize_null_as_default",
+        deserialize_with = "azure_openapi_core::util::deserialize_null_as_default",
         skip_serializing_if = "Vec::is_empty"
     )]
     pub dhcp_ranges: Vec<String>,
@@ -5762,7 +5762,7 @@ impl WorkloadNetworkSegmentSubnet {
     }
 }
 #[doc = "The response of a WorkloadNetworkSegment list operation."]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model)]
 pub struct WorkloadNetworkSegmentsList {
     #[doc = "The WorkloadNetworkSegment items on this page"]
     pub value: Vec<WorkloadNetworkSegment>,
@@ -5770,7 +5770,7 @@ pub struct WorkloadNetworkSegmentsList {
     #[serde(rename = "nextLink", default, skip_serializing_if = "Option::is_none")]
     pub next_link: Option<String>,
 }
-impl azure_core::Continuable for WorkloadNetworkSegmentsList {
+impl azure_openapi_core::Continuable for WorkloadNetworkSegmentsList {
     type Continuation = String;
     fn continuation(&self) -> Option<Self::Continuation> {
         self.next_link.clone().filter(|value| !value.is_empty())
@@ -5782,7 +5782,7 @@ impl WorkloadNetworkSegmentsList {
     }
 }
 #[doc = "NSX VM Group"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct WorkloadNetworkVmGroup {
     #[serde(flatten)]
     pub proxy_resource: ProxyResource,
@@ -5796,7 +5796,7 @@ impl WorkloadNetworkVmGroup {
     }
 }
 #[doc = "NSX VM Group Properties"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct WorkloadNetworkVmGroupProperties {
     #[doc = "Display name of the VM group."]
     #[serde(rename = "displayName", default, skip_serializing_if = "Option::is_none")]
@@ -5804,7 +5804,7 @@ pub struct WorkloadNetworkVmGroupProperties {
     #[doc = "Virtual machine members of this group."]
     #[serde(
         default,
-        deserialize_with = "azure_core::util::deserialize_null_as_default",
+        deserialize_with = "azure_openapi_core::util::deserialize_null_as_default",
         skip_serializing_if = "Vec::is_empty"
     )]
     pub members: Vec<String>,
@@ -5869,7 +5869,7 @@ impl Serialize for WorkloadNetworkVmGroupProvisioningState {
     }
 }
 #[doc = "The response of a WorkloadNetworkVMGroup list operation."]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model)]
 pub struct WorkloadNetworkVmGroupsList {
     #[doc = "The WorkloadNetworkVMGroup items on this page"]
     pub value: Vec<WorkloadNetworkVmGroup>,
@@ -5877,7 +5877,7 @@ pub struct WorkloadNetworkVmGroupsList {
     #[serde(rename = "nextLink", default, skip_serializing_if = "Option::is_none")]
     pub next_link: Option<String>,
 }
-impl azure_core::Continuable for WorkloadNetworkVmGroupsList {
+impl azure_openapi_core::Continuable for WorkloadNetworkVmGroupsList {
     type Continuation = String;
     fn continuation(&self) -> Option<Self::Continuation> {
         self.next_link.clone().filter(|value| !value.is_empty())
@@ -5889,7 +5889,7 @@ impl WorkloadNetworkVmGroupsList {
     }
 }
 #[doc = "NSX Virtual Machine"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct WorkloadNetworkVirtualMachine {
     #[serde(flatten)]
     pub proxy_resource: ProxyResource,
@@ -5903,7 +5903,7 @@ impl WorkloadNetworkVirtualMachine {
     }
 }
 #[doc = "NSX Virtual Machine Properties"]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct WorkloadNetworkVirtualMachineProperties {
     #[doc = "base Workload Network provisioning state"]
     #[serde(rename = "provisioningState", default, skip_serializing_if = "Option::is_none")]
@@ -5921,7 +5921,7 @@ impl WorkloadNetworkVirtualMachineProperties {
     }
 }
 #[doc = "The response of a WorkloadNetworkVirtualMachine list operation."]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model)]
 pub struct WorkloadNetworkVirtualMachinesList {
     #[doc = "The WorkloadNetworkVirtualMachine items on this page"]
     pub value: Vec<WorkloadNetworkVirtualMachine>,
@@ -5929,7 +5929,7 @@ pub struct WorkloadNetworkVirtualMachinesList {
     #[serde(rename = "nextLink", default, skip_serializing_if = "Option::is_none")]
     pub next_link: Option<String>,
 }
-impl azure_core::Continuable for WorkloadNetworkVirtualMachinesList {
+impl azure_openapi_core::Continuable for WorkloadNetworkVirtualMachinesList {
     type Continuation = String;
     fn continuation(&self) -> Option<Self::Continuation> {
         self.next_link.clone().filter(|value| !value.is_empty())
@@ -5941,7 +5941,7 @@ impl WorkloadNetworkVirtualMachinesList {
     }
 }
 #[doc = "Metadata pertaining to creation and last modification of the resource."]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core :: http :: Model, Default)]
 pub struct SystemData {
     #[doc = "The identity that created the resource."]
     #[serde(rename = "createdBy", default, skip_serializing_if = "Option::is_none")]

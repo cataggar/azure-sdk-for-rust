@@ -5,33 +5,33 @@
 pub mod models;
 #[derive(Clone)]
 pub struct Client {
-    endpoint: azure_core::Url,
-    credential: std::sync::Arc<dyn azure_core::auth::TokenCredential>,
+    endpoint: azure_core::http::Url,
+    credential: std::sync::Arc<dyn azure_core::credentials::TokenCredential>,
     scopes: Vec<String>,
-    pipeline: azure_core::Pipeline,
+    pipeline: azure_core::http::Pipeline,
 }
 #[derive(Clone)]
 pub struct ClientBuilder {
-    credential: std::sync::Arc<dyn azure_core::auth::TokenCredential>,
-    endpoint: Option<azure_core::Url>,
+    credential: std::sync::Arc<dyn azure_core::credentials::TokenCredential>,
+    endpoint: Option<azure_core::http::Url>,
     scopes: Option<Vec<String>>,
-    options: azure_core::ClientOptions,
+    options: azure_core::http::options::ClientOptions,
 }
 pub use azure_core::resource_manager_endpoint::AZURE_PUBLIC_CLOUD as DEFAULT_ENDPOINT;
 impl ClientBuilder {
     #[doc = "Create a new instance of `ClientBuilder`."]
     #[must_use]
-    pub fn new(credential: std::sync::Arc<dyn azure_core::auth::TokenCredential>) -> Self {
+    pub fn new(credential: std::sync::Arc<dyn azure_core::credentials::TokenCredential>) -> Self {
         Self {
             credential,
             endpoint: None,
             scopes: None,
-            options: azure_core::ClientOptions::default(),
+            options: azure_core::http::options::ClientOptions::default(),
         }
     }
     #[doc = "Set the endpoint."]
     #[must_use]
-    pub fn endpoint(mut self, endpoint: impl Into<azure_core::Url>) -> Self {
+    pub fn endpoint(mut self, endpoint: impl Into<azure_core::http::Url>) -> Self {
         self.endpoint = Some(endpoint.into());
         self
     }
@@ -43,13 +43,13 @@ impl ClientBuilder {
     }
     #[doc = "Set the retry options."]
     #[must_use]
-    pub fn retry(mut self, retry: impl Into<azure_core::RetryOptions>) -> Self {
+    pub fn retry(mut self, retry: impl Into<azure_core::http::options::RetryOptions>) -> Self {
         self.options = self.options.retry(retry);
         self
     }
     #[doc = "Set the transport options."]
     #[must_use]
-    pub fn transport(mut self, transport: impl Into<azure_core::TransportOptions>) -> Self {
+    pub fn transport(mut self, transport: impl Into<azure_core::http::options::TransportOptions>) -> Self {
         self.options = self.options.transport(transport);
         self
     }
@@ -59,7 +59,7 @@ impl ClientBuilder {
         let scopes = if let Some(scopes) = self.scopes {
             scopes
         } else {
-            vec![endpoint.join(azure_core::auth::DEFAULT_SCOPE_SUFFIX)?.to_string()]
+            vec![endpoint.join(azure_core::credentials::DEFAULT_SCOPE_SUFFIX)?.to_string()]
         };
         Ok(Client::new(endpoint, self.credential, scopes, self.options))
     }
@@ -70,34 +70,34 @@ impl Client {
         let response = credential.get_token(&self.scopes()).await?;
         Ok(response.token)
     }
-    pub(crate) fn endpoint(&self) -> &azure_core::Url {
+    pub(crate) fn endpoint(&self) -> &azure_core::http::Url {
         &self.endpoint
     }
-    pub(crate) fn token_credential(&self) -> &dyn azure_core::auth::TokenCredential {
+    pub(crate) fn token_credential(&self) -> &dyn azure_core::credentials::TokenCredential {
         self.credential.as_ref()
     }
     pub(crate) fn scopes(&self) -> Vec<&str> {
         self.scopes.iter().map(String::as_str).collect()
     }
-    pub(crate) async fn send(&self, request: &mut azure_core::Request) -> azure_core::Result<azure_core::Response> {
-        let context = azure_core::Context::default();
+    pub(crate) async fn send(&self, request: &mut azure_core::http::Request) -> azure_core::Result<azure_core::http::Response> {
+        let context = typespec_client_core::http::Context::default();
         self.pipeline.send(&context, request).await
     }
     #[doc = "Create a new `ClientBuilder`."]
     #[must_use]
-    pub fn builder(credential: std::sync::Arc<dyn azure_core::auth::TokenCredential>) -> ClientBuilder {
+    pub fn builder(credential: std::sync::Arc<dyn azure_core::credentials::TokenCredential>) -> ClientBuilder {
         ClientBuilder::new(credential)
     }
     #[doc = "Create a new `Client`."]
     #[must_use]
     pub fn new(
-        endpoint: impl Into<azure_core::Url>,
-        credential: std::sync::Arc<dyn azure_core::auth::TokenCredential>,
+        endpoint: impl Into<azure_core::http::Url>,
+        credential: std::sync::Arc<dyn azure_core::credentials::TokenCredential>,
         scopes: Vec<String>,
-        options: azure_core::ClientOptions,
+        options: azure_core::http::options::ClientOptions,
     ) -> Self {
         let endpoint = endpoint.into();
-        let pipeline = azure_core::Pipeline::new(
+        let pipeline = azure_core::http::Pipeline::new(
             option_env!("CARGO_PKG_NAME"),
             option_env!("CARGO_PKG_VERSION"),
             options,
@@ -195,27 +195,27 @@ pub mod operations {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::OperationListResult> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::OperationListResult = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -251,9 +251,12 @@ pub mod operations {
                             Some(value) => {
                                 url.set_path("");
                                 url = url.join(&value)?;
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                req.insert_header(
+                                    azure_core::http::headers::AUTHORIZATION,
+                                    format!("Bearer {}", bearer_token.secret()),
+                                );
                                 let has_api_version_already =
                                     req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
                                 if !has_api_version_already {
@@ -266,9 +269,12 @@ pub mod operations {
                                 this.client.send(&mut req).await?
                             }
                             None => {
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                req.insert_header(
+                                    azure_core::http::headers::AUTHORIZATION,
+                                    format!("Bearer {}", bearer_token.secret()),
+                                );
                                 let req_body = azure_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
@@ -286,7 +292,7 @@ pub mod operations {
                 };
                 azure_core::Pageable::new(make_request)
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path("/providers/Microsoft.AVS/operations");
                 let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
@@ -348,27 +354,27 @@ pub mod locations {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::Quota> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::Quota = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -406,17 +412,20 @@ pub mod locations {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Post);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Post);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         let req_body = azure_core::EMPTY_BODY;
-                        req.insert_header(azure_core::headers::CONTENT_LENGTH, "0");
+                        req.insert_header(azure_core::http::headers::CONTENT_LENGTH, "0");
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/providers/Microsoft.AVS/locations/{}/checkQuotaAvailability",
@@ -450,27 +459,27 @@ pub mod locations {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::Trial> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::Trial = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -514,12 +523,15 @@ pub mod locations {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Post);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Post);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         let req_body = if let Some(sku) = &this.sku {
                             req.insert_header("content-type", "application/json");
-                            azure_core::to_json(sku)?
+                            azure_core::json::to_json(sku)?
                         } else {
                             azure_core::EMPTY_BODY
                         };
@@ -528,7 +540,7 @@ pub mod locations {
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/providers/Microsoft.AVS/locations/{}/checkTrialAvailability",
@@ -733,27 +745,27 @@ pub mod private_clouds {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::PrivateCloudList> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::PrivateCloudList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -790,9 +802,12 @@ pub mod private_clouds {
                             Some(value) => {
                                 url.set_path("");
                                 url = url.join(&value)?;
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                req.insert_header(
+                                    azure_core::http::headers::AUTHORIZATION,
+                                    format!("Bearer {}", bearer_token.secret()),
+                                );
                                 let has_api_version_already =
                                     req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
                                 if !has_api_version_already {
@@ -805,9 +820,12 @@ pub mod private_clouds {
                                 this.client.send(&mut req).await?
                             }
                             None => {
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                req.insert_header(
+                                    azure_core::http::headers::AUTHORIZATION,
+                                    format!("Bearer {}", bearer_token.secret()),
+                                );
                                 let req_body = azure_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
@@ -825,7 +843,7 @@ pub mod private_clouds {
                 };
                 azure_core::Pageable::new(make_request)
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/providers/Microsoft.AVS/privateClouds",
@@ -847,27 +865,27 @@ pub mod private_clouds {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::PrivateCloudList> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::PrivateCloudList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -905,9 +923,12 @@ pub mod private_clouds {
                             Some(value) => {
                                 url.set_path("");
                                 url = url.join(&value)?;
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                req.insert_header(
+                                    azure_core::http::headers::AUTHORIZATION,
+                                    format!("Bearer {}", bearer_token.secret()),
+                                );
                                 let has_api_version_already =
                                     req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
                                 if !has_api_version_already {
@@ -920,9 +941,12 @@ pub mod private_clouds {
                                 this.client.send(&mut req).await?
                             }
                             None => {
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                req.insert_header(
+                                    azure_core::http::headers::AUTHORIZATION,
+                                    format!("Bearer {}", bearer_token.secret()),
+                                );
                                 let req_body = azure_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
@@ -940,7 +964,7 @@ pub mod private_clouds {
                 };
                 azure_core::Pageable::new(make_request)
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds",
@@ -962,27 +986,27 @@ pub mod private_clouds {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::PrivateCloud> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::PrivateCloud = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -1021,16 +1045,19 @@ pub mod private_clouds {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         let req_body = azure_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}",
@@ -1064,38 +1091,38 @@ pub mod private_clouds {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::PrivateCloud> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::PrivateCloud = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -1133,17 +1160,20 @@ pub mod private_clouds {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Put);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Put);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::to_json(&this.private_cloud)?;
+                        let req_body = azure_core::json::to_json(&this.private_cloud)?;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}",
@@ -1185,9 +1215,12 @@ pub mod private_clouds {
                     let location = get_location(headers, FinalState::AzureAsyncOperation)?;
                     if let Some(url) = location {
                         loop {
-                            let mut req = azure_core::Request::new(url.clone(), azure_core::Method::Get);
+                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::Method::Get);
                             let bearer_token = self.client.bearer_token().await?;
-                            req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                            req.insert_header(
+                                azure_core::http::headers::AUTHORIZATION,
+                                format!("Bearer {}", bearer_token.secret()),
+                            );
                             let response = self.client.send(&mut req).await?;
                             let headers = response.headers();
                             let retry_after = get_retry_after(headers);
@@ -1201,9 +1234,12 @@ pub mod private_clouds {
                             log::trace!("current provisioning_state: {provisioning_state:?}");
                             match provisioning_state {
                                 LroStatus::Succeeded => {
-                                    let mut req = azure_core::Request::new(self.url()?, azure_core::Method::Get);
+                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::Method::Get);
                                     let bearer_token = self.client.bearer_token().await?;
-                                    req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
                                     let response = self.client.send(&mut req).await?;
                                     return Response(response).into_body().await;
                                 }
@@ -1232,42 +1268,42 @@ pub mod private_clouds {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::PrivateCloud> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::PrivateCloud = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
             pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::headers::HeaderName::from_static("location"))
+                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
             }
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -1305,17 +1341,20 @@ pub mod private_clouds {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Patch);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Patch);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::to_json(&this.private_cloud_update)?;
+                        let req_body = azure_core::json::to_json(&this.private_cloud_update)?;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}",
@@ -1357,9 +1396,12 @@ pub mod private_clouds {
                     let location = get_location(headers, FinalState::Location)?;
                     if let Some(url) = location {
                         loop {
-                            let mut req = azure_core::Request::new(url.clone(), azure_core::Method::Get);
+                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::Method::Get);
                             let bearer_token = self.client.bearer_token().await?;
-                            req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                            req.insert_header(
+                                azure_core::http::headers::AUTHORIZATION,
+                                format!("Bearer {}", bearer_token.secret()),
+                            );
                             let response = self.client.send(&mut req).await?;
                             let headers = response.headers();
                             let retry_after = get_retry_after(headers);
@@ -1373,9 +1415,12 @@ pub mod private_clouds {
                             log::trace!("current provisioning_state: {provisioning_state:?}");
                             match provisioning_state {
                                 LroStatus::Succeeded => {
-                                    let mut req = azure_core::Request::new(self.url()?, azure_core::Method::Get);
+                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::Method::Get);
                                     let bearer_token = self.client.bearer_token().await?;
-                                    req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
                                     let response = self.client.send(&mut req).await?;
                                     return Response(response).into_body().await;
                                 }
@@ -1404,37 +1449,37 @@ pub mod private_clouds {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
             pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::headers::HeaderName::from_static("location"))
+                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
             }
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -1471,16 +1516,19 @@ pub mod private_clouds {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Delete);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Delete);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         let req_body = azure_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}",
@@ -1502,27 +1550,27 @@ pub mod private_clouds {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::AdminCredentials> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::AdminCredentials = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -1561,17 +1609,20 @@ pub mod private_clouds {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Post);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Post);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         let req_body = azure_core::EMPTY_BODY;
-                        req.insert_header(azure_core::headers::CONTENT_LENGTH, "0");
+                        req.insert_header(azure_core::http::headers::CONTENT_LENGTH, "0");
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/listAdminCredentials",
@@ -1605,37 +1656,37 @@ pub mod private_clouds {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
             pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::headers::HeaderName::from_static("location"))
+                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
             }
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -1672,17 +1723,20 @@ pub mod private_clouds {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Post);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Post);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         let req_body = azure_core::EMPTY_BODY;
-                        req.insert_header(azure_core::headers::CONTENT_LENGTH, "0");
+                        req.insert_header(azure_core::http::headers::CONTENT_LENGTH, "0");
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/rotateNsxtPassword",
@@ -1704,37 +1758,37 @@ pub mod private_clouds {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
             pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::headers::HeaderName::from_static("location"))
+                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
             }
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -1771,17 +1825,20 @@ pub mod private_clouds {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Post);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Post);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         let req_body = azure_core::EMPTY_BODY;
-                        req.insert_header(azure_core::headers::CONTENT_LENGTH, "0");
+                        req.insert_header(azure_core::http::headers::CONTENT_LENGTH, "0");
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/rotateVcenterPassword",
@@ -1823,27 +1880,27 @@ pub mod skus {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::PagedResourceSku> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::PagedResourceSku = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -1880,9 +1937,12 @@ pub mod skus {
                             Some(value) => {
                                 url.set_path("");
                                 url = url.join(&value)?;
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                req.insert_header(
+                                    azure_core::http::headers::AUTHORIZATION,
+                                    format!("Bearer {}", bearer_token.secret()),
+                                );
                                 let has_api_version_already =
                                     req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
                                 if !has_api_version_already {
@@ -1895,9 +1955,12 @@ pub mod skus {
                                 this.client.send(&mut req).await?
                             }
                             None => {
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                req.insert_header(
+                                    azure_core::http::headers::AUTHORIZATION,
+                                    format!("Bearer {}", bearer_token.secret()),
+                                );
                                 let req_body = azure_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
@@ -1915,7 +1978,7 @@ pub mod skus {
                 };
                 azure_core::Pageable::new(make_request)
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!("/subscriptions/{}/providers/Microsoft.AVS/skus", &self.subscription_id));
                 let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
@@ -2032,27 +2095,27 @@ pub mod addons {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::AddonList> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::AddonList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -2091,9 +2154,12 @@ pub mod addons {
                             Some(value) => {
                                 url.set_path("");
                                 url = url.join(&value)?;
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                req.insert_header(
+                                    azure_core::http::headers::AUTHORIZATION,
+                                    format!("Bearer {}", bearer_token.secret()),
+                                );
                                 let has_api_version_already =
                                     req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
                                 if !has_api_version_already {
@@ -2106,9 +2172,12 @@ pub mod addons {
                                 this.client.send(&mut req).await?
                             }
                             None => {
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                req.insert_header(
+                                    azure_core::http::headers::AUTHORIZATION,
+                                    format!("Bearer {}", bearer_token.secret()),
+                                );
                                 let req_body = azure_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
@@ -2126,7 +2195,7 @@ pub mod addons {
                 };
                 azure_core::Pageable::new(make_request)
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/addons",
@@ -2148,27 +2217,27 @@ pub mod addons {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::Addon> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::Addon = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -2208,16 +2277,19 @@ pub mod addons {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         let req_body = azure_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/addons/{}",
@@ -2251,38 +2323,38 @@ pub mod addons {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::Addon> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::Addon = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -2321,17 +2393,20 @@ pub mod addons {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Put);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Put);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::to_json(&this.addon)?;
+                        let req_body = azure_core::json::to_json(&this.addon)?;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/addons/{}",
@@ -2373,9 +2448,12 @@ pub mod addons {
                     let location = get_location(headers, FinalState::AzureAsyncOperation)?;
                     if let Some(url) = location {
                         loop {
-                            let mut req = azure_core::Request::new(url.clone(), azure_core::Method::Get);
+                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::Method::Get);
                             let bearer_token = self.client.bearer_token().await?;
-                            req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                            req.insert_header(
+                                azure_core::http::headers::AUTHORIZATION,
+                                format!("Bearer {}", bearer_token.secret()),
+                            );
                             let response = self.client.send(&mut req).await?;
                             let headers = response.headers();
                             let retry_after = get_retry_after(headers);
@@ -2389,9 +2467,12 @@ pub mod addons {
                             log::trace!("current provisioning_state: {provisioning_state:?}");
                             match provisioning_state {
                                 LroStatus::Succeeded => {
-                                    let mut req = azure_core::Request::new(self.url()?, azure_core::Method::Get);
+                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::Method::Get);
                                     let bearer_token = self.client.bearer_token().await?;
-                                    req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
                                     let response = self.client.send(&mut req).await?;
                                     return Response(response).into_body().await;
                                 }
@@ -2420,37 +2501,37 @@ pub mod addons {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
             pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::headers::HeaderName::from_static("location"))
+                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
             }
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -2488,16 +2569,19 @@ pub mod addons {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Delete);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Delete);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         let req_body = azure_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/addons/{}",
@@ -2617,27 +2701,27 @@ pub mod authorizations {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::ExpressRouteAuthorizationList> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::ExpressRouteAuthorizationList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -2676,9 +2760,12 @@ pub mod authorizations {
                             Some(value) => {
                                 url.set_path("");
                                 url = url.join(&value)?;
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                req.insert_header(
+                                    azure_core::http::headers::AUTHORIZATION,
+                                    format!("Bearer {}", bearer_token.secret()),
+                                );
                                 let has_api_version_already =
                                     req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
                                 if !has_api_version_already {
@@ -2691,9 +2778,12 @@ pub mod authorizations {
                                 this.client.send(&mut req).await?
                             }
                             None => {
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                req.insert_header(
+                                    azure_core::http::headers::AUTHORIZATION,
+                                    format!("Bearer {}", bearer_token.secret()),
+                                );
                                 let req_body = azure_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
@@ -2711,7 +2801,7 @@ pub mod authorizations {
                 };
                 azure_core::Pageable::new(make_request)
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/authorizations",
@@ -2733,27 +2823,27 @@ pub mod authorizations {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::ExpressRouteAuthorization> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::ExpressRouteAuthorization = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -2793,16 +2883,19 @@ pub mod authorizations {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         let req_body = azure_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/authorizations/{}",
@@ -2836,38 +2929,38 @@ pub mod authorizations {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::ExpressRouteAuthorization> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::ExpressRouteAuthorization = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -2906,17 +2999,20 @@ pub mod authorizations {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Put);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Put);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::to_json(&this.authorization)?;
+                        let req_body = azure_core::json::to_json(&this.authorization)?;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/authorizations/{}",
@@ -2958,9 +3054,12 @@ pub mod authorizations {
                     let location = get_location(headers, FinalState::AzureAsyncOperation)?;
                     if let Some(url) = location {
                         loop {
-                            let mut req = azure_core::Request::new(url.clone(), azure_core::Method::Get);
+                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::Method::Get);
                             let bearer_token = self.client.bearer_token().await?;
-                            req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                            req.insert_header(
+                                azure_core::http::headers::AUTHORIZATION,
+                                format!("Bearer {}", bearer_token.secret()),
+                            );
                             let response = self.client.send(&mut req).await?;
                             let headers = response.headers();
                             let retry_after = get_retry_after(headers);
@@ -2974,9 +3073,12 @@ pub mod authorizations {
                             log::trace!("current provisioning_state: {provisioning_state:?}");
                             match provisioning_state {
                                 LroStatus::Succeeded => {
-                                    let mut req = azure_core::Request::new(self.url()?, azure_core::Method::Get);
+                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::Method::Get);
                                     let bearer_token = self.client.bearer_token().await?;
-                                    req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
                                     let response = self.client.send(&mut req).await?;
                                     return Response(response).into_body().await;
                                 }
@@ -3005,37 +3107,37 @@ pub mod authorizations {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
             pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::headers::HeaderName::from_static("location"))
+                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
             }
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -3073,16 +3175,19 @@ pub mod authorizations {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Delete);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Delete);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         let req_body = azure_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/authorizations/{}",
@@ -3202,27 +3307,27 @@ pub mod cloud_links {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::CloudLinkList> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::CloudLinkList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -3261,9 +3366,12 @@ pub mod cloud_links {
                             Some(value) => {
                                 url.set_path("");
                                 url = url.join(&value)?;
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                req.insert_header(
+                                    azure_core::http::headers::AUTHORIZATION,
+                                    format!("Bearer {}", bearer_token.secret()),
+                                );
                                 let has_api_version_already =
                                     req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
                                 if !has_api_version_already {
@@ -3276,9 +3384,12 @@ pub mod cloud_links {
                                 this.client.send(&mut req).await?
                             }
                             None => {
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                req.insert_header(
+                                    azure_core::http::headers::AUTHORIZATION,
+                                    format!("Bearer {}", bearer_token.secret()),
+                                );
                                 let req_body = azure_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
@@ -3296,7 +3407,7 @@ pub mod cloud_links {
                 };
                 azure_core::Pageable::new(make_request)
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/cloudLinks",
@@ -3318,27 +3429,27 @@ pub mod cloud_links {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::CloudLink> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::CloudLink = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -3378,16 +3489,19 @@ pub mod cloud_links {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         let req_body = azure_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/cloudLinks/{}",
@@ -3421,38 +3535,38 @@ pub mod cloud_links {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::CloudLink> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::CloudLink = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -3491,17 +3605,20 @@ pub mod cloud_links {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Put);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Put);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::to_json(&this.cloud_link)?;
+                        let req_body = azure_core::json::to_json(&this.cloud_link)?;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/cloudLinks/{}",
@@ -3543,9 +3660,12 @@ pub mod cloud_links {
                     let location = get_location(headers, FinalState::AzureAsyncOperation)?;
                     if let Some(url) = location {
                         loop {
-                            let mut req = azure_core::Request::new(url.clone(), azure_core::Method::Get);
+                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::Method::Get);
                             let bearer_token = self.client.bearer_token().await?;
-                            req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                            req.insert_header(
+                                azure_core::http::headers::AUTHORIZATION,
+                                format!("Bearer {}", bearer_token.secret()),
+                            );
                             let response = self.client.send(&mut req).await?;
                             let headers = response.headers();
                             let retry_after = get_retry_after(headers);
@@ -3559,9 +3679,12 @@ pub mod cloud_links {
                             log::trace!("current provisioning_state: {provisioning_state:?}");
                             match provisioning_state {
                                 LroStatus::Succeeded => {
-                                    let mut req = azure_core::Request::new(self.url()?, azure_core::Method::Get);
+                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::Method::Get);
                                     let bearer_token = self.client.bearer_token().await?;
-                                    req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
                                     let response = self.client.send(&mut req).await?;
                                     return Response(response).into_body().await;
                                 }
@@ -3590,37 +3713,37 @@ pub mod cloud_links {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
             pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::headers::HeaderName::from_static("location"))
+                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
             }
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -3658,16 +3781,19 @@ pub mod cloud_links {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Delete);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Delete);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         let req_body = azure_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/cloudLinks/{}",
@@ -3834,27 +3960,27 @@ pub mod clusters {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::ClusterList> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::ClusterList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -3893,9 +4019,12 @@ pub mod clusters {
                             Some(value) => {
                                 url.set_path("");
                                 url = url.join(&value)?;
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                req.insert_header(
+                                    azure_core::http::headers::AUTHORIZATION,
+                                    format!("Bearer {}", bearer_token.secret()),
+                                );
                                 let has_api_version_already =
                                     req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
                                 if !has_api_version_already {
@@ -3908,9 +4037,12 @@ pub mod clusters {
                                 this.client.send(&mut req).await?
                             }
                             None => {
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                req.insert_header(
+                                    azure_core::http::headers::AUTHORIZATION,
+                                    format!("Bearer {}", bearer_token.secret()),
+                                );
                                 let req_body = azure_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
@@ -3928,7 +4060,7 @@ pub mod clusters {
                 };
                 azure_core::Pageable::new(make_request)
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/clusters",
@@ -3950,27 +4082,27 @@ pub mod clusters {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::Cluster> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::Cluster = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -4010,16 +4142,19 @@ pub mod clusters {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         let req_body = azure_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/clusters/{}",
@@ -4053,38 +4188,38 @@ pub mod clusters {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::Cluster> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::Cluster = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -4123,17 +4258,20 @@ pub mod clusters {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Put);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Put);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::to_json(&this.cluster)?;
+                        let req_body = azure_core::json::to_json(&this.cluster)?;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/clusters/{}",
@@ -4175,9 +4313,12 @@ pub mod clusters {
                     let location = get_location(headers, FinalState::AzureAsyncOperation)?;
                     if let Some(url) = location {
                         loop {
-                            let mut req = azure_core::Request::new(url.clone(), azure_core::Method::Get);
+                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::Method::Get);
                             let bearer_token = self.client.bearer_token().await?;
-                            req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                            req.insert_header(
+                                azure_core::http::headers::AUTHORIZATION,
+                                format!("Bearer {}", bearer_token.secret()),
+                            );
                             let response = self.client.send(&mut req).await?;
                             let headers = response.headers();
                             let retry_after = get_retry_after(headers);
@@ -4191,9 +4332,12 @@ pub mod clusters {
                             log::trace!("current provisioning_state: {provisioning_state:?}");
                             match provisioning_state {
                                 LroStatus::Succeeded => {
-                                    let mut req = azure_core::Request::new(self.url()?, azure_core::Method::Get);
+                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::Method::Get);
                                     let bearer_token = self.client.bearer_token().await?;
-                                    req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
                                     let response = self.client.send(&mut req).await?;
                                     return Response(response).into_body().await;
                                 }
@@ -4222,42 +4366,42 @@ pub mod clusters {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::Cluster> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::Cluster = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
             pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::headers::HeaderName::from_static("location"))
+                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
             }
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -4296,17 +4440,20 @@ pub mod clusters {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Patch);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Patch);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::to_json(&this.cluster_update)?;
+                        let req_body = azure_core::json::to_json(&this.cluster_update)?;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/clusters/{}",
@@ -4348,9 +4495,12 @@ pub mod clusters {
                     let location = get_location(headers, FinalState::Location)?;
                     if let Some(url) = location {
                         loop {
-                            let mut req = azure_core::Request::new(url.clone(), azure_core::Method::Get);
+                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::Method::Get);
                             let bearer_token = self.client.bearer_token().await?;
-                            req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                            req.insert_header(
+                                azure_core::http::headers::AUTHORIZATION,
+                                format!("Bearer {}", bearer_token.secret()),
+                            );
                             let response = self.client.send(&mut req).await?;
                             let headers = response.headers();
                             let retry_after = get_retry_after(headers);
@@ -4364,9 +4514,12 @@ pub mod clusters {
                             log::trace!("current provisioning_state: {provisioning_state:?}");
                             match provisioning_state {
                                 LroStatus::Succeeded => {
-                                    let mut req = azure_core::Request::new(self.url()?, azure_core::Method::Get);
+                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::Method::Get);
                                     let bearer_token = self.client.bearer_token().await?;
-                                    req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
                                     let response = self.client.send(&mut req).await?;
                                     return Response(response).into_body().await;
                                 }
@@ -4395,37 +4548,37 @@ pub mod clusters {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
             pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::headers::HeaderName::from_static("location"))
+                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
             }
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -4463,16 +4616,19 @@ pub mod clusters {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Delete);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Delete);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         let req_body = azure_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/clusters/{}",
@@ -4494,27 +4650,27 @@ pub mod clusters {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::ClusterZoneList> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::ClusterZoneList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -4554,17 +4710,20 @@ pub mod clusters {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Post);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Post);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         let req_body = azure_core::EMPTY_BODY;
-                        req.insert_header(azure_core::headers::CONTENT_LENGTH, "0");
+                        req.insert_header(azure_core::http::headers::CONTENT_LENGTH, "0");
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/clusters/{}/listZones",
@@ -4708,27 +4867,27 @@ pub mod datastores {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::DatastoreList> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::DatastoreList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -4768,9 +4927,12 @@ pub mod datastores {
                             Some(value) => {
                                 url.set_path("");
                                 url = url.join(&value)?;
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                req.insert_header(
+                                    azure_core::http::headers::AUTHORIZATION,
+                                    format!("Bearer {}", bearer_token.secret()),
+                                );
                                 let has_api_version_already =
                                     req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
                                 if !has_api_version_already {
@@ -4783,9 +4945,12 @@ pub mod datastores {
                                 this.client.send(&mut req).await?
                             }
                             None => {
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                req.insert_header(
+                                    azure_core::http::headers::AUTHORIZATION,
+                                    format!("Bearer {}", bearer_token.secret()),
+                                );
                                 let req_body = azure_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
@@ -4803,7 +4968,7 @@ pub mod datastores {
                 };
                 azure_core::Pageable::new(make_request)
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/clusters/{}/datastores",
@@ -4825,27 +4990,27 @@ pub mod datastores {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::Datastore> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::Datastore = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -4886,16 +5051,19 @@ pub mod datastores {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         let req_body = azure_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/clusters/{}/datastores/{}",
@@ -4929,38 +5097,38 @@ pub mod datastores {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::Datastore> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::Datastore = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -5000,17 +5168,20 @@ pub mod datastores {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Put);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Put);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::to_json(&this.datastore)?;
+                        let req_body = azure_core::json::to_json(&this.datastore)?;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/clusters/{}/datastores/{}",
@@ -5052,9 +5223,12 @@ pub mod datastores {
                     let location = get_location(headers, FinalState::AzureAsyncOperation)?;
                     if let Some(url) = location {
                         loop {
-                            let mut req = azure_core::Request::new(url.clone(), azure_core::Method::Get);
+                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::Method::Get);
                             let bearer_token = self.client.bearer_token().await?;
-                            req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                            req.insert_header(
+                                azure_core::http::headers::AUTHORIZATION,
+                                format!("Bearer {}", bearer_token.secret()),
+                            );
                             let response = self.client.send(&mut req).await?;
                             let headers = response.headers();
                             let retry_after = get_retry_after(headers);
@@ -5068,9 +5242,12 @@ pub mod datastores {
                             log::trace!("current provisioning_state: {provisioning_state:?}");
                             match provisioning_state {
                                 LroStatus::Succeeded => {
-                                    let mut req = azure_core::Request::new(self.url()?, azure_core::Method::Get);
+                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::Method::Get);
                                     let bearer_token = self.client.bearer_token().await?;
-                                    req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
                                     let response = self.client.send(&mut req).await?;
                                     return Response(response).into_body().await;
                                 }
@@ -5099,37 +5276,37 @@ pub mod datastores {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
             pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::headers::HeaderName::from_static("location"))
+                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
             }
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -5168,16 +5345,19 @@ pub mod datastores {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Delete);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Delete);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         let req_body = azure_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/clusters/{}/datastores/{}",
@@ -5256,27 +5436,27 @@ pub mod hosts {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::HostListResult> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::HostListResult = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -5316,9 +5496,12 @@ pub mod hosts {
                             Some(value) => {
                                 url.set_path("");
                                 url = url.join(&value)?;
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                req.insert_header(
+                                    azure_core::http::headers::AUTHORIZATION,
+                                    format!("Bearer {}", bearer_token.secret()),
+                                );
                                 let has_api_version_already =
                                     req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
                                 if !has_api_version_already {
@@ -5331,9 +5514,12 @@ pub mod hosts {
                                 this.client.send(&mut req).await?
                             }
                             None => {
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                req.insert_header(
+                                    azure_core::http::headers::AUTHORIZATION,
+                                    format!("Bearer {}", bearer_token.secret()),
+                                );
                                 let req_body = azure_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
@@ -5351,7 +5537,7 @@ pub mod hosts {
                 };
                 azure_core::Pageable::new(make_request)
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/clusters/{}/hosts",
@@ -5373,27 +5559,27 @@ pub mod hosts {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::Host> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::Host = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -5434,16 +5620,19 @@ pub mod hosts {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         let req_body = azure_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/clusters/{}/hosts/{}",
@@ -5615,27 +5804,27 @@ pub mod placement_policies {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::PlacementPoliciesList> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::PlacementPoliciesList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -5675,9 +5864,12 @@ pub mod placement_policies {
                             Some(value) => {
                                 url.set_path("");
                                 url = url.join(&value)?;
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                req.insert_header(
+                                    azure_core::http::headers::AUTHORIZATION,
+                                    format!("Bearer {}", bearer_token.secret()),
+                                );
                                 let has_api_version_already =
                                     req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
                                 if !has_api_version_already {
@@ -5690,9 +5882,12 @@ pub mod placement_policies {
                                 this.client.send(&mut req).await?
                             }
                             None => {
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                req.insert_header(
+                                    azure_core::http::headers::AUTHORIZATION,
+                                    format!("Bearer {}", bearer_token.secret()),
+                                );
                                 let req_body = azure_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
@@ -5710,7 +5905,7 @@ pub mod placement_policies {
                 };
                 azure_core::Pageable::new(make_request)
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/clusters/{}/placementPolicies",
@@ -5732,27 +5927,27 @@ pub mod placement_policies {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::PlacementPolicy> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::PlacementPolicy = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -5793,16 +5988,19 @@ pub mod placement_policies {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         let req_body = azure_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/clusters/{}/placementPolicies/{}",
@@ -5840,38 +6038,38 @@ pub mod placement_policies {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::PlacementPolicy> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::PlacementPolicy = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -5911,17 +6109,20 @@ pub mod placement_policies {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Put);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Put);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::to_json(&this.placement_policy)?;
+                        let req_body = azure_core::json::to_json(&this.placement_policy)?;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/clusters/{}/placementPolicies/{}",
@@ -5967,9 +6168,12 @@ pub mod placement_policies {
                     let location = get_location(headers, FinalState::AzureAsyncOperation)?;
                     if let Some(url) = location {
                         loop {
-                            let mut req = azure_core::Request::new(url.clone(), azure_core::Method::Get);
+                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::Method::Get);
                             let bearer_token = self.client.bearer_token().await?;
-                            req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                            req.insert_header(
+                                azure_core::http::headers::AUTHORIZATION,
+                                format!("Bearer {}", bearer_token.secret()),
+                            );
                             let response = self.client.send(&mut req).await?;
                             let headers = response.headers();
                             let retry_after = get_retry_after(headers);
@@ -5983,9 +6187,12 @@ pub mod placement_policies {
                             log::trace!("current provisioning_state: {provisioning_state:?}");
                             match provisioning_state {
                                 LroStatus::Succeeded => {
-                                    let mut req = azure_core::Request::new(self.url()?, azure_core::Method::Get);
+                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::Method::Get);
                                     let bearer_token = self.client.bearer_token().await?;
-                                    req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
                                     let response = self.client.send(&mut req).await?;
                                     return Response(response).into_body().await;
                                 }
@@ -6014,42 +6221,42 @@ pub mod placement_policies {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::PlacementPolicy> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::PlacementPolicy = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
             pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::headers::HeaderName::from_static("location"))
+                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
             }
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -6089,17 +6296,20 @@ pub mod placement_policies {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Patch);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Patch);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::to_json(&this.placement_policy_update)?;
+                        let req_body = azure_core::json::to_json(&this.placement_policy_update)?;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/clusters/{}/placementPolicies/{}",
@@ -6145,9 +6355,12 @@ pub mod placement_policies {
                     let location = get_location(headers, FinalState::Location)?;
                     if let Some(url) = location {
                         loop {
-                            let mut req = azure_core::Request::new(url.clone(), azure_core::Method::Get);
+                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::Method::Get);
                             let bearer_token = self.client.bearer_token().await?;
-                            req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                            req.insert_header(
+                                azure_core::http::headers::AUTHORIZATION,
+                                format!("Bearer {}", bearer_token.secret()),
+                            );
                             let response = self.client.send(&mut req).await?;
                             let headers = response.headers();
                             let retry_after = get_retry_after(headers);
@@ -6161,9 +6374,12 @@ pub mod placement_policies {
                             log::trace!("current provisioning_state: {provisioning_state:?}");
                             match provisioning_state {
                                 LroStatus::Succeeded => {
-                                    let mut req = azure_core::Request::new(self.url()?, azure_core::Method::Get);
+                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::Method::Get);
                                     let bearer_token = self.client.bearer_token().await?;
-                                    req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
                                     let response = self.client.send(&mut req).await?;
                                     return Response(response).into_body().await;
                                 }
@@ -6192,37 +6408,37 @@ pub mod placement_policies {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
             pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::headers::HeaderName::from_static("location"))
+                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
             }
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -6261,16 +6477,19 @@ pub mod placement_policies {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Delete);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Delete);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         let req_body = azure_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/clusters/{}/placementPolicies/{}",
@@ -6381,27 +6600,27 @@ pub mod virtual_machines {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::VirtualMachinesList> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::VirtualMachinesList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -6441,9 +6660,12 @@ pub mod virtual_machines {
                             Some(value) => {
                                 url.set_path("");
                                 url = url.join(&value)?;
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                req.insert_header(
+                                    azure_core::http::headers::AUTHORIZATION,
+                                    format!("Bearer {}", bearer_token.secret()),
+                                );
                                 let has_api_version_already =
                                     req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
                                 if !has_api_version_already {
@@ -6456,9 +6678,12 @@ pub mod virtual_machines {
                                 this.client.send(&mut req).await?
                             }
                             None => {
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                req.insert_header(
+                                    azure_core::http::headers::AUTHORIZATION,
+                                    format!("Bearer {}", bearer_token.secret()),
+                                );
                                 let req_body = azure_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
@@ -6476,7 +6701,7 @@ pub mod virtual_machines {
                 };
                 azure_core::Pageable::new(make_request)
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/clusters/{}/virtualMachines",
@@ -6498,27 +6723,27 @@ pub mod virtual_machines {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::VirtualMachine> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::VirtualMachine = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -6559,16 +6784,19 @@ pub mod virtual_machines {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         let req_body = azure_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/clusters/{}/virtualMachines/{}",
@@ -6606,37 +6834,37 @@ pub mod virtual_machines {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
             pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::headers::HeaderName::from_static("location"))
+                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
             }
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -6676,17 +6904,20 @@ pub mod virtual_machines {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Post);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Post);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::to_json(&this.restrict_movement)?;
+                        let req_body = azure_core::json::to_json(&this.restrict_movement)?;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url . set_path (& format ! ("/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/clusters/{}/virtualMachines/{}/restrictMovement" , & self . subscription_id , & self . resource_group_name , & self . private_cloud_name , & self . cluster_name , & self . virtual_machine_id)) ;
                 let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
@@ -6803,27 +7034,27 @@ pub mod global_reach_connections {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::GlobalReachConnectionList> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::GlobalReachConnectionList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -6862,9 +7093,12 @@ pub mod global_reach_connections {
                             Some(value) => {
                                 url.set_path("");
                                 url = url.join(&value)?;
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                req.insert_header(
+                                    azure_core::http::headers::AUTHORIZATION,
+                                    format!("Bearer {}", bearer_token.secret()),
+                                );
                                 let has_api_version_already =
                                     req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
                                 if !has_api_version_already {
@@ -6877,9 +7111,12 @@ pub mod global_reach_connections {
                                 this.client.send(&mut req).await?
                             }
                             None => {
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                req.insert_header(
+                                    azure_core::http::headers::AUTHORIZATION,
+                                    format!("Bearer {}", bearer_token.secret()),
+                                );
                                 let req_body = azure_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
@@ -6897,7 +7134,7 @@ pub mod global_reach_connections {
                 };
                 azure_core::Pageable::new(make_request)
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/globalReachConnections",
@@ -6919,27 +7156,27 @@ pub mod global_reach_connections {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::GlobalReachConnection> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::GlobalReachConnection = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -6979,16 +7216,19 @@ pub mod global_reach_connections {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         let req_body = azure_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/globalReachConnections/{}",
@@ -7022,38 +7262,38 @@ pub mod global_reach_connections {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::GlobalReachConnection> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::GlobalReachConnection = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -7092,17 +7332,20 @@ pub mod global_reach_connections {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Put);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Put);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::to_json(&this.global_reach_connection)?;
+                        let req_body = azure_core::json::to_json(&this.global_reach_connection)?;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/globalReachConnections/{}",
@@ -7144,9 +7387,12 @@ pub mod global_reach_connections {
                     let location = get_location(headers, FinalState::AzureAsyncOperation)?;
                     if let Some(url) = location {
                         loop {
-                            let mut req = azure_core::Request::new(url.clone(), azure_core::Method::Get);
+                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::Method::Get);
                             let bearer_token = self.client.bearer_token().await?;
-                            req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                            req.insert_header(
+                                azure_core::http::headers::AUTHORIZATION,
+                                format!("Bearer {}", bearer_token.secret()),
+                            );
                             let response = self.client.send(&mut req).await?;
                             let headers = response.headers();
                             let retry_after = get_retry_after(headers);
@@ -7160,9 +7406,12 @@ pub mod global_reach_connections {
                             log::trace!("current provisioning_state: {provisioning_state:?}");
                             match provisioning_state {
                                 LroStatus::Succeeded => {
-                                    let mut req = azure_core::Request::new(self.url()?, azure_core::Method::Get);
+                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::Method::Get);
                                     let bearer_token = self.client.bearer_token().await?;
-                                    req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
                                     let response = self.client.send(&mut req).await?;
                                     return Response(response).into_body().await;
                                 }
@@ -7191,37 +7440,37 @@ pub mod global_reach_connections {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
             pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::headers::HeaderName::from_static("location"))
+                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
             }
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -7259,16 +7508,19 @@ pub mod global_reach_connections {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Delete);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Delete);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         let req_body = azure_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/globalReachConnections/{}",
@@ -7388,27 +7640,27 @@ pub mod hcx_enterprise_sites {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::HcxEnterpriseSiteList> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::HcxEnterpriseSiteList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -7447,9 +7699,12 @@ pub mod hcx_enterprise_sites {
                             Some(value) => {
                                 url.set_path("");
                                 url = url.join(&value)?;
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                req.insert_header(
+                                    azure_core::http::headers::AUTHORIZATION,
+                                    format!("Bearer {}", bearer_token.secret()),
+                                );
                                 let has_api_version_already =
                                     req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
                                 if !has_api_version_already {
@@ -7462,9 +7717,12 @@ pub mod hcx_enterprise_sites {
                                 this.client.send(&mut req).await?
                             }
                             None => {
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                req.insert_header(
+                                    azure_core::http::headers::AUTHORIZATION,
+                                    format!("Bearer {}", bearer_token.secret()),
+                                );
                                 let req_body = azure_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
@@ -7482,7 +7740,7 @@ pub mod hcx_enterprise_sites {
                 };
                 azure_core::Pageable::new(make_request)
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/hcxEnterpriseSites",
@@ -7504,27 +7762,27 @@ pub mod hcx_enterprise_sites {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::HcxEnterpriseSite> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::HcxEnterpriseSite = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -7564,16 +7822,19 @@ pub mod hcx_enterprise_sites {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         let req_body = azure_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/hcxEnterpriseSites/{}",
@@ -7607,27 +7868,27 @@ pub mod hcx_enterprise_sites {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::HcxEnterpriseSite> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::HcxEnterpriseSite = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -7668,17 +7929,20 @@ pub mod hcx_enterprise_sites {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Put);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Put);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::to_json(&this.hcx_enterprise_site)?;
+                        let req_body = azure_core::json::to_json(&this.hcx_enterprise_site)?;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/hcxEnterpriseSites/{}",
@@ -7712,22 +7976,22 @@ pub mod hcx_enterprise_sites {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -7767,16 +8031,19 @@ pub mod hcx_enterprise_sites {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Delete);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Delete);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         let req_body = azure_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/hcxEnterpriseSites/{}",
@@ -7887,27 +8154,27 @@ pub mod iscsi_paths {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::IscsiPathListResult> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::IscsiPathListResult = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -7946,9 +8213,12 @@ pub mod iscsi_paths {
                             Some(value) => {
                                 url.set_path("");
                                 url = url.join(&value)?;
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                req.insert_header(
+                                    azure_core::http::headers::AUTHORIZATION,
+                                    format!("Bearer {}", bearer_token.secret()),
+                                );
                                 let has_api_version_already =
                                     req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
                                 if !has_api_version_already {
@@ -7961,9 +8231,12 @@ pub mod iscsi_paths {
                                 this.client.send(&mut req).await?
                             }
                             None => {
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                req.insert_header(
+                                    azure_core::http::headers::AUTHORIZATION,
+                                    format!("Bearer {}", bearer_token.secret()),
+                                );
                                 let req_body = azure_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
@@ -7981,7 +8254,7 @@ pub mod iscsi_paths {
                 };
                 azure_core::Pageable::new(make_request)
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/iscsiPaths",
@@ -8003,27 +8276,27 @@ pub mod iscsi_paths {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::IscsiPath> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::IscsiPath = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -8062,16 +8335,19 @@ pub mod iscsi_paths {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         let req_body = azure_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/iscsiPaths/default",
@@ -8105,38 +8381,38 @@ pub mod iscsi_paths {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::IscsiPath> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::IscsiPath = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -8174,17 +8450,20 @@ pub mod iscsi_paths {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Put);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Put);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::to_json(&this.resource)?;
+                        let req_body = azure_core::json::to_json(&this.resource)?;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/iscsiPaths/default",
@@ -8226,9 +8505,12 @@ pub mod iscsi_paths {
                     let location = get_location(headers, FinalState::AzureAsyncOperation)?;
                     if let Some(url) = location {
                         loop {
-                            let mut req = azure_core::Request::new(url.clone(), azure_core::Method::Get);
+                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::Method::Get);
                             let bearer_token = self.client.bearer_token().await?;
-                            req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                            req.insert_header(
+                                azure_core::http::headers::AUTHORIZATION,
+                                format!("Bearer {}", bearer_token.secret()),
+                            );
                             let response = self.client.send(&mut req).await?;
                             let headers = response.headers();
                             let retry_after = get_retry_after(headers);
@@ -8242,9 +8524,12 @@ pub mod iscsi_paths {
                             log::trace!("current provisioning_state: {provisioning_state:?}");
                             match provisioning_state {
                                 LroStatus::Succeeded => {
-                                    let mut req = azure_core::Request::new(self.url()?, azure_core::Method::Get);
+                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::Method::Get);
                                     let bearer_token = self.client.bearer_token().await?;
-                                    req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
                                     let response = self.client.send(&mut req).await?;
                                     return Response(response).into_body().await;
                                 }
@@ -8273,37 +8558,37 @@ pub mod iscsi_paths {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
             pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::headers::HeaderName::from_static("location"))
+                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
             }
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -8340,16 +8625,19 @@ pub mod iscsi_paths {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Delete);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Delete);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         let req_body = azure_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/iscsiPaths/default",
@@ -8422,27 +8710,27 @@ pub mod provisioned_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::ProvisionedNetworkListResult> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::ProvisionedNetworkListResult = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -8481,9 +8769,12 @@ pub mod provisioned_networks {
                             Some(value) => {
                                 url.set_path("");
                                 url = url.join(&value)?;
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                req.insert_header(
+                                    azure_core::http::headers::AUTHORIZATION,
+                                    format!("Bearer {}", bearer_token.secret()),
+                                );
                                 let has_api_version_already =
                                     req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
                                 if !has_api_version_already {
@@ -8496,9 +8787,12 @@ pub mod provisioned_networks {
                                 this.client.send(&mut req).await?
                             }
                             None => {
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                req.insert_header(
+                                    azure_core::http::headers::AUTHORIZATION,
+                                    format!("Bearer {}", bearer_token.secret()),
+                                );
                                 let req_body = azure_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
@@ -8516,7 +8810,7 @@ pub mod provisioned_networks {
                 };
                 azure_core::Pageable::new(make_request)
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/provisionedNetworks",
@@ -8538,27 +8832,27 @@ pub mod provisioned_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::ProvisionedNetwork> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::ProvisionedNetwork = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -8598,16 +8892,19 @@ pub mod provisioned_networks {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         let req_body = azure_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/provisionedNetworks/{}",
@@ -8739,27 +9036,27 @@ pub mod pure_storage_policies {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::PureStoragePolicyListResult> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::PureStoragePolicyListResult = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -8798,9 +9095,12 @@ pub mod pure_storage_policies {
                             Some(value) => {
                                 url.set_path("");
                                 url = url.join(&value)?;
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                req.insert_header(
+                                    azure_core::http::headers::AUTHORIZATION,
+                                    format!("Bearer {}", bearer_token.secret()),
+                                );
                                 let has_api_version_already =
                                     req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
                                 if !has_api_version_already {
@@ -8813,9 +9113,12 @@ pub mod pure_storage_policies {
                                 this.client.send(&mut req).await?
                             }
                             None => {
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                req.insert_header(
+                                    azure_core::http::headers::AUTHORIZATION,
+                                    format!("Bearer {}", bearer_token.secret()),
+                                );
                                 let req_body = azure_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
@@ -8833,7 +9136,7 @@ pub mod pure_storage_policies {
                 };
                 azure_core::Pageable::new(make_request)
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/pureStoragePolicies",
@@ -8855,27 +9158,27 @@ pub mod pure_storage_policies {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::PureStoragePolicy> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::PureStoragePolicy = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -8915,16 +9218,19 @@ pub mod pure_storage_policies {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         let req_body = azure_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/pureStoragePolicies/{}",
@@ -8958,43 +9264,43 @@ pub mod pure_storage_policies {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::PureStoragePolicy> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::PureStoragePolicy = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "A link to the status monitor"]
             pub fn azure_async_operation(&self) -> azure_core::Result<&str> {
                 self.0
-                    .get_str(&azure_core::headers::HeaderName::from_static("azure-asyncoperation"))
+                    .get_str(&azure_core::http::headers::HeaderName::from_static("azure-asyncoperation"))
             }
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -9033,17 +9339,20 @@ pub mod pure_storage_policies {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Put);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Put);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::to_json(&this.resource)?;
+                        let req_body = azure_core::json::to_json(&this.resource)?;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/pureStoragePolicies/{}",
@@ -9085,9 +9394,12 @@ pub mod pure_storage_policies {
                     let location = get_location(headers, FinalState::AzureAsyncOperation)?;
                     if let Some(url) = location {
                         loop {
-                            let mut req = azure_core::Request::new(url.clone(), azure_core::Method::Get);
+                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::Method::Get);
                             let bearer_token = self.client.bearer_token().await?;
-                            req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                            req.insert_header(
+                                azure_core::http::headers::AUTHORIZATION,
+                                format!("Bearer {}", bearer_token.secret()),
+                            );
                             let response = self.client.send(&mut req).await?;
                             let headers = response.headers();
                             let retry_after = get_retry_after(headers);
@@ -9101,9 +9413,12 @@ pub mod pure_storage_policies {
                             log::trace!("current provisioning_state: {provisioning_state:?}");
                             match provisioning_state {
                                 LroStatus::Succeeded => {
-                                    let mut req = azure_core::Request::new(self.url()?, azure_core::Method::Get);
+                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::Method::Get);
                                     let bearer_token = self.client.bearer_token().await?;
-                                    req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
                                     let response = self.client.send(&mut req).await?;
                                     return Response(response).into_body().await;
                                 }
@@ -9132,37 +9447,37 @@ pub mod pure_storage_policies {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
             pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::headers::HeaderName::from_static("location"))
+                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
             }
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -9200,16 +9515,19 @@ pub mod pure_storage_policies {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Delete);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Delete);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         let req_body = azure_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/pureStoragePolicies/{}",
@@ -9352,27 +9670,27 @@ pub mod script_executions {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::ScriptExecutionsList> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::ScriptExecutionsList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -9411,9 +9729,12 @@ pub mod script_executions {
                             Some(value) => {
                                 url.set_path("");
                                 url = url.join(&value)?;
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                req.insert_header(
+                                    azure_core::http::headers::AUTHORIZATION,
+                                    format!("Bearer {}", bearer_token.secret()),
+                                );
                                 let has_api_version_already =
                                     req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
                                 if !has_api_version_already {
@@ -9426,9 +9747,12 @@ pub mod script_executions {
                                 this.client.send(&mut req).await?
                             }
                             None => {
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                req.insert_header(
+                                    azure_core::http::headers::AUTHORIZATION,
+                                    format!("Bearer {}", bearer_token.secret()),
+                                );
                                 let req_body = azure_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
@@ -9446,7 +9770,7 @@ pub mod script_executions {
                 };
                 azure_core::Pageable::new(make_request)
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/scriptExecutions",
@@ -9468,27 +9792,27 @@ pub mod script_executions {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::ScriptExecution> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::ScriptExecution = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -9528,16 +9852,19 @@ pub mod script_executions {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         let req_body = azure_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/scriptExecutions/{}",
@@ -9571,38 +9898,38 @@ pub mod script_executions {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::ScriptExecution> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::ScriptExecution = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -9641,17 +9968,20 @@ pub mod script_executions {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Put);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Put);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::to_json(&this.script_execution)?;
+                        let req_body = azure_core::json::to_json(&this.script_execution)?;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/scriptExecutions/{}",
@@ -9693,9 +10023,12 @@ pub mod script_executions {
                     let location = get_location(headers, FinalState::AzureAsyncOperation)?;
                     if let Some(url) = location {
                         loop {
-                            let mut req = azure_core::Request::new(url.clone(), azure_core::Method::Get);
+                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::Method::Get);
                             let bearer_token = self.client.bearer_token().await?;
-                            req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                            req.insert_header(
+                                azure_core::http::headers::AUTHORIZATION,
+                                format!("Bearer {}", bearer_token.secret()),
+                            );
                             let response = self.client.send(&mut req).await?;
                             let headers = response.headers();
                             let retry_after = get_retry_after(headers);
@@ -9709,9 +10042,12 @@ pub mod script_executions {
                             log::trace!("current provisioning_state: {provisioning_state:?}");
                             match provisioning_state {
                                 LroStatus::Succeeded => {
-                                    let mut req = azure_core::Request::new(self.url()?, azure_core::Method::Get);
+                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::Method::Get);
                                     let bearer_token = self.client.bearer_token().await?;
-                                    req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
                                     let response = self.client.send(&mut req).await?;
                                     return Response(response).into_body().await;
                                 }
@@ -9740,37 +10076,37 @@ pub mod script_executions {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
             pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::headers::HeaderName::from_static("location"))
+                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
             }
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -9808,16 +10144,19 @@ pub mod script_executions {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Delete);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Delete);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         let req_body = azure_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/scriptExecutions/{}",
@@ -9839,27 +10178,27 @@ pub mod script_executions {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::ScriptExecution> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::ScriptExecution = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -9905,17 +10244,20 @@ pub mod script_executions {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Post);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Post);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::to_json(&this.script_output_stream_type)?;
+                        let req_body = azure_core::json::to_json(&this.script_output_stream_type)?;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/scriptExecutions/{}/getExecutionLogs",
@@ -10000,27 +10342,27 @@ pub mod script_packages {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::ScriptPackagesList> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::ScriptPackagesList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -10059,9 +10401,12 @@ pub mod script_packages {
                             Some(value) => {
                                 url.set_path("");
                                 url = url.join(&value)?;
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                req.insert_header(
+                                    azure_core::http::headers::AUTHORIZATION,
+                                    format!("Bearer {}", bearer_token.secret()),
+                                );
                                 let has_api_version_already =
                                     req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
                                 if !has_api_version_already {
@@ -10074,9 +10419,12 @@ pub mod script_packages {
                                 this.client.send(&mut req).await?
                             }
                             None => {
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                req.insert_header(
+                                    azure_core::http::headers::AUTHORIZATION,
+                                    format!("Bearer {}", bearer_token.secret()),
+                                );
                                 let req_body = azure_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
@@ -10094,7 +10442,7 @@ pub mod script_packages {
                 };
                 azure_core::Pageable::new(make_request)
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/scriptPackages",
@@ -10116,27 +10464,27 @@ pub mod script_packages {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::ScriptPackage> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::ScriptPackage = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -10176,16 +10524,19 @@ pub mod script_packages {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         let req_body = azure_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/scriptPackages/{}",
@@ -10276,27 +10627,27 @@ pub mod script_cmdlets {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::ScriptCmdletsList> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::ScriptCmdletsList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -10336,9 +10687,12 @@ pub mod script_cmdlets {
                             Some(value) => {
                                 url.set_path("");
                                 url = url.join(&value)?;
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                req.insert_header(
+                                    azure_core::http::headers::AUTHORIZATION,
+                                    format!("Bearer {}", bearer_token.secret()),
+                                );
                                 let has_api_version_already =
                                     req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
                                 if !has_api_version_already {
@@ -10351,9 +10705,12 @@ pub mod script_cmdlets {
                                 this.client.send(&mut req).await?
                             }
                             None => {
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                req.insert_header(
+                                    azure_core::http::headers::AUTHORIZATION,
+                                    format!("Bearer {}", bearer_token.secret()),
+                                );
                                 let req_body = azure_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
@@ -10371,7 +10728,7 @@ pub mod script_cmdlets {
                 };
                 azure_core::Pageable::new(make_request)
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/scriptPackages/{}/scriptCmdlets",
@@ -10393,27 +10750,27 @@ pub mod script_cmdlets {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::ScriptCmdlet> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::ScriptCmdlet = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -10454,16 +10811,19 @@ pub mod script_cmdlets {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         let req_body = azure_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/scriptPackages/{}/scriptCmdlets/{}",
@@ -11397,27 +11757,27 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkList> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::WorkloadNetworkList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -11456,9 +11816,12 @@ pub mod workload_networks {
                             Some(value) => {
                                 url.set_path("");
                                 url = url.join(&value)?;
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                req.insert_header(
+                                    azure_core::http::headers::AUTHORIZATION,
+                                    format!("Bearer {}", bearer_token.secret()),
+                                );
                                 let has_api_version_already =
                                     req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
                                 if !has_api_version_already {
@@ -11471,9 +11834,12 @@ pub mod workload_networks {
                                 this.client.send(&mut req).await?
                             }
                             None => {
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                req.insert_header(
+                                    azure_core::http::headers::AUTHORIZATION,
+                                    format!("Bearer {}", bearer_token.secret()),
+                                );
                                 let req_body = azure_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
@@ -11491,7 +11857,7 @@ pub mod workload_networks {
                 };
                 azure_core::Pageable::new(make_request)
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks",
@@ -11513,27 +11879,27 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetwork> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::WorkloadNetwork = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -11572,16 +11938,19 @@ pub mod workload_networks {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         let req_body = azure_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default",
@@ -11615,27 +11984,27 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkDhcpList> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::WorkloadNetworkDhcpList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -11674,9 +12043,12 @@ pub mod workload_networks {
                             Some(value) => {
                                 url.set_path("");
                                 url = url.join(&value)?;
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                req.insert_header(
+                                    azure_core::http::headers::AUTHORIZATION,
+                                    format!("Bearer {}", bearer_token.secret()),
+                                );
                                 let has_api_version_already =
                                     req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
                                 if !has_api_version_already {
@@ -11689,9 +12061,12 @@ pub mod workload_networks {
                                 this.client.send(&mut req).await?
                             }
                             None => {
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                req.insert_header(
+                                    azure_core::http::headers::AUTHORIZATION,
+                                    format!("Bearer {}", bearer_token.secret()),
+                                );
                                 let req_body = azure_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
@@ -11709,7 +12084,7 @@ pub mod workload_networks {
                 };
                 azure_core::Pageable::new(make_request)
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url . set_path (& format ! ("/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/dhcpConfigurations" , & self . subscription_id , & self . resource_group_name , & self . private_cloud_name)) ;
                 let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
@@ -11728,27 +12103,27 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkDhcp> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::WorkloadNetworkDhcp = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -11788,16 +12163,19 @@ pub mod workload_networks {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         let req_body = azure_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url . set_path (& format ! ("/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/dhcpConfigurations/{}" , & self . subscription_id , & self . resource_group_name , & self . private_cloud_name , & self . dhcp_id)) ;
                 let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
@@ -11828,38 +12206,38 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkDhcp> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::WorkloadNetworkDhcp = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -11898,17 +12276,20 @@ pub mod workload_networks {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Put);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Put);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::to_json(&this.workload_network_dhcp)?;
+                        let req_body = azure_core::json::to_json(&this.workload_network_dhcp)?;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url . set_path (& format ! ("/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/dhcpConfigurations/{}" , & self . subscription_id , & self . resource_group_name , & self . private_cloud_name , & self . dhcp_id)) ;
                 let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
@@ -11947,9 +12328,12 @@ pub mod workload_networks {
                     let location = get_location(headers, FinalState::AzureAsyncOperation)?;
                     if let Some(url) = location {
                         loop {
-                            let mut req = azure_core::Request::new(url.clone(), azure_core::Method::Get);
+                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::Method::Get);
                             let bearer_token = self.client.bearer_token().await?;
-                            req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                            req.insert_header(
+                                azure_core::http::headers::AUTHORIZATION,
+                                format!("Bearer {}", bearer_token.secret()),
+                            );
                             let response = self.client.send(&mut req).await?;
                             let headers = response.headers();
                             let retry_after = get_retry_after(headers);
@@ -11963,9 +12347,12 @@ pub mod workload_networks {
                             log::trace!("current provisioning_state: {provisioning_state:?}");
                             match provisioning_state {
                                 LroStatus::Succeeded => {
-                                    let mut req = azure_core::Request::new(self.url()?, azure_core::Method::Get);
+                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::Method::Get);
                                     let bearer_token = self.client.bearer_token().await?;
-                                    req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
                                     let response = self.client.send(&mut req).await?;
                                     return Response(response).into_body().await;
                                 }
@@ -11994,42 +12381,42 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkDhcp> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::WorkloadNetworkDhcp = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
             pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::headers::HeaderName::from_static("location"))
+                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
             }
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -12068,17 +12455,20 @@ pub mod workload_networks {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Patch);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Patch);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::to_json(&this.workload_network_dhcp)?;
+                        let req_body = azure_core::json::to_json(&this.workload_network_dhcp)?;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url . set_path (& format ! ("/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/dhcpConfigurations/{}" , & self . subscription_id , & self . resource_group_name , & self . private_cloud_name , & self . dhcp_id)) ;
                 let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
@@ -12117,9 +12507,12 @@ pub mod workload_networks {
                     let location = get_location(headers, FinalState::Location)?;
                     if let Some(url) = location {
                         loop {
-                            let mut req = azure_core::Request::new(url.clone(), azure_core::Method::Get);
+                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::Method::Get);
                             let bearer_token = self.client.bearer_token().await?;
-                            req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                            req.insert_header(
+                                azure_core::http::headers::AUTHORIZATION,
+                                format!("Bearer {}", bearer_token.secret()),
+                            );
                             let response = self.client.send(&mut req).await?;
                             let headers = response.headers();
                             let retry_after = get_retry_after(headers);
@@ -12133,9 +12526,12 @@ pub mod workload_networks {
                             log::trace!("current provisioning_state: {provisioning_state:?}");
                             match provisioning_state {
                                 LroStatus::Succeeded => {
-                                    let mut req = azure_core::Request::new(self.url()?, azure_core::Method::Get);
+                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::Method::Get);
                                     let bearer_token = self.client.bearer_token().await?;
-                                    req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
                                     let response = self.client.send(&mut req).await?;
                                     return Response(response).into_body().await;
                                 }
@@ -12164,37 +12560,37 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
             pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::headers::HeaderName::from_static("location"))
+                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
             }
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -12232,16 +12628,19 @@ pub mod workload_networks {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Delete);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Delete);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         let req_body = azure_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url . set_path (& format ! ("/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/dhcpConfigurations/{}" , & self . subscription_id , & self . resource_group_name , & self . private_cloud_name , & self . dhcp_id)) ;
                 let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
@@ -12260,27 +12659,27 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkDnsServicesList> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::WorkloadNetworkDnsServicesList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -12319,9 +12718,12 @@ pub mod workload_networks {
                             Some(value) => {
                                 url.set_path("");
                                 url = url.join(&value)?;
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                req.insert_header(
+                                    azure_core::http::headers::AUTHORIZATION,
+                                    format!("Bearer {}", bearer_token.secret()),
+                                );
                                 let has_api_version_already =
                                     req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
                                 if !has_api_version_already {
@@ -12334,9 +12736,12 @@ pub mod workload_networks {
                                 this.client.send(&mut req).await?
                             }
                             None => {
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                req.insert_header(
+                                    azure_core::http::headers::AUTHORIZATION,
+                                    format!("Bearer {}", bearer_token.secret()),
+                                );
                                 let req_body = azure_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
@@ -12354,7 +12759,7 @@ pub mod workload_networks {
                 };
                 azure_core::Pageable::new(make_request)
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/dnsServices",
@@ -12376,27 +12781,27 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkDnsService> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::WorkloadNetworkDnsService = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -12436,16 +12841,19 @@ pub mod workload_networks {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         let req_body = azure_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/dnsServices/{}",
@@ -12479,38 +12887,38 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkDnsService> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::WorkloadNetworkDnsService = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -12549,17 +12957,20 @@ pub mod workload_networks {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Put);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Put);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::to_json(&this.workload_network_dns_service)?;
+                        let req_body = azure_core::json::to_json(&this.workload_network_dns_service)?;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/dnsServices/{}",
@@ -12601,9 +13012,12 @@ pub mod workload_networks {
                     let location = get_location(headers, FinalState::AzureAsyncOperation)?;
                     if let Some(url) = location {
                         loop {
-                            let mut req = azure_core::Request::new(url.clone(), azure_core::Method::Get);
+                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::Method::Get);
                             let bearer_token = self.client.bearer_token().await?;
-                            req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                            req.insert_header(
+                                azure_core::http::headers::AUTHORIZATION,
+                                format!("Bearer {}", bearer_token.secret()),
+                            );
                             let response = self.client.send(&mut req).await?;
                             let headers = response.headers();
                             let retry_after = get_retry_after(headers);
@@ -12617,9 +13031,12 @@ pub mod workload_networks {
                             log::trace!("current provisioning_state: {provisioning_state:?}");
                             match provisioning_state {
                                 LroStatus::Succeeded => {
-                                    let mut req = azure_core::Request::new(self.url()?, azure_core::Method::Get);
+                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::Method::Get);
                                     let bearer_token = self.client.bearer_token().await?;
-                                    req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
                                     let response = self.client.send(&mut req).await?;
                                     return Response(response).into_body().await;
                                 }
@@ -12648,42 +13065,42 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkDnsService> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::WorkloadNetworkDnsService = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
             pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::headers::HeaderName::from_static("location"))
+                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
             }
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -12722,17 +13139,20 @@ pub mod workload_networks {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Patch);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Patch);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::to_json(&this.workload_network_dns_service)?;
+                        let req_body = azure_core::json::to_json(&this.workload_network_dns_service)?;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/dnsServices/{}",
@@ -12774,9 +13194,12 @@ pub mod workload_networks {
                     let location = get_location(headers, FinalState::Location)?;
                     if let Some(url) = location {
                         loop {
-                            let mut req = azure_core::Request::new(url.clone(), azure_core::Method::Get);
+                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::Method::Get);
                             let bearer_token = self.client.bearer_token().await?;
-                            req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                            req.insert_header(
+                                azure_core::http::headers::AUTHORIZATION,
+                                format!("Bearer {}", bearer_token.secret()),
+                            );
                             let response = self.client.send(&mut req).await?;
                             let headers = response.headers();
                             let retry_after = get_retry_after(headers);
@@ -12790,9 +13213,12 @@ pub mod workload_networks {
                             log::trace!("current provisioning_state: {provisioning_state:?}");
                             match provisioning_state {
                                 LroStatus::Succeeded => {
-                                    let mut req = azure_core::Request::new(self.url()?, azure_core::Method::Get);
+                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::Method::Get);
                                     let bearer_token = self.client.bearer_token().await?;
-                                    req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
                                     let response = self.client.send(&mut req).await?;
                                     return Response(response).into_body().await;
                                 }
@@ -12821,37 +13247,37 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
             pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::headers::HeaderName::from_static("location"))
+                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
             }
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -12889,16 +13315,19 @@ pub mod workload_networks {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Delete);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Delete);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         let req_body = azure_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/dnsServices/{}",
@@ -12920,27 +13349,27 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkDnsZonesList> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::WorkloadNetworkDnsZonesList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -12979,9 +13408,12 @@ pub mod workload_networks {
                             Some(value) => {
                                 url.set_path("");
                                 url = url.join(&value)?;
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                req.insert_header(
+                                    azure_core::http::headers::AUTHORIZATION,
+                                    format!("Bearer {}", bearer_token.secret()),
+                                );
                                 let has_api_version_already =
                                     req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
                                 if !has_api_version_already {
@@ -12994,9 +13426,12 @@ pub mod workload_networks {
                                 this.client.send(&mut req).await?
                             }
                             None => {
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                req.insert_header(
+                                    azure_core::http::headers::AUTHORIZATION,
+                                    format!("Bearer {}", bearer_token.secret()),
+                                );
                                 let req_body = azure_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
@@ -13014,7 +13449,7 @@ pub mod workload_networks {
                 };
                 azure_core::Pageable::new(make_request)
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/dnsZones",
@@ -13036,27 +13471,27 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkDnsZone> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::WorkloadNetworkDnsZone = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -13096,16 +13531,19 @@ pub mod workload_networks {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         let req_body = azure_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/dnsZones/{}",
@@ -13139,38 +13577,38 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkDnsZone> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::WorkloadNetworkDnsZone = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -13209,17 +13647,20 @@ pub mod workload_networks {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Put);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Put);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::to_json(&this.workload_network_dns_zone)?;
+                        let req_body = azure_core::json::to_json(&this.workload_network_dns_zone)?;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/dnsZones/{}",
@@ -13261,9 +13702,12 @@ pub mod workload_networks {
                     let location = get_location(headers, FinalState::AzureAsyncOperation)?;
                     if let Some(url) = location {
                         loop {
-                            let mut req = azure_core::Request::new(url.clone(), azure_core::Method::Get);
+                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::Method::Get);
                             let bearer_token = self.client.bearer_token().await?;
-                            req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                            req.insert_header(
+                                azure_core::http::headers::AUTHORIZATION,
+                                format!("Bearer {}", bearer_token.secret()),
+                            );
                             let response = self.client.send(&mut req).await?;
                             let headers = response.headers();
                             let retry_after = get_retry_after(headers);
@@ -13277,9 +13721,12 @@ pub mod workload_networks {
                             log::trace!("current provisioning_state: {provisioning_state:?}");
                             match provisioning_state {
                                 LroStatus::Succeeded => {
-                                    let mut req = azure_core::Request::new(self.url()?, azure_core::Method::Get);
+                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::Method::Get);
                                     let bearer_token = self.client.bearer_token().await?;
-                                    req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
                                     let response = self.client.send(&mut req).await?;
                                     return Response(response).into_body().await;
                                 }
@@ -13308,42 +13755,42 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkDnsZone> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::WorkloadNetworkDnsZone = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
             pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::headers::HeaderName::from_static("location"))
+                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
             }
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -13382,17 +13829,20 @@ pub mod workload_networks {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Patch);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Patch);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::to_json(&this.workload_network_dns_zone)?;
+                        let req_body = azure_core::json::to_json(&this.workload_network_dns_zone)?;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/dnsZones/{}",
@@ -13434,9 +13884,12 @@ pub mod workload_networks {
                     let location = get_location(headers, FinalState::Location)?;
                     if let Some(url) = location {
                         loop {
-                            let mut req = azure_core::Request::new(url.clone(), azure_core::Method::Get);
+                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::Method::Get);
                             let bearer_token = self.client.bearer_token().await?;
-                            req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                            req.insert_header(
+                                azure_core::http::headers::AUTHORIZATION,
+                                format!("Bearer {}", bearer_token.secret()),
+                            );
                             let response = self.client.send(&mut req).await?;
                             let headers = response.headers();
                             let retry_after = get_retry_after(headers);
@@ -13450,9 +13903,12 @@ pub mod workload_networks {
                             log::trace!("current provisioning_state: {provisioning_state:?}");
                             match provisioning_state {
                                 LroStatus::Succeeded => {
-                                    let mut req = azure_core::Request::new(self.url()?, azure_core::Method::Get);
+                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::Method::Get);
                                     let bearer_token = self.client.bearer_token().await?;
-                                    req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
                                     let response = self.client.send(&mut req).await?;
                                     return Response(response).into_body().await;
                                 }
@@ -13481,37 +13937,37 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
             pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::headers::HeaderName::from_static("location"))
+                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
             }
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -13549,16 +14005,19 @@ pub mod workload_networks {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Delete);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Delete);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         let req_body = azure_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/dnsZones/{}",
@@ -13580,27 +14039,27 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkGatewayList> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::WorkloadNetworkGatewayList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -13639,9 +14098,12 @@ pub mod workload_networks {
                             Some(value) => {
                                 url.set_path("");
                                 url = url.join(&value)?;
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                req.insert_header(
+                                    azure_core::http::headers::AUTHORIZATION,
+                                    format!("Bearer {}", bearer_token.secret()),
+                                );
                                 let has_api_version_already =
                                     req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
                                 if !has_api_version_already {
@@ -13654,9 +14116,12 @@ pub mod workload_networks {
                                 this.client.send(&mut req).await?
                             }
                             None => {
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                req.insert_header(
+                                    azure_core::http::headers::AUTHORIZATION,
+                                    format!("Bearer {}", bearer_token.secret()),
+                                );
                                 let req_body = azure_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
@@ -13674,7 +14139,7 @@ pub mod workload_networks {
                 };
                 azure_core::Pageable::new(make_request)
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/gateways",
@@ -13696,27 +14161,27 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkGateway> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::WorkloadNetworkGateway = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -13756,16 +14221,19 @@ pub mod workload_networks {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         let req_body = azure_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/gateways/{}",
@@ -13799,27 +14267,27 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkPortMirroringList> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::WorkloadNetworkPortMirroringList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -13858,9 +14326,12 @@ pub mod workload_networks {
                             Some(value) => {
                                 url.set_path("");
                                 url = url.join(&value)?;
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                req.insert_header(
+                                    azure_core::http::headers::AUTHORIZATION,
+                                    format!("Bearer {}", bearer_token.secret()),
+                                );
                                 let has_api_version_already =
                                     req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
                                 if !has_api_version_already {
@@ -13873,9 +14344,12 @@ pub mod workload_networks {
                                 this.client.send(&mut req).await?
                             }
                             None => {
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                req.insert_header(
+                                    azure_core::http::headers::AUTHORIZATION,
+                                    format!("Bearer {}", bearer_token.secret()),
+                                );
                                 let req_body = azure_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
@@ -13893,7 +14367,7 @@ pub mod workload_networks {
                 };
                 azure_core::Pageable::new(make_request)
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url . set_path (& format ! ("/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/portMirroringProfiles" , & self . subscription_id , & self . resource_group_name , & self . private_cloud_name)) ;
                 let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
@@ -13912,27 +14386,27 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkPortMirroring> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::WorkloadNetworkPortMirroring = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -13972,16 +14446,19 @@ pub mod workload_networks {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         let req_body = azure_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url . set_path (& format ! ("/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/portMirroringProfiles/{}" , & self . subscription_id , & self . resource_group_name , & self . private_cloud_name , & self . port_mirroring_id)) ;
                 let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
@@ -14012,38 +14489,38 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkPortMirroring> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::WorkloadNetworkPortMirroring = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -14082,17 +14559,20 @@ pub mod workload_networks {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Put);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Put);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::to_json(&this.workload_network_port_mirroring)?;
+                        let req_body = azure_core::json::to_json(&this.workload_network_port_mirroring)?;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url . set_path (& format ! ("/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/portMirroringProfiles/{}" , & self . subscription_id , & self . resource_group_name , & self . private_cloud_name , & self . port_mirroring_id)) ;
                 let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
@@ -14131,9 +14611,12 @@ pub mod workload_networks {
                     let location = get_location(headers, FinalState::AzureAsyncOperation)?;
                     if let Some(url) = location {
                         loop {
-                            let mut req = azure_core::Request::new(url.clone(), azure_core::Method::Get);
+                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::Method::Get);
                             let bearer_token = self.client.bearer_token().await?;
-                            req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                            req.insert_header(
+                                azure_core::http::headers::AUTHORIZATION,
+                                format!("Bearer {}", bearer_token.secret()),
+                            );
                             let response = self.client.send(&mut req).await?;
                             let headers = response.headers();
                             let retry_after = get_retry_after(headers);
@@ -14147,9 +14630,12 @@ pub mod workload_networks {
                             log::trace!("current provisioning_state: {provisioning_state:?}");
                             match provisioning_state {
                                 LroStatus::Succeeded => {
-                                    let mut req = azure_core::Request::new(self.url()?, azure_core::Method::Get);
+                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::Method::Get);
                                     let bearer_token = self.client.bearer_token().await?;
-                                    req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
                                     let response = self.client.send(&mut req).await?;
                                     return Response(response).into_body().await;
                                 }
@@ -14178,42 +14664,42 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkPortMirroring> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::WorkloadNetworkPortMirroring = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
             pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::headers::HeaderName::from_static("location"))
+                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
             }
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -14252,17 +14738,20 @@ pub mod workload_networks {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Patch);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Patch);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::to_json(&this.workload_network_port_mirroring)?;
+                        let req_body = azure_core::json::to_json(&this.workload_network_port_mirroring)?;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url . set_path (& format ! ("/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/portMirroringProfiles/{}" , & self . subscription_id , & self . resource_group_name , & self . private_cloud_name , & self . port_mirroring_id)) ;
                 let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
@@ -14301,9 +14790,12 @@ pub mod workload_networks {
                     let location = get_location(headers, FinalState::Location)?;
                     if let Some(url) = location {
                         loop {
-                            let mut req = azure_core::Request::new(url.clone(), azure_core::Method::Get);
+                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::Method::Get);
                             let bearer_token = self.client.bearer_token().await?;
-                            req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                            req.insert_header(
+                                azure_core::http::headers::AUTHORIZATION,
+                                format!("Bearer {}", bearer_token.secret()),
+                            );
                             let response = self.client.send(&mut req).await?;
                             let headers = response.headers();
                             let retry_after = get_retry_after(headers);
@@ -14317,9 +14809,12 @@ pub mod workload_networks {
                             log::trace!("current provisioning_state: {provisioning_state:?}");
                             match provisioning_state {
                                 LroStatus::Succeeded => {
-                                    let mut req = azure_core::Request::new(self.url()?, azure_core::Method::Get);
+                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::Method::Get);
                                     let bearer_token = self.client.bearer_token().await?;
-                                    req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
                                     let response = self.client.send(&mut req).await?;
                                     return Response(response).into_body().await;
                                 }
@@ -14348,37 +14843,37 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
             pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::headers::HeaderName::from_static("location"))
+                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
             }
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -14416,16 +14911,19 @@ pub mod workload_networks {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Delete);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Delete);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         let req_body = azure_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url . set_path (& format ! ("/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/portMirroringProfiles/{}" , & self . subscription_id , & self . resource_group_name , & self . private_cloud_name , & self . port_mirroring_id)) ;
                 let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
@@ -14444,27 +14942,27 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkPublicIPsList> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::WorkloadNetworkPublicIPsList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -14503,9 +15001,12 @@ pub mod workload_networks {
                             Some(value) => {
                                 url.set_path("");
                                 url = url.join(&value)?;
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                req.insert_header(
+                                    azure_core::http::headers::AUTHORIZATION,
+                                    format!("Bearer {}", bearer_token.secret()),
+                                );
                                 let has_api_version_already =
                                     req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
                                 if !has_api_version_already {
@@ -14518,9 +15019,12 @@ pub mod workload_networks {
                                 this.client.send(&mut req).await?
                             }
                             None => {
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                req.insert_header(
+                                    azure_core::http::headers::AUTHORIZATION,
+                                    format!("Bearer {}", bearer_token.secret()),
+                                );
                                 let req_body = azure_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
@@ -14538,7 +15042,7 @@ pub mod workload_networks {
                 };
                 azure_core::Pageable::new(make_request)
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/publicIPs",
@@ -14560,27 +15064,27 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkPublicIp> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::WorkloadNetworkPublicIp = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -14620,16 +15124,19 @@ pub mod workload_networks {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         let req_body = azure_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/publicIPs/{}",
@@ -14663,38 +15170,38 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkPublicIp> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::WorkloadNetworkPublicIp = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -14733,17 +15240,20 @@ pub mod workload_networks {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Put);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Put);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::to_json(&this.workload_network_public_ip)?;
+                        let req_body = azure_core::json::to_json(&this.workload_network_public_ip)?;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/publicIPs/{}",
@@ -14785,9 +15295,12 @@ pub mod workload_networks {
                     let location = get_location(headers, FinalState::AzureAsyncOperation)?;
                     if let Some(url) = location {
                         loop {
-                            let mut req = azure_core::Request::new(url.clone(), azure_core::Method::Get);
+                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::Method::Get);
                             let bearer_token = self.client.bearer_token().await?;
-                            req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                            req.insert_header(
+                                azure_core::http::headers::AUTHORIZATION,
+                                format!("Bearer {}", bearer_token.secret()),
+                            );
                             let response = self.client.send(&mut req).await?;
                             let headers = response.headers();
                             let retry_after = get_retry_after(headers);
@@ -14801,9 +15314,12 @@ pub mod workload_networks {
                             log::trace!("current provisioning_state: {provisioning_state:?}");
                             match provisioning_state {
                                 LroStatus::Succeeded => {
-                                    let mut req = azure_core::Request::new(self.url()?, azure_core::Method::Get);
+                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::Method::Get);
                                     let bearer_token = self.client.bearer_token().await?;
-                                    req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
                                     let response = self.client.send(&mut req).await?;
                                     return Response(response).into_body().await;
                                 }
@@ -14832,37 +15348,37 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
             pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::headers::HeaderName::from_static("location"))
+                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
             }
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -14900,16 +15416,19 @@ pub mod workload_networks {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Delete);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Delete);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         let req_body = azure_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/publicIPs/{}",
@@ -14931,27 +15450,27 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkSegmentsList> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::WorkloadNetworkSegmentsList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -14990,9 +15509,12 @@ pub mod workload_networks {
                             Some(value) => {
                                 url.set_path("");
                                 url = url.join(&value)?;
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                req.insert_header(
+                                    azure_core::http::headers::AUTHORIZATION,
+                                    format!("Bearer {}", bearer_token.secret()),
+                                );
                                 let has_api_version_already =
                                     req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
                                 if !has_api_version_already {
@@ -15005,9 +15527,12 @@ pub mod workload_networks {
                                 this.client.send(&mut req).await?
                             }
                             None => {
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                req.insert_header(
+                                    azure_core::http::headers::AUTHORIZATION,
+                                    format!("Bearer {}", bearer_token.secret()),
+                                );
                                 let req_body = azure_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
@@ -15025,7 +15550,7 @@ pub mod workload_networks {
                 };
                 azure_core::Pageable::new(make_request)
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/segments",
@@ -15047,27 +15572,27 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkSegment> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::WorkloadNetworkSegment = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -15107,16 +15632,19 @@ pub mod workload_networks {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         let req_body = azure_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/segments/{}",
@@ -15150,38 +15678,38 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkSegment> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::WorkloadNetworkSegment = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -15220,17 +15748,20 @@ pub mod workload_networks {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Put);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Put);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::to_json(&this.workload_network_segment)?;
+                        let req_body = azure_core::json::to_json(&this.workload_network_segment)?;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/segments/{}",
@@ -15272,9 +15803,12 @@ pub mod workload_networks {
                     let location = get_location(headers, FinalState::AzureAsyncOperation)?;
                     if let Some(url) = location {
                         loop {
-                            let mut req = azure_core::Request::new(url.clone(), azure_core::Method::Get);
+                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::Method::Get);
                             let bearer_token = self.client.bearer_token().await?;
-                            req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                            req.insert_header(
+                                azure_core::http::headers::AUTHORIZATION,
+                                format!("Bearer {}", bearer_token.secret()),
+                            );
                             let response = self.client.send(&mut req).await?;
                             let headers = response.headers();
                             let retry_after = get_retry_after(headers);
@@ -15288,9 +15822,12 @@ pub mod workload_networks {
                             log::trace!("current provisioning_state: {provisioning_state:?}");
                             match provisioning_state {
                                 LroStatus::Succeeded => {
-                                    let mut req = azure_core::Request::new(self.url()?, azure_core::Method::Get);
+                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::Method::Get);
                                     let bearer_token = self.client.bearer_token().await?;
-                                    req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
                                     let response = self.client.send(&mut req).await?;
                                     return Response(response).into_body().await;
                                 }
@@ -15319,42 +15856,42 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkSegment> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::WorkloadNetworkSegment = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
             pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::headers::HeaderName::from_static("location"))
+                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
             }
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -15393,17 +15930,20 @@ pub mod workload_networks {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Patch);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Patch);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::to_json(&this.workload_network_segment)?;
+                        let req_body = azure_core::json::to_json(&this.workload_network_segment)?;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/segments/{}",
@@ -15445,9 +15985,12 @@ pub mod workload_networks {
                     let location = get_location(headers, FinalState::Location)?;
                     if let Some(url) = location {
                         loop {
-                            let mut req = azure_core::Request::new(url.clone(), azure_core::Method::Get);
+                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::Method::Get);
                             let bearer_token = self.client.bearer_token().await?;
-                            req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                            req.insert_header(
+                                azure_core::http::headers::AUTHORIZATION,
+                                format!("Bearer {}", bearer_token.secret()),
+                            );
                             let response = self.client.send(&mut req).await?;
                             let headers = response.headers();
                             let retry_after = get_retry_after(headers);
@@ -15461,9 +16004,12 @@ pub mod workload_networks {
                             log::trace!("current provisioning_state: {provisioning_state:?}");
                             match provisioning_state {
                                 LroStatus::Succeeded => {
-                                    let mut req = azure_core::Request::new(self.url()?, azure_core::Method::Get);
+                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::Method::Get);
                                     let bearer_token = self.client.bearer_token().await?;
-                                    req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
                                     let response = self.client.send(&mut req).await?;
                                     return Response(response).into_body().await;
                                 }
@@ -15492,37 +16038,37 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
             pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::headers::HeaderName::from_static("location"))
+                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
             }
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -15560,16 +16106,19 @@ pub mod workload_networks {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Delete);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Delete);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         let req_body = azure_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/segments/{}",
@@ -15591,27 +16140,27 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkVirtualMachinesList> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::WorkloadNetworkVirtualMachinesList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -15650,9 +16199,12 @@ pub mod workload_networks {
                             Some(value) => {
                                 url.set_path("");
                                 url = url.join(&value)?;
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                req.insert_header(
+                                    azure_core::http::headers::AUTHORIZATION,
+                                    format!("Bearer {}", bearer_token.secret()),
+                                );
                                 let has_api_version_already =
                                     req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
                                 if !has_api_version_already {
@@ -15665,9 +16217,12 @@ pub mod workload_networks {
                                 this.client.send(&mut req).await?
                             }
                             None => {
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                req.insert_header(
+                                    azure_core::http::headers::AUTHORIZATION,
+                                    format!("Bearer {}", bearer_token.secret()),
+                                );
                                 let req_body = azure_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
@@ -15685,7 +16240,7 @@ pub mod workload_networks {
                 };
                 azure_core::Pageable::new(make_request)
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/virtualMachines",
@@ -15707,27 +16262,27 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkVirtualMachine> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::WorkloadNetworkVirtualMachine = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -15767,16 +16322,19 @@ pub mod workload_networks {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         let req_body = azure_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url . set_path (& format ! ("/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/virtualMachines/{}" , & self . subscription_id , & self . resource_group_name , & self . private_cloud_name , & self . virtual_machine_id)) ;
                 let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
@@ -15807,27 +16365,27 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkVmGroupsList> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::WorkloadNetworkVmGroupsList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -15866,9 +16424,12 @@ pub mod workload_networks {
                             Some(value) => {
                                 url.set_path("");
                                 url = url.join(&value)?;
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                req.insert_header(
+                                    azure_core::http::headers::AUTHORIZATION,
+                                    format!("Bearer {}", bearer_token.secret()),
+                                );
                                 let has_api_version_already =
                                     req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
                                 if !has_api_version_already {
@@ -15881,9 +16442,12 @@ pub mod workload_networks {
                                 this.client.send(&mut req).await?
                             }
                             None => {
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                req.insert_header(
+                                    azure_core::http::headers::AUTHORIZATION,
+                                    format!("Bearer {}", bearer_token.secret()),
+                                );
                                 let req_body = azure_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
@@ -15901,7 +16465,7 @@ pub mod workload_networks {
                 };
                 azure_core::Pageable::new(make_request)
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/vmGroups",
@@ -15923,27 +16487,27 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkVmGroup> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::WorkloadNetworkVmGroup = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -15983,16 +16547,19 @@ pub mod workload_networks {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Get);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         let req_body = azure_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/vmGroups/{}",
@@ -16026,38 +16593,38 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkVmGroup> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::WorkloadNetworkVmGroup = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -16096,17 +16663,20 @@ pub mod workload_networks {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Put);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Put);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::to_json(&this.workload_network_vm_group)?;
+                        let req_body = azure_core::json::to_json(&this.workload_network_vm_group)?;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/vmGroups/{}",
@@ -16148,9 +16718,12 @@ pub mod workload_networks {
                     let location = get_location(headers, FinalState::AzureAsyncOperation)?;
                     if let Some(url) = location {
                         loop {
-                            let mut req = azure_core::Request::new(url.clone(), azure_core::Method::Get);
+                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::Method::Get);
                             let bearer_token = self.client.bearer_token().await?;
-                            req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                            req.insert_header(
+                                azure_core::http::headers::AUTHORIZATION,
+                                format!("Bearer {}", bearer_token.secret()),
+                            );
                             let response = self.client.send(&mut req).await?;
                             let headers = response.headers();
                             let retry_after = get_retry_after(headers);
@@ -16164,9 +16737,12 @@ pub mod workload_networks {
                             log::trace!("current provisioning_state: {provisioning_state:?}");
                             match provisioning_state {
                                 LroStatus::Succeeded => {
-                                    let mut req = azure_core::Request::new(self.url()?, azure_core::Method::Get);
+                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::Method::Get);
                                     let bearer_token = self.client.bearer_token().await?;
-                                    req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
                                     let response = self.client.send(&mut req).await?;
                                     return Response(response).into_body().await;
                                 }
@@ -16195,42 +16771,42 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkVmGroup> {
                 let bytes = self.0.into_body().collect().await?;
                 let body: models::WorkloadNetworkVmGroup = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
             pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::headers::HeaderName::from_static("location"))
+                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
             }
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -16269,17 +16845,20 @@ pub mod workload_networks {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Patch);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Patch);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::to_json(&this.workload_network_vm_group)?;
+                        let req_body = azure_core::json::to_json(&this.workload_network_vm_group)?;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/vmGroups/{}",
@@ -16321,9 +16900,12 @@ pub mod workload_networks {
                     let location = get_location(headers, FinalState::Location)?;
                     if let Some(url) = location {
                         loop {
-                            let mut req = azure_core::Request::new(url.clone(), azure_core::Method::Get);
+                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::Method::Get);
                             let bearer_token = self.client.bearer_token().await?;
-                            req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                            req.insert_header(
+                                azure_core::http::headers::AUTHORIZATION,
+                                format!("Bearer {}", bearer_token.secret()),
+                            );
                             let response = self.client.send(&mut req).await?;
                             let headers = response.headers();
                             let retry_after = get_retry_after(headers);
@@ -16337,9 +16919,12 @@ pub mod workload_networks {
                             log::trace!("current provisioning_state: {provisioning_state:?}");
                             match provisioning_state {
                                 LroStatus::Succeeded => {
-                                    let mut req = azure_core::Request::new(self.url()?, azure_core::Method::Get);
+                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::Method::Get);
                                     let bearer_token = self.client.bearer_token().await?;
-                                    req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
                                     let response = self.client.send(&mut req).await?;
                                     return Response(response).into_body().await;
                                 }
@@ -16368,37 +16953,37 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
             pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::headers::HeaderName::from_static("location"))
+                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
             }
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -16436,16 +17021,19 @@ pub mod workload_networks {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Delete);
+                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Delete);
                         let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
                         let req_body = azure_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/vmGroups/{}",
