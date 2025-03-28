@@ -15,7 +15,7 @@ pub struct ClientBuilder {
     credential: std::sync::Arc<dyn azure_core::credentials::TokenCredential>,
     endpoint: Option<azure_core::http::Url>,
     scopes: Option<Vec<String>>,
-    options: azure_core::http::options::ClientOptions,
+    options: azure_core::http::ClientOptions,
 }
 pub use azure_core::resource_manager_endpoint::AZURE_PUBLIC_CLOUD as DEFAULT_ENDPOINT;
 impl ClientBuilder {
@@ -26,7 +26,7 @@ impl ClientBuilder {
             credential,
             endpoint: None,
             scopes: None,
-            options: azure_core::http::options::ClientOptions::default(),
+            options: azure_core::http::ClientOptions::default(),
         }
     }
     #[doc = "Set the endpoint."]
@@ -43,13 +43,13 @@ impl ClientBuilder {
     }
     #[doc = "Set the retry options."]
     #[must_use]
-    pub fn retry(mut self, retry: impl Into<azure_core::http::options::RetryOptions>) -> Self {
+    pub fn retry(mut self, retry: impl Into<azure_core::http::RetryOptions>) -> Self {
         self.options = self.options.retry(retry);
         self
     }
     #[doc = "Set the transport options."]
     #[must_use]
-    pub fn transport(mut self, transport: impl Into<azure_core::http::options::TransportOptions>) -> Self {
+    pub fn transport(mut self, transport: impl Into<azure_core::http::TransportOptions>) -> Self {
         self.options = self.options.transport(transport);
         self
     }
@@ -65,7 +65,7 @@ impl ClientBuilder {
     }
 }
 impl Client {
-    pub(crate) async fn bearer_token(&self) -> azure_core::Result<azure_core::auth::Secret> {
+    pub(crate) async fn bearer_token(&self) -> azure_core::Result<azure_core::credentials::Secret> {
         let credential = self.token_credential();
         let response = credential.get_token(&self.scopes()).await?;
         Ok(response.token)
@@ -94,7 +94,7 @@ impl Client {
         endpoint: impl Into<azure_core::http::Url>,
         credential: std::sync::Arc<dyn azure_core::credentials::TokenCredential>,
         scopes: Vec<String>,
-        options: azure_core::http::options::ClientOptions,
+        options: azure_core::http::ClientOptions,
     ) -> Self {
         let endpoint = endpoint.into();
         let pipeline = azure_core::http::Pipeline::new(
@@ -198,7 +198,8 @@ pub mod operations {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::OperationListResult> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::OperationListResult = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -242,7 +243,7 @@ pub mod operations {
             pub(crate) client: super::super::Client,
         }
         impl RequestBuilder {
-            pub fn into_stream(self) -> azure_core::Pageable<models::OperationListResult, azure_core::error::Error> {
+            pub fn into_stream(self) -> azure_openapi_core::Pageable<models::OperationListResult, azure_core::error::Error> {
                 let make_request = move |continuation: Option<String>| {
                     let this = self.clone();
                     async move {
@@ -251,37 +252,39 @@ pub mod operations {
                             Some(value) => {
                                 url.set_path("");
                                 url = url.join(&value)?;
-                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
                                 req.insert_header(
                                     azure_core::http::headers::AUTHORIZATION,
                                     format!("Bearer {}", bearer_token.secret()),
                                 );
-                                let has_api_version_already =
-                                    req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                                let has_api_version_already = req
+                                    .url_mut()
+                                    .query_pairs()
+                                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                                 if !has_api_version_already {
                                     req.url_mut()
                                         .query_pairs_mut()
-                                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                 }
-                                let req_body = azure_core::EMPTY_BODY;
+                                let req_body = azure_openapi_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
                             }
                             None => {
-                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
                                 req.insert_header(
                                     azure_core::http::headers::AUTHORIZATION,
                                     format!("Bearer {}", bearer_token.secret()),
                                 );
-                                let req_body = azure_core::EMPTY_BODY;
+                                let req_body = azure_openapi_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
                             }
                         };
                         let rsp = match rsp.status() {
-                            azure_core::StatusCode::Ok => Ok(Response(rsp)),
+                            azure_core::http::StatusCode::Ok => Ok(Response(rsp)),
                             status_code => Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
                                 status: status_code,
                                 error_code: None,
@@ -290,15 +293,17 @@ pub mod operations {
                         rsp?.into_body().await
                     }
                 };
-                azure_core::Pageable::new(make_request)
+                azure_openapi_core::Pageable::new(make_request)
             }
             fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path("/providers/Microsoft.AVS/operations");
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -357,7 +362,8 @@ pub mod locations {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::Quota> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::Quota = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -412,13 +418,13 @@ pub mod locations {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Post);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Post);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_core::EMPTY_BODY;
+                        let req_body = azure_openapi_core::EMPTY_BODY;
                         req.insert_header(azure_core::http::headers::CONTENT_LENGTH, "0");
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
@@ -431,10 +437,12 @@ pub mod locations {
                     "/subscriptions/{}/providers/Microsoft.AVS/locations/{}/checkQuotaAvailability",
                     &self.subscription_id, &self.location
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -462,7 +470,8 @@ pub mod locations {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::Trial> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::Trial = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -523,7 +532,7 @@ pub mod locations {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Post);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Post);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
@@ -533,7 +542,7 @@ pub mod locations {
                             req.insert_header("content-type", "application/json");
                             azure_core::json::to_json(sku)?
                         } else {
-                            azure_core::EMPTY_BODY
+                            azure_openapi_core::EMPTY_BODY
                         };
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
@@ -546,10 +555,12 @@ pub mod locations {
                     "/subscriptions/{}/providers/Microsoft.AVS/locations/{}/checkTrialAvailability",
                     &self.subscription_id, &self.location
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -748,7 +759,8 @@ pub mod private_clouds {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::PrivateCloudList> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::PrivateCloudList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -793,7 +805,7 @@ pub mod private_clouds {
             pub(crate) subscription_id: String,
         }
         impl RequestBuilder {
-            pub fn into_stream(self) -> azure_core::Pageable<models::PrivateCloudList, azure_core::error::Error> {
+            pub fn into_stream(self) -> azure_openapi_core::Pageable<models::PrivateCloudList, azure_core::error::Error> {
                 let make_request = move |continuation: Option<String>| {
                     let this = self.clone();
                     async move {
@@ -802,37 +814,39 @@ pub mod private_clouds {
                             Some(value) => {
                                 url.set_path("");
                                 url = url.join(&value)?;
-                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
                                 req.insert_header(
                                     azure_core::http::headers::AUTHORIZATION,
                                     format!("Bearer {}", bearer_token.secret()),
                                 );
-                                let has_api_version_already =
-                                    req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                                let has_api_version_already = req
+                                    .url_mut()
+                                    .query_pairs()
+                                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                                 if !has_api_version_already {
                                     req.url_mut()
                                         .query_pairs_mut()
-                                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                 }
-                                let req_body = azure_core::EMPTY_BODY;
+                                let req_body = azure_openapi_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
                             }
                             None => {
-                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
                                 req.insert_header(
                                     azure_core::http::headers::AUTHORIZATION,
                                     format!("Bearer {}", bearer_token.secret()),
                                 );
-                                let req_body = azure_core::EMPTY_BODY;
+                                let req_body = azure_openapi_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
                             }
                         };
                         let rsp = match rsp.status() {
-                            azure_core::StatusCode::Ok => Ok(Response(rsp)),
+                            azure_core::http::StatusCode::Ok => Ok(Response(rsp)),
                             status_code => Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
                                 status: status_code,
                                 error_code: None,
@@ -841,7 +855,7 @@ pub mod private_clouds {
                         rsp?.into_body().await
                     }
                 };
-                azure_core::Pageable::new(make_request)
+                azure_openapi_core::Pageable::new(make_request)
             }
             fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
@@ -849,10 +863,12 @@ pub mod private_clouds {
                     "/subscriptions/{}/providers/Microsoft.AVS/privateClouds",
                     &self.subscription_id
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -868,7 +884,8 @@ pub mod private_clouds {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::PrivateCloudList> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::PrivateCloudList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -914,7 +931,7 @@ pub mod private_clouds {
             pub(crate) resource_group_name: String,
         }
         impl RequestBuilder {
-            pub fn into_stream(self) -> azure_core::Pageable<models::PrivateCloudList, azure_core::error::Error> {
+            pub fn into_stream(self) -> azure_openapi_core::Pageable<models::PrivateCloudList, azure_core::error::Error> {
                 let make_request = move |continuation: Option<String>| {
                     let this = self.clone();
                     async move {
@@ -923,37 +940,39 @@ pub mod private_clouds {
                             Some(value) => {
                                 url.set_path("");
                                 url = url.join(&value)?;
-                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
                                 req.insert_header(
                                     azure_core::http::headers::AUTHORIZATION,
                                     format!("Bearer {}", bearer_token.secret()),
                                 );
-                                let has_api_version_already =
-                                    req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                                let has_api_version_already = req
+                                    .url_mut()
+                                    .query_pairs()
+                                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                                 if !has_api_version_already {
                                     req.url_mut()
                                         .query_pairs_mut()
-                                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                 }
-                                let req_body = azure_core::EMPTY_BODY;
+                                let req_body = azure_openapi_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
                             }
                             None => {
-                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
                                 req.insert_header(
                                     azure_core::http::headers::AUTHORIZATION,
                                     format!("Bearer {}", bearer_token.secret()),
                                 );
-                                let req_body = azure_core::EMPTY_BODY;
+                                let req_body = azure_openapi_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
                             }
                         };
                         let rsp = match rsp.status() {
-                            azure_core::StatusCode::Ok => Ok(Response(rsp)),
+                            azure_core::http::StatusCode::Ok => Ok(Response(rsp)),
                             status_code => Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
                                 status: status_code,
                                 error_code: None,
@@ -962,7 +981,7 @@ pub mod private_clouds {
                         rsp?.into_body().await
                     }
                 };
-                azure_core::Pageable::new(make_request)
+                azure_openapi_core::Pageable::new(make_request)
             }
             fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
@@ -970,10 +989,12 @@ pub mod private_clouds {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds",
                     &self.subscription_id, &self.resource_group_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -989,7 +1010,8 @@ pub mod private_clouds {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::PrivateCloud> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::PrivateCloud = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -1045,13 +1067,13 @@ pub mod private_clouds {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_core::EMPTY_BODY;
+                        let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
@@ -1063,10 +1085,12 @@ pub mod private_clouds {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -1094,7 +1118,8 @@ pub mod private_clouds {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::PrivateCloud> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::PrivateCloud = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -1160,7 +1185,7 @@ pub mod private_clouds {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Put);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Put);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
@@ -1179,10 +1204,12 @@ pub mod private_clouds {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -1215,7 +1242,7 @@ pub mod private_clouds {
                     let location = get_location(headers, FinalState::AzureAsyncOperation)?;
                     if let Some(url) = location {
                         loop {
-                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::Method::Get);
+                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::http::Method::Get);
                             let bearer_token = self.client.bearer_token().await?;
                             req.insert_header(
                                 azure_core::http::headers::AUTHORIZATION,
@@ -1234,7 +1261,7 @@ pub mod private_clouds {
                             log::trace!("current provisioning_state: {provisioning_state:?}");
                             match provisioning_state {
                                 LroStatus::Succeeded => {
-                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::Method::Get);
+                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::http::Method::Get);
                                     let bearer_token = self.client.bearer_token().await?;
                                     req.insert_header(
                                         azure_core::http::headers::AUTHORIZATION,
@@ -1271,7 +1298,8 @@ pub mod private_clouds {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::PrivateCloud> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::PrivateCloud = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -1341,7 +1369,7 @@ pub mod private_clouds {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Patch);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Patch);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
@@ -1360,10 +1388,12 @@ pub mod private_clouds {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -1396,7 +1426,7 @@ pub mod private_clouds {
                     let location = get_location(headers, FinalState::Location)?;
                     if let Some(url) = location {
                         loop {
-                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::Method::Get);
+                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::http::Method::Get);
                             let bearer_token = self.client.bearer_token().await?;
                             req.insert_header(
                                 azure_core::http::headers::AUTHORIZATION,
@@ -1415,7 +1445,7 @@ pub mod private_clouds {
                             log::trace!("current provisioning_state: {provisioning_state:?}");
                             match provisioning_state {
                                 LroStatus::Succeeded => {
-                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::Method::Get);
+                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::http::Method::Get);
                                     let bearer_token = self.client.bearer_token().await?;
                                     req.insert_header(
                                         azure_core::http::headers::AUTHORIZATION,
@@ -1516,13 +1546,13 @@ pub mod private_clouds {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Delete);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Delete);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_core::EMPTY_BODY;
+                        let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
@@ -1534,10 +1564,12 @@ pub mod private_clouds {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -1553,7 +1585,8 @@ pub mod private_clouds {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::AdminCredentials> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::AdminCredentials = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -1609,13 +1642,13 @@ pub mod private_clouds {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Post);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Post);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_core::EMPTY_BODY;
+                        let req_body = azure_openapi_core::EMPTY_BODY;
                         req.insert_header(azure_core::http::headers::CONTENT_LENGTH, "0");
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
@@ -1628,10 +1661,12 @@ pub mod private_clouds {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/listAdminCredentials",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -1723,13 +1758,13 @@ pub mod private_clouds {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Post);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Post);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_core::EMPTY_BODY;
+                        let req_body = azure_openapi_core::EMPTY_BODY;
                         req.insert_header(azure_core::http::headers::CONTENT_LENGTH, "0");
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
@@ -1742,10 +1777,12 @@ pub mod private_clouds {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/rotateNsxtPassword",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -1825,13 +1862,13 @@ pub mod private_clouds {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Post);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Post);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_core::EMPTY_BODY;
+                        let req_body = azure_openapi_core::EMPTY_BODY;
                         req.insert_header(azure_core::http::headers::CONTENT_LENGTH, "0");
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
@@ -1844,10 +1881,12 @@ pub mod private_clouds {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/rotateVcenterPassword",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -1883,7 +1922,8 @@ pub mod skus {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::PagedResourceSku> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::PagedResourceSku = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -1928,7 +1968,7 @@ pub mod skus {
             pub(crate) subscription_id: String,
         }
         impl RequestBuilder {
-            pub fn into_stream(self) -> azure_core::Pageable<models::PagedResourceSku, azure_core::error::Error> {
+            pub fn into_stream(self) -> azure_openapi_core::Pageable<models::PagedResourceSku, azure_core::error::Error> {
                 let make_request = move |continuation: Option<String>| {
                     let this = self.clone();
                     async move {
@@ -1937,37 +1977,39 @@ pub mod skus {
                             Some(value) => {
                                 url.set_path("");
                                 url = url.join(&value)?;
-                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
                                 req.insert_header(
                                     azure_core::http::headers::AUTHORIZATION,
                                     format!("Bearer {}", bearer_token.secret()),
                                 );
-                                let has_api_version_already =
-                                    req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                                let has_api_version_already = req
+                                    .url_mut()
+                                    .query_pairs()
+                                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                                 if !has_api_version_already {
                                     req.url_mut()
                                         .query_pairs_mut()
-                                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                 }
-                                let req_body = azure_core::EMPTY_BODY;
+                                let req_body = azure_openapi_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
                             }
                             None => {
-                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
                                 req.insert_header(
                                     azure_core::http::headers::AUTHORIZATION,
                                     format!("Bearer {}", bearer_token.secret()),
                                 );
-                                let req_body = azure_core::EMPTY_BODY;
+                                let req_body = azure_openapi_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
                             }
                         };
                         let rsp = match rsp.status() {
-                            azure_core::StatusCode::Ok => Ok(Response(rsp)),
+                            azure_core::http::StatusCode::Ok => Ok(Response(rsp)),
                             status_code => Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
                                 status: status_code,
                                 error_code: None,
@@ -1976,15 +2018,17 @@ pub mod skus {
                         rsp?.into_body().await
                     }
                 };
-                azure_core::Pageable::new(make_request)
+                azure_openapi_core::Pageable::new(make_request)
             }
             fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!("/subscriptions/{}/providers/Microsoft.AVS/skus", &self.subscription_id));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -2098,7 +2142,8 @@ pub mod addons {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::AddonList> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::AddonList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -2145,7 +2190,7 @@ pub mod addons {
             pub(crate) private_cloud_name: String,
         }
         impl RequestBuilder {
-            pub fn into_stream(self) -> azure_core::Pageable<models::AddonList, azure_core::error::Error> {
+            pub fn into_stream(self) -> azure_openapi_core::Pageable<models::AddonList, azure_core::error::Error> {
                 let make_request = move |continuation: Option<String>| {
                     let this = self.clone();
                     async move {
@@ -2154,37 +2199,39 @@ pub mod addons {
                             Some(value) => {
                                 url.set_path("");
                                 url = url.join(&value)?;
-                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
                                 req.insert_header(
                                     azure_core::http::headers::AUTHORIZATION,
                                     format!("Bearer {}", bearer_token.secret()),
                                 );
-                                let has_api_version_already =
-                                    req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                                let has_api_version_already = req
+                                    .url_mut()
+                                    .query_pairs()
+                                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                                 if !has_api_version_already {
                                     req.url_mut()
                                         .query_pairs_mut()
-                                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                 }
-                                let req_body = azure_core::EMPTY_BODY;
+                                let req_body = azure_openapi_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
                             }
                             None => {
-                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
                                 req.insert_header(
                                     azure_core::http::headers::AUTHORIZATION,
                                     format!("Bearer {}", bearer_token.secret()),
                                 );
-                                let req_body = azure_core::EMPTY_BODY;
+                                let req_body = azure_openapi_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
                             }
                         };
                         let rsp = match rsp.status() {
-                            azure_core::StatusCode::Ok => Ok(Response(rsp)),
+                            azure_core::http::StatusCode::Ok => Ok(Response(rsp)),
                             status_code => Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
                                 status: status_code,
                                 error_code: None,
@@ -2193,7 +2240,7 @@ pub mod addons {
                         rsp?.into_body().await
                     }
                 };
-                azure_core::Pageable::new(make_request)
+                azure_openapi_core::Pageable::new(make_request)
             }
             fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
@@ -2201,10 +2248,12 @@ pub mod addons {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/addons",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -2220,7 +2269,8 @@ pub mod addons {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::Addon> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::Addon = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -2277,13 +2327,13 @@ pub mod addons {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_core::EMPTY_BODY;
+                        let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
@@ -2295,10 +2345,12 @@ pub mod addons {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/addons/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.addon_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -2326,7 +2378,8 @@ pub mod addons {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::Addon> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::Addon = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -2393,7 +2446,7 @@ pub mod addons {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Put);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Put);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
@@ -2412,10 +2465,12 @@ pub mod addons {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/addons/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.addon_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -2448,7 +2503,7 @@ pub mod addons {
                     let location = get_location(headers, FinalState::AzureAsyncOperation)?;
                     if let Some(url) = location {
                         loop {
-                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::Method::Get);
+                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::http::Method::Get);
                             let bearer_token = self.client.bearer_token().await?;
                             req.insert_header(
                                 azure_core::http::headers::AUTHORIZATION,
@@ -2467,7 +2522,7 @@ pub mod addons {
                             log::trace!("current provisioning_state: {provisioning_state:?}");
                             match provisioning_state {
                                 LroStatus::Succeeded => {
-                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::Method::Get);
+                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::http::Method::Get);
                                     let bearer_token = self.client.bearer_token().await?;
                                     req.insert_header(
                                         azure_core::http::headers::AUTHORIZATION,
@@ -2569,13 +2624,13 @@ pub mod addons {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Delete);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Delete);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_core::EMPTY_BODY;
+                        let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
@@ -2587,10 +2642,12 @@ pub mod addons {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/addons/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.addon_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -2704,7 +2761,8 @@ pub mod authorizations {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::ExpressRouteAuthorizationList> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::ExpressRouteAuthorizationList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -2751,7 +2809,7 @@ pub mod authorizations {
             pub(crate) private_cloud_name: String,
         }
         impl RequestBuilder {
-            pub fn into_stream(self) -> azure_core::Pageable<models::ExpressRouteAuthorizationList, azure_core::error::Error> {
+            pub fn into_stream(self) -> azure_openapi_core::Pageable<models::ExpressRouteAuthorizationList, azure_core::error::Error> {
                 let make_request = move |continuation: Option<String>| {
                     let this = self.clone();
                     async move {
@@ -2760,37 +2818,39 @@ pub mod authorizations {
                             Some(value) => {
                                 url.set_path("");
                                 url = url.join(&value)?;
-                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
                                 req.insert_header(
                                     azure_core::http::headers::AUTHORIZATION,
                                     format!("Bearer {}", bearer_token.secret()),
                                 );
-                                let has_api_version_already =
-                                    req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                                let has_api_version_already = req
+                                    .url_mut()
+                                    .query_pairs()
+                                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                                 if !has_api_version_already {
                                     req.url_mut()
                                         .query_pairs_mut()
-                                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                 }
-                                let req_body = azure_core::EMPTY_BODY;
+                                let req_body = azure_openapi_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
                             }
                             None => {
-                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
                                 req.insert_header(
                                     azure_core::http::headers::AUTHORIZATION,
                                     format!("Bearer {}", bearer_token.secret()),
                                 );
-                                let req_body = azure_core::EMPTY_BODY;
+                                let req_body = azure_openapi_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
                             }
                         };
                         let rsp = match rsp.status() {
-                            azure_core::StatusCode::Ok => Ok(Response(rsp)),
+                            azure_core::http::StatusCode::Ok => Ok(Response(rsp)),
                             status_code => Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
                                 status: status_code,
                                 error_code: None,
@@ -2799,7 +2859,7 @@ pub mod authorizations {
                         rsp?.into_body().await
                     }
                 };
-                azure_core::Pageable::new(make_request)
+                azure_openapi_core::Pageable::new(make_request)
             }
             fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
@@ -2807,10 +2867,12 @@ pub mod authorizations {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/authorizations",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -2826,7 +2888,8 @@ pub mod authorizations {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::ExpressRouteAuthorization> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::ExpressRouteAuthorization = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -2883,13 +2946,13 @@ pub mod authorizations {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_core::EMPTY_BODY;
+                        let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
@@ -2901,10 +2964,12 @@ pub mod authorizations {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/authorizations/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.authorization_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -2932,7 +2997,8 @@ pub mod authorizations {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::ExpressRouteAuthorization> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::ExpressRouteAuthorization = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -2999,7 +3065,7 @@ pub mod authorizations {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Put);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Put);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
@@ -3018,10 +3084,12 @@ pub mod authorizations {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/authorizations/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.authorization_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -3054,7 +3122,7 @@ pub mod authorizations {
                     let location = get_location(headers, FinalState::AzureAsyncOperation)?;
                     if let Some(url) = location {
                         loop {
-                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::Method::Get);
+                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::http::Method::Get);
                             let bearer_token = self.client.bearer_token().await?;
                             req.insert_header(
                                 azure_core::http::headers::AUTHORIZATION,
@@ -3073,7 +3141,7 @@ pub mod authorizations {
                             log::trace!("current provisioning_state: {provisioning_state:?}");
                             match provisioning_state {
                                 LroStatus::Succeeded => {
-                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::Method::Get);
+                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::http::Method::Get);
                                     let bearer_token = self.client.bearer_token().await?;
                                     req.insert_header(
                                         azure_core::http::headers::AUTHORIZATION,
@@ -3175,13 +3243,13 @@ pub mod authorizations {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Delete);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Delete);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_core::EMPTY_BODY;
+                        let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
@@ -3193,10 +3261,12 @@ pub mod authorizations {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/authorizations/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.authorization_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -3310,7 +3380,8 @@ pub mod cloud_links {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::CloudLinkList> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::CloudLinkList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -3357,7 +3428,7 @@ pub mod cloud_links {
             pub(crate) private_cloud_name: String,
         }
         impl RequestBuilder {
-            pub fn into_stream(self) -> azure_core::Pageable<models::CloudLinkList, azure_core::error::Error> {
+            pub fn into_stream(self) -> azure_openapi_core::Pageable<models::CloudLinkList, azure_core::error::Error> {
                 let make_request = move |continuation: Option<String>| {
                     let this = self.clone();
                     async move {
@@ -3366,37 +3437,39 @@ pub mod cloud_links {
                             Some(value) => {
                                 url.set_path("");
                                 url = url.join(&value)?;
-                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
                                 req.insert_header(
                                     azure_core::http::headers::AUTHORIZATION,
                                     format!("Bearer {}", bearer_token.secret()),
                                 );
-                                let has_api_version_already =
-                                    req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                                let has_api_version_already = req
+                                    .url_mut()
+                                    .query_pairs()
+                                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                                 if !has_api_version_already {
                                     req.url_mut()
                                         .query_pairs_mut()
-                                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                 }
-                                let req_body = azure_core::EMPTY_BODY;
+                                let req_body = azure_openapi_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
                             }
                             None => {
-                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
                                 req.insert_header(
                                     azure_core::http::headers::AUTHORIZATION,
                                     format!("Bearer {}", bearer_token.secret()),
                                 );
-                                let req_body = azure_core::EMPTY_BODY;
+                                let req_body = azure_openapi_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
                             }
                         };
                         let rsp = match rsp.status() {
-                            azure_core::StatusCode::Ok => Ok(Response(rsp)),
+                            azure_core::http::StatusCode::Ok => Ok(Response(rsp)),
                             status_code => Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
                                 status: status_code,
                                 error_code: None,
@@ -3405,7 +3478,7 @@ pub mod cloud_links {
                         rsp?.into_body().await
                     }
                 };
-                azure_core::Pageable::new(make_request)
+                azure_openapi_core::Pageable::new(make_request)
             }
             fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
@@ -3413,10 +3486,12 @@ pub mod cloud_links {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/cloudLinks",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -3432,7 +3507,8 @@ pub mod cloud_links {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::CloudLink> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::CloudLink = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -3489,13 +3565,13 @@ pub mod cloud_links {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_core::EMPTY_BODY;
+                        let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
@@ -3507,10 +3583,12 @@ pub mod cloud_links {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/cloudLinks/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.cloud_link_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -3538,7 +3616,8 @@ pub mod cloud_links {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::CloudLink> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::CloudLink = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -3605,7 +3684,7 @@ pub mod cloud_links {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Put);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Put);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
@@ -3624,10 +3703,12 @@ pub mod cloud_links {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/cloudLinks/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.cloud_link_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -3660,7 +3741,7 @@ pub mod cloud_links {
                     let location = get_location(headers, FinalState::AzureAsyncOperation)?;
                     if let Some(url) = location {
                         loop {
-                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::Method::Get);
+                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::http::Method::Get);
                             let bearer_token = self.client.bearer_token().await?;
                             req.insert_header(
                                 azure_core::http::headers::AUTHORIZATION,
@@ -3679,7 +3760,7 @@ pub mod cloud_links {
                             log::trace!("current provisioning_state: {provisioning_state:?}");
                             match provisioning_state {
                                 LroStatus::Succeeded => {
-                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::Method::Get);
+                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::http::Method::Get);
                                     let bearer_token = self.client.bearer_token().await?;
                                     req.insert_header(
                                         azure_core::http::headers::AUTHORIZATION,
@@ -3781,13 +3862,13 @@ pub mod cloud_links {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Delete);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Delete);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_core::EMPTY_BODY;
+                        let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
@@ -3799,10 +3880,12 @@ pub mod cloud_links {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/cloudLinks/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.cloud_link_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -3963,7 +4046,8 @@ pub mod clusters {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::ClusterList> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::ClusterList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -4010,7 +4094,7 @@ pub mod clusters {
             pub(crate) private_cloud_name: String,
         }
         impl RequestBuilder {
-            pub fn into_stream(self) -> azure_core::Pageable<models::ClusterList, azure_core::error::Error> {
+            pub fn into_stream(self) -> azure_openapi_core::Pageable<models::ClusterList, azure_core::error::Error> {
                 let make_request = move |continuation: Option<String>| {
                     let this = self.clone();
                     async move {
@@ -4019,37 +4103,39 @@ pub mod clusters {
                             Some(value) => {
                                 url.set_path("");
                                 url = url.join(&value)?;
-                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
                                 req.insert_header(
                                     azure_core::http::headers::AUTHORIZATION,
                                     format!("Bearer {}", bearer_token.secret()),
                                 );
-                                let has_api_version_already =
-                                    req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                                let has_api_version_already = req
+                                    .url_mut()
+                                    .query_pairs()
+                                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                                 if !has_api_version_already {
                                     req.url_mut()
                                         .query_pairs_mut()
-                                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                 }
-                                let req_body = azure_core::EMPTY_BODY;
+                                let req_body = azure_openapi_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
                             }
                             None => {
-                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
                                 req.insert_header(
                                     azure_core::http::headers::AUTHORIZATION,
                                     format!("Bearer {}", bearer_token.secret()),
                                 );
-                                let req_body = azure_core::EMPTY_BODY;
+                                let req_body = azure_openapi_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
                             }
                         };
                         let rsp = match rsp.status() {
-                            azure_core::StatusCode::Ok => Ok(Response(rsp)),
+                            azure_core::http::StatusCode::Ok => Ok(Response(rsp)),
                             status_code => Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
                                 status: status_code,
                                 error_code: None,
@@ -4058,7 +4144,7 @@ pub mod clusters {
                         rsp?.into_body().await
                     }
                 };
-                azure_core::Pageable::new(make_request)
+                azure_openapi_core::Pageable::new(make_request)
             }
             fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
@@ -4066,10 +4152,12 @@ pub mod clusters {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/clusters",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -4085,7 +4173,8 @@ pub mod clusters {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::Cluster> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::Cluster = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -4142,13 +4231,13 @@ pub mod clusters {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_core::EMPTY_BODY;
+                        let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
@@ -4160,10 +4249,12 @@ pub mod clusters {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/clusters/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.cluster_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -4191,7 +4282,8 @@ pub mod clusters {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::Cluster> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::Cluster = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -4258,7 +4350,7 @@ pub mod clusters {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Put);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Put);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
@@ -4277,10 +4369,12 @@ pub mod clusters {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/clusters/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.cluster_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -4313,7 +4407,7 @@ pub mod clusters {
                     let location = get_location(headers, FinalState::AzureAsyncOperation)?;
                     if let Some(url) = location {
                         loop {
-                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::Method::Get);
+                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::http::Method::Get);
                             let bearer_token = self.client.bearer_token().await?;
                             req.insert_header(
                                 azure_core::http::headers::AUTHORIZATION,
@@ -4332,7 +4426,7 @@ pub mod clusters {
                             log::trace!("current provisioning_state: {provisioning_state:?}");
                             match provisioning_state {
                                 LroStatus::Succeeded => {
-                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::Method::Get);
+                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::http::Method::Get);
                                     let bearer_token = self.client.bearer_token().await?;
                                     req.insert_header(
                                         azure_core::http::headers::AUTHORIZATION,
@@ -4369,7 +4463,8 @@ pub mod clusters {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::Cluster> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::Cluster = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -4440,7 +4535,7 @@ pub mod clusters {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Patch);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Patch);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
@@ -4459,10 +4554,12 @@ pub mod clusters {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/clusters/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.cluster_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -4495,7 +4592,7 @@ pub mod clusters {
                     let location = get_location(headers, FinalState::Location)?;
                     if let Some(url) = location {
                         loop {
-                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::Method::Get);
+                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::http::Method::Get);
                             let bearer_token = self.client.bearer_token().await?;
                             req.insert_header(
                                 azure_core::http::headers::AUTHORIZATION,
@@ -4514,7 +4611,7 @@ pub mod clusters {
                             log::trace!("current provisioning_state: {provisioning_state:?}");
                             match provisioning_state {
                                 LroStatus::Succeeded => {
-                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::Method::Get);
+                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::http::Method::Get);
                                     let bearer_token = self.client.bearer_token().await?;
                                     req.insert_header(
                                         azure_core::http::headers::AUTHORIZATION,
@@ -4616,13 +4713,13 @@ pub mod clusters {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Delete);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Delete);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_core::EMPTY_BODY;
+                        let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
@@ -4634,10 +4731,12 @@ pub mod clusters {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/clusters/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.cluster_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -4653,7 +4752,8 @@ pub mod clusters {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::ClusterZoneList> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::ClusterZoneList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -4710,13 +4810,13 @@ pub mod clusters {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Post);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Post);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_core::EMPTY_BODY;
+                        let req_body = azure_openapi_core::EMPTY_BODY;
                         req.insert_header(azure_core::http::headers::CONTENT_LENGTH, "0");
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
@@ -4729,10 +4829,12 @@ pub mod clusters {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/clusters/{}/listZones",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.cluster_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -4870,7 +4972,8 @@ pub mod datastores {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::DatastoreList> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::DatastoreList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -4918,7 +5021,7 @@ pub mod datastores {
             pub(crate) cluster_name: String,
         }
         impl RequestBuilder {
-            pub fn into_stream(self) -> azure_core::Pageable<models::DatastoreList, azure_core::error::Error> {
+            pub fn into_stream(self) -> azure_openapi_core::Pageable<models::DatastoreList, azure_core::error::Error> {
                 let make_request = move |continuation: Option<String>| {
                     let this = self.clone();
                     async move {
@@ -4927,37 +5030,39 @@ pub mod datastores {
                             Some(value) => {
                                 url.set_path("");
                                 url = url.join(&value)?;
-                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
                                 req.insert_header(
                                     azure_core::http::headers::AUTHORIZATION,
                                     format!("Bearer {}", bearer_token.secret()),
                                 );
-                                let has_api_version_already =
-                                    req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                                let has_api_version_already = req
+                                    .url_mut()
+                                    .query_pairs()
+                                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                                 if !has_api_version_already {
                                     req.url_mut()
                                         .query_pairs_mut()
-                                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                 }
-                                let req_body = azure_core::EMPTY_BODY;
+                                let req_body = azure_openapi_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
                             }
                             None => {
-                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
                                 req.insert_header(
                                     azure_core::http::headers::AUTHORIZATION,
                                     format!("Bearer {}", bearer_token.secret()),
                                 );
-                                let req_body = azure_core::EMPTY_BODY;
+                                let req_body = azure_openapi_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
                             }
                         };
                         let rsp = match rsp.status() {
-                            azure_core::StatusCode::Ok => Ok(Response(rsp)),
+                            azure_core::http::StatusCode::Ok => Ok(Response(rsp)),
                             status_code => Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
                                 status: status_code,
                                 error_code: None,
@@ -4966,7 +5071,7 @@ pub mod datastores {
                         rsp?.into_body().await
                     }
                 };
-                azure_core::Pageable::new(make_request)
+                azure_openapi_core::Pageable::new(make_request)
             }
             fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
@@ -4974,10 +5079,12 @@ pub mod datastores {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/clusters/{}/datastores",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.cluster_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -4993,7 +5100,8 @@ pub mod datastores {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::Datastore> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::Datastore = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -5051,13 +5159,13 @@ pub mod datastores {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_core::EMPTY_BODY;
+                        let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
@@ -5069,10 +5177,12 @@ pub mod datastores {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/clusters/{}/datastores/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.cluster_name, &self.datastore_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -5100,7 +5210,8 @@ pub mod datastores {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::Datastore> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::Datastore = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -5168,7 +5279,7 @@ pub mod datastores {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Put);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Put);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
@@ -5187,10 +5298,12 @@ pub mod datastores {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/clusters/{}/datastores/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.cluster_name, &self.datastore_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -5223,7 +5336,7 @@ pub mod datastores {
                     let location = get_location(headers, FinalState::AzureAsyncOperation)?;
                     if let Some(url) = location {
                         loop {
-                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::Method::Get);
+                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::http::Method::Get);
                             let bearer_token = self.client.bearer_token().await?;
                             req.insert_header(
                                 azure_core::http::headers::AUTHORIZATION,
@@ -5242,7 +5355,7 @@ pub mod datastores {
                             log::trace!("current provisioning_state: {provisioning_state:?}");
                             match provisioning_state {
                                 LroStatus::Succeeded => {
-                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::Method::Get);
+                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::http::Method::Get);
                                     let bearer_token = self.client.bearer_token().await?;
                                     req.insert_header(
                                         azure_core::http::headers::AUTHORIZATION,
@@ -5345,13 +5458,13 @@ pub mod datastores {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Delete);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Delete);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_core::EMPTY_BODY;
+                        let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
@@ -5363,10 +5476,12 @@ pub mod datastores {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/clusters/{}/datastores/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.cluster_name, &self.datastore_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -5439,7 +5554,8 @@ pub mod hosts {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::HostListResult> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::HostListResult = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -5487,7 +5603,7 @@ pub mod hosts {
             pub(crate) cluster_name: String,
         }
         impl RequestBuilder {
-            pub fn into_stream(self) -> azure_core::Pageable<models::HostListResult, azure_core::error::Error> {
+            pub fn into_stream(self) -> azure_openapi_core::Pageable<models::HostListResult, azure_core::error::Error> {
                 let make_request = move |continuation: Option<String>| {
                     let this = self.clone();
                     async move {
@@ -5496,37 +5612,39 @@ pub mod hosts {
                             Some(value) => {
                                 url.set_path("");
                                 url = url.join(&value)?;
-                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
                                 req.insert_header(
                                     azure_core::http::headers::AUTHORIZATION,
                                     format!("Bearer {}", bearer_token.secret()),
                                 );
-                                let has_api_version_already =
-                                    req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                                let has_api_version_already = req
+                                    .url_mut()
+                                    .query_pairs()
+                                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                                 if !has_api_version_already {
                                     req.url_mut()
                                         .query_pairs_mut()
-                                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                 }
-                                let req_body = azure_core::EMPTY_BODY;
+                                let req_body = azure_openapi_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
                             }
                             None => {
-                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
                                 req.insert_header(
                                     azure_core::http::headers::AUTHORIZATION,
                                     format!("Bearer {}", bearer_token.secret()),
                                 );
-                                let req_body = azure_core::EMPTY_BODY;
+                                let req_body = azure_openapi_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
                             }
                         };
                         let rsp = match rsp.status() {
-                            azure_core::StatusCode::Ok => Ok(Response(rsp)),
+                            azure_core::http::StatusCode::Ok => Ok(Response(rsp)),
                             status_code => Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
                                 status: status_code,
                                 error_code: None,
@@ -5535,7 +5653,7 @@ pub mod hosts {
                         rsp?.into_body().await
                     }
                 };
-                azure_core::Pageable::new(make_request)
+                azure_openapi_core::Pageable::new(make_request)
             }
             fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
@@ -5543,10 +5661,12 @@ pub mod hosts {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/clusters/{}/hosts",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.cluster_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -5562,7 +5682,8 @@ pub mod hosts {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::Host> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::Host = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -5620,13 +5741,13 @@ pub mod hosts {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_core::EMPTY_BODY;
+                        let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
@@ -5638,10 +5759,12 @@ pub mod hosts {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/clusters/{}/hosts/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.cluster_name, &self.host_id
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -5807,7 +5930,8 @@ pub mod placement_policies {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::PlacementPoliciesList> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::PlacementPoliciesList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -5855,7 +5979,7 @@ pub mod placement_policies {
             pub(crate) cluster_name: String,
         }
         impl RequestBuilder {
-            pub fn into_stream(self) -> azure_core::Pageable<models::PlacementPoliciesList, azure_core::error::Error> {
+            pub fn into_stream(self) -> azure_openapi_core::Pageable<models::PlacementPoliciesList, azure_core::error::Error> {
                 let make_request = move |continuation: Option<String>| {
                     let this = self.clone();
                     async move {
@@ -5864,37 +5988,39 @@ pub mod placement_policies {
                             Some(value) => {
                                 url.set_path("");
                                 url = url.join(&value)?;
-                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
                                 req.insert_header(
                                     azure_core::http::headers::AUTHORIZATION,
                                     format!("Bearer {}", bearer_token.secret()),
                                 );
-                                let has_api_version_already =
-                                    req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                                let has_api_version_already = req
+                                    .url_mut()
+                                    .query_pairs()
+                                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                                 if !has_api_version_already {
                                     req.url_mut()
                                         .query_pairs_mut()
-                                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                 }
-                                let req_body = azure_core::EMPTY_BODY;
+                                let req_body = azure_openapi_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
                             }
                             None => {
-                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
                                 req.insert_header(
                                     azure_core::http::headers::AUTHORIZATION,
                                     format!("Bearer {}", bearer_token.secret()),
                                 );
-                                let req_body = azure_core::EMPTY_BODY;
+                                let req_body = azure_openapi_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
                             }
                         };
                         let rsp = match rsp.status() {
-                            azure_core::StatusCode::Ok => Ok(Response(rsp)),
+                            azure_core::http::StatusCode::Ok => Ok(Response(rsp)),
                             status_code => Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
                                 status: status_code,
                                 error_code: None,
@@ -5903,7 +6029,7 @@ pub mod placement_policies {
                         rsp?.into_body().await
                     }
                 };
-                azure_core::Pageable::new(make_request)
+                azure_openapi_core::Pageable::new(make_request)
             }
             fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
@@ -5911,10 +6037,12 @@ pub mod placement_policies {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/clusters/{}/placementPolicies",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.cluster_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -5930,7 +6058,8 @@ pub mod placement_policies {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::PlacementPolicy> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::PlacementPolicy = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -5988,13 +6117,13 @@ pub mod placement_policies {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_core::EMPTY_BODY;
+                        let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
@@ -6010,10 +6139,12 @@ pub mod placement_policies {
                     &self.cluster_name,
                     &self.placement_policy_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -6041,7 +6172,8 @@ pub mod placement_policies {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::PlacementPolicy> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::PlacementPolicy = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -6109,7 +6241,7 @@ pub mod placement_policies {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Put);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Put);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
@@ -6132,10 +6264,12 @@ pub mod placement_policies {
                     &self.cluster_name,
                     &self.placement_policy_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -6168,7 +6302,7 @@ pub mod placement_policies {
                     let location = get_location(headers, FinalState::AzureAsyncOperation)?;
                     if let Some(url) = location {
                         loop {
-                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::Method::Get);
+                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::http::Method::Get);
                             let bearer_token = self.client.bearer_token().await?;
                             req.insert_header(
                                 azure_core::http::headers::AUTHORIZATION,
@@ -6187,7 +6321,7 @@ pub mod placement_policies {
                             log::trace!("current provisioning_state: {provisioning_state:?}");
                             match provisioning_state {
                                 LroStatus::Succeeded => {
-                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::Method::Get);
+                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::http::Method::Get);
                                     let bearer_token = self.client.bearer_token().await?;
                                     req.insert_header(
                                         azure_core::http::headers::AUTHORIZATION,
@@ -6224,7 +6358,8 @@ pub mod placement_policies {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::PlacementPolicy> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::PlacementPolicy = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -6296,7 +6431,7 @@ pub mod placement_policies {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Patch);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Patch);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
@@ -6319,10 +6454,12 @@ pub mod placement_policies {
                     &self.cluster_name,
                     &self.placement_policy_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -6355,7 +6492,7 @@ pub mod placement_policies {
                     let location = get_location(headers, FinalState::Location)?;
                     if let Some(url) = location {
                         loop {
-                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::Method::Get);
+                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::http::Method::Get);
                             let bearer_token = self.client.bearer_token().await?;
                             req.insert_header(
                                 azure_core::http::headers::AUTHORIZATION,
@@ -6374,7 +6511,7 @@ pub mod placement_policies {
                             log::trace!("current provisioning_state: {provisioning_state:?}");
                             match provisioning_state {
                                 LroStatus::Succeeded => {
-                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::Method::Get);
+                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::http::Method::Get);
                                     let bearer_token = self.client.bearer_token().await?;
                                     req.insert_header(
                                         azure_core::http::headers::AUTHORIZATION,
@@ -6477,13 +6614,13 @@ pub mod placement_policies {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Delete);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Delete);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_core::EMPTY_BODY;
+                        let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
@@ -6499,10 +6636,12 @@ pub mod placement_policies {
                     &self.cluster_name,
                     &self.placement_policy_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -6603,7 +6742,8 @@ pub mod virtual_machines {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::VirtualMachinesList> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::VirtualMachinesList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -6651,7 +6791,7 @@ pub mod virtual_machines {
             pub(crate) cluster_name: String,
         }
         impl RequestBuilder {
-            pub fn into_stream(self) -> azure_core::Pageable<models::VirtualMachinesList, azure_core::error::Error> {
+            pub fn into_stream(self) -> azure_openapi_core::Pageable<models::VirtualMachinesList, azure_core::error::Error> {
                 let make_request = move |continuation: Option<String>| {
                     let this = self.clone();
                     async move {
@@ -6660,37 +6800,39 @@ pub mod virtual_machines {
                             Some(value) => {
                                 url.set_path("");
                                 url = url.join(&value)?;
-                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
                                 req.insert_header(
                                     azure_core::http::headers::AUTHORIZATION,
                                     format!("Bearer {}", bearer_token.secret()),
                                 );
-                                let has_api_version_already =
-                                    req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                                let has_api_version_already = req
+                                    .url_mut()
+                                    .query_pairs()
+                                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                                 if !has_api_version_already {
                                     req.url_mut()
                                         .query_pairs_mut()
-                                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                 }
-                                let req_body = azure_core::EMPTY_BODY;
+                                let req_body = azure_openapi_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
                             }
                             None => {
-                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
                                 req.insert_header(
                                     azure_core::http::headers::AUTHORIZATION,
                                     format!("Bearer {}", bearer_token.secret()),
                                 );
-                                let req_body = azure_core::EMPTY_BODY;
+                                let req_body = azure_openapi_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
                             }
                         };
                         let rsp = match rsp.status() {
-                            azure_core::StatusCode::Ok => Ok(Response(rsp)),
+                            azure_core::http::StatusCode::Ok => Ok(Response(rsp)),
                             status_code => Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
                                 status: status_code,
                                 error_code: None,
@@ -6699,7 +6841,7 @@ pub mod virtual_machines {
                         rsp?.into_body().await
                     }
                 };
-                azure_core::Pageable::new(make_request)
+                azure_openapi_core::Pageable::new(make_request)
             }
             fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
@@ -6707,10 +6849,12 @@ pub mod virtual_machines {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/clusters/{}/virtualMachines",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.cluster_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -6726,7 +6870,8 @@ pub mod virtual_machines {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::VirtualMachine> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::VirtualMachine = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -6784,13 +6929,13 @@ pub mod virtual_machines {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_core::EMPTY_BODY;
+                        let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
@@ -6806,10 +6951,12 @@ pub mod virtual_machines {
                     &self.cluster_name,
                     &self.virtual_machine_id
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -6904,7 +7051,7 @@ pub mod virtual_machines {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Post);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Post);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
@@ -6920,10 +7067,12 @@ pub mod virtual_machines {
             fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url . set_path (& format ! ("/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/clusters/{}/virtualMachines/{}/restrictMovement" , & self . subscription_id , & self . resource_group_name , & self . private_cloud_name , & self . cluster_name , & self . virtual_machine_id)) ;
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -7037,7 +7186,8 @@ pub mod global_reach_connections {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::GlobalReachConnectionList> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::GlobalReachConnectionList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -7084,7 +7234,7 @@ pub mod global_reach_connections {
             pub(crate) private_cloud_name: String,
         }
         impl RequestBuilder {
-            pub fn into_stream(self) -> azure_core::Pageable<models::GlobalReachConnectionList, azure_core::error::Error> {
+            pub fn into_stream(self) -> azure_openapi_core::Pageable<models::GlobalReachConnectionList, azure_core::error::Error> {
                 let make_request = move |continuation: Option<String>| {
                     let this = self.clone();
                     async move {
@@ -7093,37 +7243,39 @@ pub mod global_reach_connections {
                             Some(value) => {
                                 url.set_path("");
                                 url = url.join(&value)?;
-                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
                                 req.insert_header(
                                     azure_core::http::headers::AUTHORIZATION,
                                     format!("Bearer {}", bearer_token.secret()),
                                 );
-                                let has_api_version_already =
-                                    req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                                let has_api_version_already = req
+                                    .url_mut()
+                                    .query_pairs()
+                                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                                 if !has_api_version_already {
                                     req.url_mut()
                                         .query_pairs_mut()
-                                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                 }
-                                let req_body = azure_core::EMPTY_BODY;
+                                let req_body = azure_openapi_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
                             }
                             None => {
-                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
                                 req.insert_header(
                                     azure_core::http::headers::AUTHORIZATION,
                                     format!("Bearer {}", bearer_token.secret()),
                                 );
-                                let req_body = azure_core::EMPTY_BODY;
+                                let req_body = azure_openapi_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
                             }
                         };
                         let rsp = match rsp.status() {
-                            azure_core::StatusCode::Ok => Ok(Response(rsp)),
+                            azure_core::http::StatusCode::Ok => Ok(Response(rsp)),
                             status_code => Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
                                 status: status_code,
                                 error_code: None,
@@ -7132,7 +7284,7 @@ pub mod global_reach_connections {
                         rsp?.into_body().await
                     }
                 };
-                azure_core::Pageable::new(make_request)
+                azure_openapi_core::Pageable::new(make_request)
             }
             fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
@@ -7140,10 +7292,12 @@ pub mod global_reach_connections {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/globalReachConnections",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -7159,7 +7313,8 @@ pub mod global_reach_connections {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::GlobalReachConnection> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::GlobalReachConnection = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -7216,13 +7371,13 @@ pub mod global_reach_connections {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_core::EMPTY_BODY;
+                        let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
@@ -7234,10 +7389,12 @@ pub mod global_reach_connections {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/globalReachConnections/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.global_reach_connection_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -7265,7 +7422,8 @@ pub mod global_reach_connections {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::GlobalReachConnection> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::GlobalReachConnection = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -7332,7 +7490,7 @@ pub mod global_reach_connections {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Put);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Put);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
@@ -7351,10 +7509,12 @@ pub mod global_reach_connections {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/globalReachConnections/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.global_reach_connection_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -7387,7 +7547,7 @@ pub mod global_reach_connections {
                     let location = get_location(headers, FinalState::AzureAsyncOperation)?;
                     if let Some(url) = location {
                         loop {
-                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::Method::Get);
+                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::http::Method::Get);
                             let bearer_token = self.client.bearer_token().await?;
                             req.insert_header(
                                 azure_core::http::headers::AUTHORIZATION,
@@ -7406,7 +7566,7 @@ pub mod global_reach_connections {
                             log::trace!("current provisioning_state: {provisioning_state:?}");
                             match provisioning_state {
                                 LroStatus::Succeeded => {
-                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::Method::Get);
+                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::http::Method::Get);
                                     let bearer_token = self.client.bearer_token().await?;
                                     req.insert_header(
                                         azure_core::http::headers::AUTHORIZATION,
@@ -7508,13 +7668,13 @@ pub mod global_reach_connections {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Delete);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Delete);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_core::EMPTY_BODY;
+                        let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
@@ -7526,10 +7686,12 @@ pub mod global_reach_connections {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/globalReachConnections/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.global_reach_connection_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -7643,7 +7805,8 @@ pub mod hcx_enterprise_sites {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::HcxEnterpriseSiteList> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::HcxEnterpriseSiteList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -7690,7 +7853,7 @@ pub mod hcx_enterprise_sites {
             pub(crate) private_cloud_name: String,
         }
         impl RequestBuilder {
-            pub fn into_stream(self) -> azure_core::Pageable<models::HcxEnterpriseSiteList, azure_core::error::Error> {
+            pub fn into_stream(self) -> azure_openapi_core::Pageable<models::HcxEnterpriseSiteList, azure_core::error::Error> {
                 let make_request = move |continuation: Option<String>| {
                     let this = self.clone();
                     async move {
@@ -7699,37 +7862,39 @@ pub mod hcx_enterprise_sites {
                             Some(value) => {
                                 url.set_path("");
                                 url = url.join(&value)?;
-                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
                                 req.insert_header(
                                     azure_core::http::headers::AUTHORIZATION,
                                     format!("Bearer {}", bearer_token.secret()),
                                 );
-                                let has_api_version_already =
-                                    req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                                let has_api_version_already = req
+                                    .url_mut()
+                                    .query_pairs()
+                                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                                 if !has_api_version_already {
                                     req.url_mut()
                                         .query_pairs_mut()
-                                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                 }
-                                let req_body = azure_core::EMPTY_BODY;
+                                let req_body = azure_openapi_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
                             }
                             None => {
-                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
                                 req.insert_header(
                                     azure_core::http::headers::AUTHORIZATION,
                                     format!("Bearer {}", bearer_token.secret()),
                                 );
-                                let req_body = azure_core::EMPTY_BODY;
+                                let req_body = azure_openapi_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
                             }
                         };
                         let rsp = match rsp.status() {
-                            azure_core::StatusCode::Ok => Ok(Response(rsp)),
+                            azure_core::http::StatusCode::Ok => Ok(Response(rsp)),
                             status_code => Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
                                 status: status_code,
                                 error_code: None,
@@ -7738,7 +7903,7 @@ pub mod hcx_enterprise_sites {
                         rsp?.into_body().await
                     }
                 };
-                azure_core::Pageable::new(make_request)
+                azure_openapi_core::Pageable::new(make_request)
             }
             fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
@@ -7746,10 +7911,12 @@ pub mod hcx_enterprise_sites {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/hcxEnterpriseSites",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -7765,7 +7932,8 @@ pub mod hcx_enterprise_sites {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::HcxEnterpriseSite> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::HcxEnterpriseSite = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -7822,13 +7990,13 @@ pub mod hcx_enterprise_sites {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_core::EMPTY_BODY;
+                        let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
@@ -7840,10 +8008,12 @@ pub mod hcx_enterprise_sites {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/hcxEnterpriseSites/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.hcx_enterprise_site_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -7871,7 +8041,8 @@ pub mod hcx_enterprise_sites {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::HcxEnterpriseSite> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::HcxEnterpriseSite = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -7929,7 +8100,7 @@ pub mod hcx_enterprise_sites {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Put);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Put);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
@@ -7948,10 +8119,12 @@ pub mod hcx_enterprise_sites {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/hcxEnterpriseSites/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.hcx_enterprise_site_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -8031,13 +8204,13 @@ pub mod hcx_enterprise_sites {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Delete);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Delete);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_core::EMPTY_BODY;
+                        let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
@@ -8049,10 +8222,12 @@ pub mod hcx_enterprise_sites {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/hcxEnterpriseSites/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.hcx_enterprise_site_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -8157,7 +8332,8 @@ pub mod iscsi_paths {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::IscsiPathListResult> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::IscsiPathListResult = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -8204,7 +8380,7 @@ pub mod iscsi_paths {
             pub(crate) private_cloud_name: String,
         }
         impl RequestBuilder {
-            pub fn into_stream(self) -> azure_core::Pageable<models::IscsiPathListResult, azure_core::error::Error> {
+            pub fn into_stream(self) -> azure_openapi_core::Pageable<models::IscsiPathListResult, azure_core::error::Error> {
                 let make_request = move |continuation: Option<String>| {
                     let this = self.clone();
                     async move {
@@ -8213,37 +8389,39 @@ pub mod iscsi_paths {
                             Some(value) => {
                                 url.set_path("");
                                 url = url.join(&value)?;
-                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
                                 req.insert_header(
                                     azure_core::http::headers::AUTHORIZATION,
                                     format!("Bearer {}", bearer_token.secret()),
                                 );
-                                let has_api_version_already =
-                                    req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                                let has_api_version_already = req
+                                    .url_mut()
+                                    .query_pairs()
+                                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                                 if !has_api_version_already {
                                     req.url_mut()
                                         .query_pairs_mut()
-                                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                 }
-                                let req_body = azure_core::EMPTY_BODY;
+                                let req_body = azure_openapi_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
                             }
                             None => {
-                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
                                 req.insert_header(
                                     azure_core::http::headers::AUTHORIZATION,
                                     format!("Bearer {}", bearer_token.secret()),
                                 );
-                                let req_body = azure_core::EMPTY_BODY;
+                                let req_body = azure_openapi_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
                             }
                         };
                         let rsp = match rsp.status() {
-                            azure_core::StatusCode::Ok => Ok(Response(rsp)),
+                            azure_core::http::StatusCode::Ok => Ok(Response(rsp)),
                             status_code => Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
                                 status: status_code,
                                 error_code: None,
@@ -8252,7 +8430,7 @@ pub mod iscsi_paths {
                         rsp?.into_body().await
                     }
                 };
-                azure_core::Pageable::new(make_request)
+                azure_openapi_core::Pageable::new(make_request)
             }
             fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
@@ -8260,10 +8438,12 @@ pub mod iscsi_paths {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/iscsiPaths",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -8279,7 +8459,8 @@ pub mod iscsi_paths {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::IscsiPath> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::IscsiPath = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -8335,13 +8516,13 @@ pub mod iscsi_paths {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_core::EMPTY_BODY;
+                        let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
@@ -8353,10 +8534,12 @@ pub mod iscsi_paths {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/iscsiPaths/default",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -8384,7 +8567,8 @@ pub mod iscsi_paths {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::IscsiPath> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::IscsiPath = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -8450,7 +8634,7 @@ pub mod iscsi_paths {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Put);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Put);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
@@ -8469,10 +8653,12 @@ pub mod iscsi_paths {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/iscsiPaths/default",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -8505,7 +8691,7 @@ pub mod iscsi_paths {
                     let location = get_location(headers, FinalState::AzureAsyncOperation)?;
                     if let Some(url) = location {
                         loop {
-                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::Method::Get);
+                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::http::Method::Get);
                             let bearer_token = self.client.bearer_token().await?;
                             req.insert_header(
                                 azure_core::http::headers::AUTHORIZATION,
@@ -8524,7 +8710,7 @@ pub mod iscsi_paths {
                             log::trace!("current provisioning_state: {provisioning_state:?}");
                             match provisioning_state {
                                 LroStatus::Succeeded => {
-                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::Method::Get);
+                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::http::Method::Get);
                                     let bearer_token = self.client.bearer_token().await?;
                                     req.insert_header(
                                         azure_core::http::headers::AUTHORIZATION,
@@ -8625,13 +8811,13 @@ pub mod iscsi_paths {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Delete);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Delete);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_core::EMPTY_BODY;
+                        let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
@@ -8643,10 +8829,12 @@ pub mod iscsi_paths {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/iscsiPaths/default",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -8713,7 +8901,8 @@ pub mod provisioned_networks {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::ProvisionedNetworkListResult> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::ProvisionedNetworkListResult = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -8760,7 +8949,7 @@ pub mod provisioned_networks {
             pub(crate) private_cloud_name: String,
         }
         impl RequestBuilder {
-            pub fn into_stream(self) -> azure_core::Pageable<models::ProvisionedNetworkListResult, azure_core::error::Error> {
+            pub fn into_stream(self) -> azure_openapi_core::Pageable<models::ProvisionedNetworkListResult, azure_core::error::Error> {
                 let make_request = move |continuation: Option<String>| {
                     let this = self.clone();
                     async move {
@@ -8769,37 +8958,39 @@ pub mod provisioned_networks {
                             Some(value) => {
                                 url.set_path("");
                                 url = url.join(&value)?;
-                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
                                 req.insert_header(
                                     azure_core::http::headers::AUTHORIZATION,
                                     format!("Bearer {}", bearer_token.secret()),
                                 );
-                                let has_api_version_already =
-                                    req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                                let has_api_version_already = req
+                                    .url_mut()
+                                    .query_pairs()
+                                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                                 if !has_api_version_already {
                                     req.url_mut()
                                         .query_pairs_mut()
-                                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                 }
-                                let req_body = azure_core::EMPTY_BODY;
+                                let req_body = azure_openapi_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
                             }
                             None => {
-                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
                                 req.insert_header(
                                     azure_core::http::headers::AUTHORIZATION,
                                     format!("Bearer {}", bearer_token.secret()),
                                 );
-                                let req_body = azure_core::EMPTY_BODY;
+                                let req_body = azure_openapi_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
                             }
                         };
                         let rsp = match rsp.status() {
-                            azure_core::StatusCode::Ok => Ok(Response(rsp)),
+                            azure_core::http::StatusCode::Ok => Ok(Response(rsp)),
                             status_code => Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
                                 status: status_code,
                                 error_code: None,
@@ -8808,7 +8999,7 @@ pub mod provisioned_networks {
                         rsp?.into_body().await
                     }
                 };
-                azure_core::Pageable::new(make_request)
+                azure_openapi_core::Pageable::new(make_request)
             }
             fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
@@ -8816,10 +9007,12 @@ pub mod provisioned_networks {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/provisionedNetworks",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -8835,7 +9028,8 @@ pub mod provisioned_networks {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::ProvisionedNetwork> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::ProvisionedNetwork = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -8892,13 +9086,13 @@ pub mod provisioned_networks {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_core::EMPTY_BODY;
+                        let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
@@ -8910,10 +9104,12 @@ pub mod provisioned_networks {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/provisionedNetworks/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.provisioned_network_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -9039,7 +9235,8 @@ pub mod pure_storage_policies {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::PureStoragePolicyListResult> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::PureStoragePolicyListResult = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -9086,7 +9283,7 @@ pub mod pure_storage_policies {
             pub(crate) private_cloud_name: String,
         }
         impl RequestBuilder {
-            pub fn into_stream(self) -> azure_core::Pageable<models::PureStoragePolicyListResult, azure_core::error::Error> {
+            pub fn into_stream(self) -> azure_openapi_core::Pageable<models::PureStoragePolicyListResult, azure_core::error::Error> {
                 let make_request = move |continuation: Option<String>| {
                     let this = self.clone();
                     async move {
@@ -9095,37 +9292,39 @@ pub mod pure_storage_policies {
                             Some(value) => {
                                 url.set_path("");
                                 url = url.join(&value)?;
-                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
                                 req.insert_header(
                                     azure_core::http::headers::AUTHORIZATION,
                                     format!("Bearer {}", bearer_token.secret()),
                                 );
-                                let has_api_version_already =
-                                    req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                                let has_api_version_already = req
+                                    .url_mut()
+                                    .query_pairs()
+                                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                                 if !has_api_version_already {
                                     req.url_mut()
                                         .query_pairs_mut()
-                                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                 }
-                                let req_body = azure_core::EMPTY_BODY;
+                                let req_body = azure_openapi_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
                             }
                             None => {
-                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
                                 req.insert_header(
                                     azure_core::http::headers::AUTHORIZATION,
                                     format!("Bearer {}", bearer_token.secret()),
                                 );
-                                let req_body = azure_core::EMPTY_BODY;
+                                let req_body = azure_openapi_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
                             }
                         };
                         let rsp = match rsp.status() {
-                            azure_core::StatusCode::Ok => Ok(Response(rsp)),
+                            azure_core::http::StatusCode::Ok => Ok(Response(rsp)),
                             status_code => Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
                                 status: status_code,
                                 error_code: None,
@@ -9134,7 +9333,7 @@ pub mod pure_storage_policies {
                         rsp?.into_body().await
                     }
                 };
-                azure_core::Pageable::new(make_request)
+                azure_openapi_core::Pageable::new(make_request)
             }
             fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
@@ -9142,10 +9341,12 @@ pub mod pure_storage_policies {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/pureStoragePolicies",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -9161,7 +9362,8 @@ pub mod pure_storage_policies {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::PureStoragePolicy> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::PureStoragePolicy = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -9218,13 +9420,13 @@ pub mod pure_storage_policies {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_core::EMPTY_BODY;
+                        let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
@@ -9236,10 +9438,12 @@ pub mod pure_storage_policies {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/pureStoragePolicies/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.storage_policy_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -9267,7 +9471,8 @@ pub mod pure_storage_policies {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::PureStoragePolicy> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::PureStoragePolicy = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -9339,7 +9544,7 @@ pub mod pure_storage_policies {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Put);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Put);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
@@ -9358,10 +9563,12 @@ pub mod pure_storage_policies {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/pureStoragePolicies/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.storage_policy_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -9394,7 +9601,7 @@ pub mod pure_storage_policies {
                     let location = get_location(headers, FinalState::AzureAsyncOperation)?;
                     if let Some(url) = location {
                         loop {
-                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::Method::Get);
+                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::http::Method::Get);
                             let bearer_token = self.client.bearer_token().await?;
                             req.insert_header(
                                 azure_core::http::headers::AUTHORIZATION,
@@ -9413,7 +9620,7 @@ pub mod pure_storage_policies {
                             log::trace!("current provisioning_state: {provisioning_state:?}");
                             match provisioning_state {
                                 LroStatus::Succeeded => {
-                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::Method::Get);
+                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::http::Method::Get);
                                     let bearer_token = self.client.bearer_token().await?;
                                     req.insert_header(
                                         azure_core::http::headers::AUTHORIZATION,
@@ -9515,13 +9722,13 @@ pub mod pure_storage_policies {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Delete);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Delete);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_core::EMPTY_BODY;
+                        let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
@@ -9533,10 +9740,12 @@ pub mod pure_storage_policies {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/pureStoragePolicies/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.storage_policy_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -9673,7 +9882,8 @@ pub mod script_executions {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::ScriptExecutionsList> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::ScriptExecutionsList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -9720,7 +9930,7 @@ pub mod script_executions {
             pub(crate) private_cloud_name: String,
         }
         impl RequestBuilder {
-            pub fn into_stream(self) -> azure_core::Pageable<models::ScriptExecutionsList, azure_core::error::Error> {
+            pub fn into_stream(self) -> azure_openapi_core::Pageable<models::ScriptExecutionsList, azure_core::error::Error> {
                 let make_request = move |continuation: Option<String>| {
                     let this = self.clone();
                     async move {
@@ -9729,37 +9939,39 @@ pub mod script_executions {
                             Some(value) => {
                                 url.set_path("");
                                 url = url.join(&value)?;
-                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
                                 req.insert_header(
                                     azure_core::http::headers::AUTHORIZATION,
                                     format!("Bearer {}", bearer_token.secret()),
                                 );
-                                let has_api_version_already =
-                                    req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                                let has_api_version_already = req
+                                    .url_mut()
+                                    .query_pairs()
+                                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                                 if !has_api_version_already {
                                     req.url_mut()
                                         .query_pairs_mut()
-                                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                 }
-                                let req_body = azure_core::EMPTY_BODY;
+                                let req_body = azure_openapi_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
                             }
                             None => {
-                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
                                 req.insert_header(
                                     azure_core::http::headers::AUTHORIZATION,
                                     format!("Bearer {}", bearer_token.secret()),
                                 );
-                                let req_body = azure_core::EMPTY_BODY;
+                                let req_body = azure_openapi_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
                             }
                         };
                         let rsp = match rsp.status() {
-                            azure_core::StatusCode::Ok => Ok(Response(rsp)),
+                            azure_core::http::StatusCode::Ok => Ok(Response(rsp)),
                             status_code => Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
                                 status: status_code,
                                 error_code: None,
@@ -9768,7 +9980,7 @@ pub mod script_executions {
                         rsp?.into_body().await
                     }
                 };
-                azure_core::Pageable::new(make_request)
+                azure_openapi_core::Pageable::new(make_request)
             }
             fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
@@ -9776,10 +9988,12 @@ pub mod script_executions {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/scriptExecutions",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -9795,7 +10009,8 @@ pub mod script_executions {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::ScriptExecution> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::ScriptExecution = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -9852,13 +10067,13 @@ pub mod script_executions {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_core::EMPTY_BODY;
+                        let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
@@ -9870,10 +10085,12 @@ pub mod script_executions {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/scriptExecutions/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.script_execution_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -9901,7 +10118,8 @@ pub mod script_executions {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::ScriptExecution> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::ScriptExecution = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -9968,7 +10186,7 @@ pub mod script_executions {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Put);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Put);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
@@ -9987,10 +10205,12 @@ pub mod script_executions {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/scriptExecutions/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.script_execution_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -10023,7 +10243,7 @@ pub mod script_executions {
                     let location = get_location(headers, FinalState::AzureAsyncOperation)?;
                     if let Some(url) = location {
                         loop {
-                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::Method::Get);
+                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::http::Method::Get);
                             let bearer_token = self.client.bearer_token().await?;
                             req.insert_header(
                                 azure_core::http::headers::AUTHORIZATION,
@@ -10042,7 +10262,7 @@ pub mod script_executions {
                             log::trace!("current provisioning_state: {provisioning_state:?}");
                             match provisioning_state {
                                 LroStatus::Succeeded => {
-                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::Method::Get);
+                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::http::Method::Get);
                                     let bearer_token = self.client.bearer_token().await?;
                                     req.insert_header(
                                         azure_core::http::headers::AUTHORIZATION,
@@ -10144,13 +10364,13 @@ pub mod script_executions {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Delete);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Delete);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_core::EMPTY_BODY;
+                        let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
@@ -10162,10 +10382,12 @@ pub mod script_executions {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/scriptExecutions/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.script_execution_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -10181,7 +10403,8 @@ pub mod script_executions {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::ScriptExecution> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::ScriptExecution = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -10244,7 +10467,7 @@ pub mod script_executions {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Post);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Post);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
@@ -10263,10 +10486,12 @@ pub mod script_executions {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/scriptExecutions/{}/getExecutionLogs",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.script_execution_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -10345,7 +10570,8 @@ pub mod script_packages {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::ScriptPackagesList> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::ScriptPackagesList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -10392,7 +10618,7 @@ pub mod script_packages {
             pub(crate) private_cloud_name: String,
         }
         impl RequestBuilder {
-            pub fn into_stream(self) -> azure_core::Pageable<models::ScriptPackagesList, azure_core::error::Error> {
+            pub fn into_stream(self) -> azure_openapi_core::Pageable<models::ScriptPackagesList, azure_core::error::Error> {
                 let make_request = move |continuation: Option<String>| {
                     let this = self.clone();
                     async move {
@@ -10401,37 +10627,39 @@ pub mod script_packages {
                             Some(value) => {
                                 url.set_path("");
                                 url = url.join(&value)?;
-                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
                                 req.insert_header(
                                     azure_core::http::headers::AUTHORIZATION,
                                     format!("Bearer {}", bearer_token.secret()),
                                 );
-                                let has_api_version_already =
-                                    req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                                let has_api_version_already = req
+                                    .url_mut()
+                                    .query_pairs()
+                                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                                 if !has_api_version_already {
                                     req.url_mut()
                                         .query_pairs_mut()
-                                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                 }
-                                let req_body = azure_core::EMPTY_BODY;
+                                let req_body = azure_openapi_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
                             }
                             None => {
-                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
                                 req.insert_header(
                                     azure_core::http::headers::AUTHORIZATION,
                                     format!("Bearer {}", bearer_token.secret()),
                                 );
-                                let req_body = azure_core::EMPTY_BODY;
+                                let req_body = azure_openapi_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
                             }
                         };
                         let rsp = match rsp.status() {
-                            azure_core::StatusCode::Ok => Ok(Response(rsp)),
+                            azure_core::http::StatusCode::Ok => Ok(Response(rsp)),
                             status_code => Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
                                 status: status_code,
                                 error_code: None,
@@ -10440,7 +10668,7 @@ pub mod script_packages {
                         rsp?.into_body().await
                     }
                 };
-                azure_core::Pageable::new(make_request)
+                azure_openapi_core::Pageable::new(make_request)
             }
             fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
@@ -10448,10 +10676,12 @@ pub mod script_packages {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/scriptPackages",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -10467,7 +10697,8 @@ pub mod script_packages {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::ScriptPackage> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::ScriptPackage = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -10524,13 +10755,13 @@ pub mod script_packages {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_core::EMPTY_BODY;
+                        let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
@@ -10542,10 +10773,12 @@ pub mod script_packages {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/scriptPackages/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.script_package_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -10630,7 +10863,8 @@ pub mod script_cmdlets {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::ScriptCmdletsList> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::ScriptCmdletsList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -10678,7 +10912,7 @@ pub mod script_cmdlets {
             pub(crate) script_package_name: String,
         }
         impl RequestBuilder {
-            pub fn into_stream(self) -> azure_core::Pageable<models::ScriptCmdletsList, azure_core::error::Error> {
+            pub fn into_stream(self) -> azure_openapi_core::Pageable<models::ScriptCmdletsList, azure_core::error::Error> {
                 let make_request = move |continuation: Option<String>| {
                     let this = self.clone();
                     async move {
@@ -10687,37 +10921,39 @@ pub mod script_cmdlets {
                             Some(value) => {
                                 url.set_path("");
                                 url = url.join(&value)?;
-                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
                                 req.insert_header(
                                     azure_core::http::headers::AUTHORIZATION,
                                     format!("Bearer {}", bearer_token.secret()),
                                 );
-                                let has_api_version_already =
-                                    req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                                let has_api_version_already = req
+                                    .url_mut()
+                                    .query_pairs()
+                                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                                 if !has_api_version_already {
                                     req.url_mut()
                                         .query_pairs_mut()
-                                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                 }
-                                let req_body = azure_core::EMPTY_BODY;
+                                let req_body = azure_openapi_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
                             }
                             None => {
-                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
                                 req.insert_header(
                                     azure_core::http::headers::AUTHORIZATION,
                                     format!("Bearer {}", bearer_token.secret()),
                                 );
-                                let req_body = azure_core::EMPTY_BODY;
+                                let req_body = azure_openapi_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
                             }
                         };
                         let rsp = match rsp.status() {
-                            azure_core::StatusCode::Ok => Ok(Response(rsp)),
+                            azure_core::http::StatusCode::Ok => Ok(Response(rsp)),
                             status_code => Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
                                 status: status_code,
                                 error_code: None,
@@ -10726,7 +10962,7 @@ pub mod script_cmdlets {
                         rsp?.into_body().await
                     }
                 };
-                azure_core::Pageable::new(make_request)
+                azure_openapi_core::Pageable::new(make_request)
             }
             fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
@@ -10734,10 +10970,12 @@ pub mod script_cmdlets {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/scriptPackages/{}/scriptCmdlets",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.script_package_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -10753,7 +10991,8 @@ pub mod script_cmdlets {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::ScriptCmdlet> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::ScriptCmdlet = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -10811,13 +11050,13 @@ pub mod script_cmdlets {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_core::EMPTY_BODY;
+                        let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
@@ -10833,10 +11072,12 @@ pub mod script_cmdlets {
                     &self.script_package_name,
                     &self.script_cmdlet_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -11760,7 +12001,8 @@ pub mod workload_networks {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkList> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::WorkloadNetworkList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -11807,7 +12049,7 @@ pub mod workload_networks {
             pub(crate) private_cloud_name: String,
         }
         impl RequestBuilder {
-            pub fn into_stream(self) -> azure_core::Pageable<models::WorkloadNetworkList, azure_core::error::Error> {
+            pub fn into_stream(self) -> azure_openapi_core::Pageable<models::WorkloadNetworkList, azure_core::error::Error> {
                 let make_request = move |continuation: Option<String>| {
                     let this = self.clone();
                     async move {
@@ -11816,37 +12058,39 @@ pub mod workload_networks {
                             Some(value) => {
                                 url.set_path("");
                                 url = url.join(&value)?;
-                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
                                 req.insert_header(
                                     azure_core::http::headers::AUTHORIZATION,
                                     format!("Bearer {}", bearer_token.secret()),
                                 );
-                                let has_api_version_already =
-                                    req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                                let has_api_version_already = req
+                                    .url_mut()
+                                    .query_pairs()
+                                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                                 if !has_api_version_already {
                                     req.url_mut()
                                         .query_pairs_mut()
-                                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                 }
-                                let req_body = azure_core::EMPTY_BODY;
+                                let req_body = azure_openapi_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
                             }
                             None => {
-                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
                                 req.insert_header(
                                     azure_core::http::headers::AUTHORIZATION,
                                     format!("Bearer {}", bearer_token.secret()),
                                 );
-                                let req_body = azure_core::EMPTY_BODY;
+                                let req_body = azure_openapi_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
                             }
                         };
                         let rsp = match rsp.status() {
-                            azure_core::StatusCode::Ok => Ok(Response(rsp)),
+                            azure_core::http::StatusCode::Ok => Ok(Response(rsp)),
                             status_code => Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
                                 status: status_code,
                                 error_code: None,
@@ -11855,7 +12099,7 @@ pub mod workload_networks {
                         rsp?.into_body().await
                     }
                 };
-                azure_core::Pageable::new(make_request)
+                azure_openapi_core::Pageable::new(make_request)
             }
             fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
@@ -11863,10 +12107,12 @@ pub mod workload_networks {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -11882,7 +12128,8 @@ pub mod workload_networks {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetwork> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::WorkloadNetwork = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -11938,13 +12185,13 @@ pub mod workload_networks {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_core::EMPTY_BODY;
+                        let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
@@ -11956,10 +12203,12 @@ pub mod workload_networks {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -11987,7 +12236,8 @@ pub mod workload_networks {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkDhcpList> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::WorkloadNetworkDhcpList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -12034,7 +12284,7 @@ pub mod workload_networks {
             pub(crate) private_cloud_name: String,
         }
         impl RequestBuilder {
-            pub fn into_stream(self) -> azure_core::Pageable<models::WorkloadNetworkDhcpList, azure_core::error::Error> {
+            pub fn into_stream(self) -> azure_openapi_core::Pageable<models::WorkloadNetworkDhcpList, azure_core::error::Error> {
                 let make_request = move |continuation: Option<String>| {
                     let this = self.clone();
                     async move {
@@ -12043,37 +12293,39 @@ pub mod workload_networks {
                             Some(value) => {
                                 url.set_path("");
                                 url = url.join(&value)?;
-                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
                                 req.insert_header(
                                     azure_core::http::headers::AUTHORIZATION,
                                     format!("Bearer {}", bearer_token.secret()),
                                 );
-                                let has_api_version_already =
-                                    req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                                let has_api_version_already = req
+                                    .url_mut()
+                                    .query_pairs()
+                                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                                 if !has_api_version_already {
                                     req.url_mut()
                                         .query_pairs_mut()
-                                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                 }
-                                let req_body = azure_core::EMPTY_BODY;
+                                let req_body = azure_openapi_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
                             }
                             None => {
-                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
                                 req.insert_header(
                                     azure_core::http::headers::AUTHORIZATION,
                                     format!("Bearer {}", bearer_token.secret()),
                                 );
-                                let req_body = azure_core::EMPTY_BODY;
+                                let req_body = azure_openapi_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
                             }
                         };
                         let rsp = match rsp.status() {
-                            azure_core::StatusCode::Ok => Ok(Response(rsp)),
+                            azure_core::http::StatusCode::Ok => Ok(Response(rsp)),
                             status_code => Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
                                 status: status_code,
                                 error_code: None,
@@ -12082,15 +12334,17 @@ pub mod workload_networks {
                         rsp?.into_body().await
                     }
                 };
-                azure_core::Pageable::new(make_request)
+                azure_openapi_core::Pageable::new(make_request)
             }
             fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url . set_path (& format ! ("/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/dhcpConfigurations" , & self . subscription_id , & self . resource_group_name , & self . private_cloud_name)) ;
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -12106,7 +12360,8 @@ pub mod workload_networks {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkDhcp> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::WorkloadNetworkDhcp = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -12163,13 +12418,13 @@ pub mod workload_networks {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_core::EMPTY_BODY;
+                        let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
@@ -12178,10 +12433,12 @@ pub mod workload_networks {
             fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url . set_path (& format ! ("/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/dhcpConfigurations/{}" , & self . subscription_id , & self . resource_group_name , & self . private_cloud_name , & self . dhcp_id)) ;
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -12209,7 +12466,8 @@ pub mod workload_networks {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkDhcp> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::WorkloadNetworkDhcp = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -12276,7 +12534,7 @@ pub mod workload_networks {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Put);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Put);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
@@ -12292,10 +12550,12 @@ pub mod workload_networks {
             fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url . set_path (& format ! ("/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/dhcpConfigurations/{}" , & self . subscription_id , & self . resource_group_name , & self . private_cloud_name , & self . dhcp_id)) ;
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -12328,7 +12588,7 @@ pub mod workload_networks {
                     let location = get_location(headers, FinalState::AzureAsyncOperation)?;
                     if let Some(url) = location {
                         loop {
-                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::Method::Get);
+                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::http::Method::Get);
                             let bearer_token = self.client.bearer_token().await?;
                             req.insert_header(
                                 azure_core::http::headers::AUTHORIZATION,
@@ -12347,7 +12607,7 @@ pub mod workload_networks {
                             log::trace!("current provisioning_state: {provisioning_state:?}");
                             match provisioning_state {
                                 LroStatus::Succeeded => {
-                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::Method::Get);
+                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::http::Method::Get);
                                     let bearer_token = self.client.bearer_token().await?;
                                     req.insert_header(
                                         azure_core::http::headers::AUTHORIZATION,
@@ -12384,7 +12644,8 @@ pub mod workload_networks {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkDhcp> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::WorkloadNetworkDhcp = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -12455,7 +12716,7 @@ pub mod workload_networks {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Patch);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Patch);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
@@ -12471,10 +12732,12 @@ pub mod workload_networks {
             fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url . set_path (& format ! ("/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/dhcpConfigurations/{}" , & self . subscription_id , & self . resource_group_name , & self . private_cloud_name , & self . dhcp_id)) ;
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -12507,7 +12770,7 @@ pub mod workload_networks {
                     let location = get_location(headers, FinalState::Location)?;
                     if let Some(url) = location {
                         loop {
-                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::Method::Get);
+                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::http::Method::Get);
                             let bearer_token = self.client.bearer_token().await?;
                             req.insert_header(
                                 azure_core::http::headers::AUTHORIZATION,
@@ -12526,7 +12789,7 @@ pub mod workload_networks {
                             log::trace!("current provisioning_state: {provisioning_state:?}");
                             match provisioning_state {
                                 LroStatus::Succeeded => {
-                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::Method::Get);
+                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::http::Method::Get);
                                     let bearer_token = self.client.bearer_token().await?;
                                     req.insert_header(
                                         azure_core::http::headers::AUTHORIZATION,
@@ -12628,13 +12891,13 @@ pub mod workload_networks {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Delete);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Delete);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_core::EMPTY_BODY;
+                        let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
@@ -12643,10 +12906,12 @@ pub mod workload_networks {
             fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url . set_path (& format ! ("/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/dhcpConfigurations/{}" , & self . subscription_id , & self . resource_group_name , & self . private_cloud_name , & self . dhcp_id)) ;
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -12662,7 +12927,8 @@ pub mod workload_networks {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkDnsServicesList> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::WorkloadNetworkDnsServicesList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -12709,7 +12975,7 @@ pub mod workload_networks {
             pub(crate) private_cloud_name: String,
         }
         impl RequestBuilder {
-            pub fn into_stream(self) -> azure_core::Pageable<models::WorkloadNetworkDnsServicesList, azure_core::error::Error> {
+            pub fn into_stream(self) -> azure_openapi_core::Pageable<models::WorkloadNetworkDnsServicesList, azure_core::error::Error> {
                 let make_request = move |continuation: Option<String>| {
                     let this = self.clone();
                     async move {
@@ -12718,37 +12984,39 @@ pub mod workload_networks {
                             Some(value) => {
                                 url.set_path("");
                                 url = url.join(&value)?;
-                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
                                 req.insert_header(
                                     azure_core::http::headers::AUTHORIZATION,
                                     format!("Bearer {}", bearer_token.secret()),
                                 );
-                                let has_api_version_already =
-                                    req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                                let has_api_version_already = req
+                                    .url_mut()
+                                    .query_pairs()
+                                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                                 if !has_api_version_already {
                                     req.url_mut()
                                         .query_pairs_mut()
-                                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                 }
-                                let req_body = azure_core::EMPTY_BODY;
+                                let req_body = azure_openapi_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
                             }
                             None => {
-                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
                                 req.insert_header(
                                     azure_core::http::headers::AUTHORIZATION,
                                     format!("Bearer {}", bearer_token.secret()),
                                 );
-                                let req_body = azure_core::EMPTY_BODY;
+                                let req_body = azure_openapi_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
                             }
                         };
                         let rsp = match rsp.status() {
-                            azure_core::StatusCode::Ok => Ok(Response(rsp)),
+                            azure_core::http::StatusCode::Ok => Ok(Response(rsp)),
                             status_code => Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
                                 status: status_code,
                                 error_code: None,
@@ -12757,7 +13025,7 @@ pub mod workload_networks {
                         rsp?.into_body().await
                     }
                 };
-                azure_core::Pageable::new(make_request)
+                azure_openapi_core::Pageable::new(make_request)
             }
             fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
@@ -12765,10 +13033,12 @@ pub mod workload_networks {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/dnsServices",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -12784,7 +13054,8 @@ pub mod workload_networks {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkDnsService> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::WorkloadNetworkDnsService = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -12841,13 +13112,13 @@ pub mod workload_networks {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_core::EMPTY_BODY;
+                        let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
@@ -12859,10 +13130,12 @@ pub mod workload_networks {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/dnsServices/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.dns_service_id
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -12890,7 +13163,8 @@ pub mod workload_networks {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkDnsService> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::WorkloadNetworkDnsService = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -12957,7 +13231,7 @@ pub mod workload_networks {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Put);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Put);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
@@ -12976,10 +13250,12 @@ pub mod workload_networks {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/dnsServices/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.dns_service_id
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -13012,7 +13288,7 @@ pub mod workload_networks {
                     let location = get_location(headers, FinalState::AzureAsyncOperation)?;
                     if let Some(url) = location {
                         loop {
-                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::Method::Get);
+                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::http::Method::Get);
                             let bearer_token = self.client.bearer_token().await?;
                             req.insert_header(
                                 azure_core::http::headers::AUTHORIZATION,
@@ -13031,7 +13307,7 @@ pub mod workload_networks {
                             log::trace!("current provisioning_state: {provisioning_state:?}");
                             match provisioning_state {
                                 LroStatus::Succeeded => {
-                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::Method::Get);
+                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::http::Method::Get);
                                     let bearer_token = self.client.bearer_token().await?;
                                     req.insert_header(
                                         azure_core::http::headers::AUTHORIZATION,
@@ -13068,7 +13344,8 @@ pub mod workload_networks {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkDnsService> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::WorkloadNetworkDnsService = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -13139,7 +13416,7 @@ pub mod workload_networks {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Patch);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Patch);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
@@ -13158,10 +13435,12 @@ pub mod workload_networks {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/dnsServices/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.dns_service_id
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -13194,7 +13473,7 @@ pub mod workload_networks {
                     let location = get_location(headers, FinalState::Location)?;
                     if let Some(url) = location {
                         loop {
-                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::Method::Get);
+                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::http::Method::Get);
                             let bearer_token = self.client.bearer_token().await?;
                             req.insert_header(
                                 azure_core::http::headers::AUTHORIZATION,
@@ -13213,7 +13492,7 @@ pub mod workload_networks {
                             log::trace!("current provisioning_state: {provisioning_state:?}");
                             match provisioning_state {
                                 LroStatus::Succeeded => {
-                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::Method::Get);
+                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::http::Method::Get);
                                     let bearer_token = self.client.bearer_token().await?;
                                     req.insert_header(
                                         azure_core::http::headers::AUTHORIZATION,
@@ -13315,13 +13594,13 @@ pub mod workload_networks {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Delete);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Delete);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_core::EMPTY_BODY;
+                        let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
@@ -13333,10 +13612,12 @@ pub mod workload_networks {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/dnsServices/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.dns_service_id
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -13352,7 +13633,8 @@ pub mod workload_networks {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkDnsZonesList> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::WorkloadNetworkDnsZonesList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -13399,7 +13681,7 @@ pub mod workload_networks {
             pub(crate) private_cloud_name: String,
         }
         impl RequestBuilder {
-            pub fn into_stream(self) -> azure_core::Pageable<models::WorkloadNetworkDnsZonesList, azure_core::error::Error> {
+            pub fn into_stream(self) -> azure_openapi_core::Pageable<models::WorkloadNetworkDnsZonesList, azure_core::error::Error> {
                 let make_request = move |continuation: Option<String>| {
                     let this = self.clone();
                     async move {
@@ -13408,37 +13690,39 @@ pub mod workload_networks {
                             Some(value) => {
                                 url.set_path("");
                                 url = url.join(&value)?;
-                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
                                 req.insert_header(
                                     azure_core::http::headers::AUTHORIZATION,
                                     format!("Bearer {}", bearer_token.secret()),
                                 );
-                                let has_api_version_already =
-                                    req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                                let has_api_version_already = req
+                                    .url_mut()
+                                    .query_pairs()
+                                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                                 if !has_api_version_already {
                                     req.url_mut()
                                         .query_pairs_mut()
-                                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                 }
-                                let req_body = azure_core::EMPTY_BODY;
+                                let req_body = azure_openapi_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
                             }
                             None => {
-                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
                                 req.insert_header(
                                     azure_core::http::headers::AUTHORIZATION,
                                     format!("Bearer {}", bearer_token.secret()),
                                 );
-                                let req_body = azure_core::EMPTY_BODY;
+                                let req_body = azure_openapi_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
                             }
                         };
                         let rsp = match rsp.status() {
-                            azure_core::StatusCode::Ok => Ok(Response(rsp)),
+                            azure_core::http::StatusCode::Ok => Ok(Response(rsp)),
                             status_code => Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
                                 status: status_code,
                                 error_code: None,
@@ -13447,7 +13731,7 @@ pub mod workload_networks {
                         rsp?.into_body().await
                     }
                 };
-                azure_core::Pageable::new(make_request)
+                azure_openapi_core::Pageable::new(make_request)
             }
             fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
@@ -13455,10 +13739,12 @@ pub mod workload_networks {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/dnsZones",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -13474,7 +13760,8 @@ pub mod workload_networks {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkDnsZone> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::WorkloadNetworkDnsZone = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -13531,13 +13818,13 @@ pub mod workload_networks {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_core::EMPTY_BODY;
+                        let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
@@ -13549,10 +13836,12 @@ pub mod workload_networks {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/dnsZones/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.dns_zone_id
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -13580,7 +13869,8 @@ pub mod workload_networks {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkDnsZone> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::WorkloadNetworkDnsZone = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -13647,7 +13937,7 @@ pub mod workload_networks {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Put);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Put);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
@@ -13666,10 +13956,12 @@ pub mod workload_networks {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/dnsZones/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.dns_zone_id
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -13702,7 +13994,7 @@ pub mod workload_networks {
                     let location = get_location(headers, FinalState::AzureAsyncOperation)?;
                     if let Some(url) = location {
                         loop {
-                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::Method::Get);
+                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::http::Method::Get);
                             let bearer_token = self.client.bearer_token().await?;
                             req.insert_header(
                                 azure_core::http::headers::AUTHORIZATION,
@@ -13721,7 +14013,7 @@ pub mod workload_networks {
                             log::trace!("current provisioning_state: {provisioning_state:?}");
                             match provisioning_state {
                                 LroStatus::Succeeded => {
-                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::Method::Get);
+                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::http::Method::Get);
                                     let bearer_token = self.client.bearer_token().await?;
                                     req.insert_header(
                                         azure_core::http::headers::AUTHORIZATION,
@@ -13758,7 +14050,8 @@ pub mod workload_networks {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkDnsZone> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::WorkloadNetworkDnsZone = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -13829,7 +14122,7 @@ pub mod workload_networks {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Patch);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Patch);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
@@ -13848,10 +14141,12 @@ pub mod workload_networks {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/dnsZones/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.dns_zone_id
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -13884,7 +14179,7 @@ pub mod workload_networks {
                     let location = get_location(headers, FinalState::Location)?;
                     if let Some(url) = location {
                         loop {
-                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::Method::Get);
+                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::http::Method::Get);
                             let bearer_token = self.client.bearer_token().await?;
                             req.insert_header(
                                 azure_core::http::headers::AUTHORIZATION,
@@ -13903,7 +14198,7 @@ pub mod workload_networks {
                             log::trace!("current provisioning_state: {provisioning_state:?}");
                             match provisioning_state {
                                 LroStatus::Succeeded => {
-                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::Method::Get);
+                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::http::Method::Get);
                                     let bearer_token = self.client.bearer_token().await?;
                                     req.insert_header(
                                         azure_core::http::headers::AUTHORIZATION,
@@ -14005,13 +14300,13 @@ pub mod workload_networks {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Delete);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Delete);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_core::EMPTY_BODY;
+                        let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
@@ -14023,10 +14318,12 @@ pub mod workload_networks {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/dnsZones/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.dns_zone_id
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -14042,7 +14339,8 @@ pub mod workload_networks {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkGatewayList> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::WorkloadNetworkGatewayList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -14089,7 +14387,7 @@ pub mod workload_networks {
             pub(crate) private_cloud_name: String,
         }
         impl RequestBuilder {
-            pub fn into_stream(self) -> azure_core::Pageable<models::WorkloadNetworkGatewayList, azure_core::error::Error> {
+            pub fn into_stream(self) -> azure_openapi_core::Pageable<models::WorkloadNetworkGatewayList, azure_core::error::Error> {
                 let make_request = move |continuation: Option<String>| {
                     let this = self.clone();
                     async move {
@@ -14098,37 +14396,39 @@ pub mod workload_networks {
                             Some(value) => {
                                 url.set_path("");
                                 url = url.join(&value)?;
-                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
                                 req.insert_header(
                                     azure_core::http::headers::AUTHORIZATION,
                                     format!("Bearer {}", bearer_token.secret()),
                                 );
-                                let has_api_version_already =
-                                    req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                                let has_api_version_already = req
+                                    .url_mut()
+                                    .query_pairs()
+                                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                                 if !has_api_version_already {
                                     req.url_mut()
                                         .query_pairs_mut()
-                                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                 }
-                                let req_body = azure_core::EMPTY_BODY;
+                                let req_body = azure_openapi_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
                             }
                             None => {
-                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
                                 req.insert_header(
                                     azure_core::http::headers::AUTHORIZATION,
                                     format!("Bearer {}", bearer_token.secret()),
                                 );
-                                let req_body = azure_core::EMPTY_BODY;
+                                let req_body = azure_openapi_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
                             }
                         };
                         let rsp = match rsp.status() {
-                            azure_core::StatusCode::Ok => Ok(Response(rsp)),
+                            azure_core::http::StatusCode::Ok => Ok(Response(rsp)),
                             status_code => Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
                                 status: status_code,
                                 error_code: None,
@@ -14137,7 +14437,7 @@ pub mod workload_networks {
                         rsp?.into_body().await
                     }
                 };
-                azure_core::Pageable::new(make_request)
+                azure_openapi_core::Pageable::new(make_request)
             }
             fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
@@ -14145,10 +14445,12 @@ pub mod workload_networks {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/gateways",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -14164,7 +14466,8 @@ pub mod workload_networks {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkGateway> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::WorkloadNetworkGateway = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -14221,13 +14524,13 @@ pub mod workload_networks {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_core::EMPTY_BODY;
+                        let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
@@ -14239,10 +14542,12 @@ pub mod workload_networks {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/gateways/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.gateway_id
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -14270,7 +14575,8 @@ pub mod workload_networks {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkPortMirroringList> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::WorkloadNetworkPortMirroringList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -14317,7 +14623,7 @@ pub mod workload_networks {
             pub(crate) private_cloud_name: String,
         }
         impl RequestBuilder {
-            pub fn into_stream(self) -> azure_core::Pageable<models::WorkloadNetworkPortMirroringList, azure_core::error::Error> {
+            pub fn into_stream(self) -> azure_openapi_core::Pageable<models::WorkloadNetworkPortMirroringList, azure_core::error::Error> {
                 let make_request = move |continuation: Option<String>| {
                     let this = self.clone();
                     async move {
@@ -14326,37 +14632,39 @@ pub mod workload_networks {
                             Some(value) => {
                                 url.set_path("");
                                 url = url.join(&value)?;
-                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
                                 req.insert_header(
                                     azure_core::http::headers::AUTHORIZATION,
                                     format!("Bearer {}", bearer_token.secret()),
                                 );
-                                let has_api_version_already =
-                                    req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                                let has_api_version_already = req
+                                    .url_mut()
+                                    .query_pairs()
+                                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                                 if !has_api_version_already {
                                     req.url_mut()
                                         .query_pairs_mut()
-                                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                 }
-                                let req_body = azure_core::EMPTY_BODY;
+                                let req_body = azure_openapi_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
                             }
                             None => {
-                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
                                 req.insert_header(
                                     azure_core::http::headers::AUTHORIZATION,
                                     format!("Bearer {}", bearer_token.secret()),
                                 );
-                                let req_body = azure_core::EMPTY_BODY;
+                                let req_body = azure_openapi_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
                             }
                         };
                         let rsp = match rsp.status() {
-                            azure_core::StatusCode::Ok => Ok(Response(rsp)),
+                            azure_core::http::StatusCode::Ok => Ok(Response(rsp)),
                             status_code => Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
                                 status: status_code,
                                 error_code: None,
@@ -14365,15 +14673,17 @@ pub mod workload_networks {
                         rsp?.into_body().await
                     }
                 };
-                azure_core::Pageable::new(make_request)
+                azure_openapi_core::Pageable::new(make_request)
             }
             fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url . set_path (& format ! ("/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/portMirroringProfiles" , & self . subscription_id , & self . resource_group_name , & self . private_cloud_name)) ;
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -14389,7 +14699,8 @@ pub mod workload_networks {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkPortMirroring> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::WorkloadNetworkPortMirroring = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -14446,13 +14757,13 @@ pub mod workload_networks {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_core::EMPTY_BODY;
+                        let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
@@ -14461,10 +14772,12 @@ pub mod workload_networks {
             fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url . set_path (& format ! ("/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/portMirroringProfiles/{}" , & self . subscription_id , & self . resource_group_name , & self . private_cloud_name , & self . port_mirroring_id)) ;
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -14492,7 +14805,8 @@ pub mod workload_networks {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkPortMirroring> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::WorkloadNetworkPortMirroring = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -14559,7 +14873,7 @@ pub mod workload_networks {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Put);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Put);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
@@ -14575,10 +14889,12 @@ pub mod workload_networks {
             fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url . set_path (& format ! ("/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/portMirroringProfiles/{}" , & self . subscription_id , & self . resource_group_name , & self . private_cloud_name , & self . port_mirroring_id)) ;
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -14611,7 +14927,7 @@ pub mod workload_networks {
                     let location = get_location(headers, FinalState::AzureAsyncOperation)?;
                     if let Some(url) = location {
                         loop {
-                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::Method::Get);
+                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::http::Method::Get);
                             let bearer_token = self.client.bearer_token().await?;
                             req.insert_header(
                                 azure_core::http::headers::AUTHORIZATION,
@@ -14630,7 +14946,7 @@ pub mod workload_networks {
                             log::trace!("current provisioning_state: {provisioning_state:?}");
                             match provisioning_state {
                                 LroStatus::Succeeded => {
-                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::Method::Get);
+                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::http::Method::Get);
                                     let bearer_token = self.client.bearer_token().await?;
                                     req.insert_header(
                                         azure_core::http::headers::AUTHORIZATION,
@@ -14667,7 +14983,8 @@ pub mod workload_networks {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkPortMirroring> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::WorkloadNetworkPortMirroring = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -14738,7 +15055,7 @@ pub mod workload_networks {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Patch);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Patch);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
@@ -14754,10 +15071,12 @@ pub mod workload_networks {
             fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url . set_path (& format ! ("/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/portMirroringProfiles/{}" , & self . subscription_id , & self . resource_group_name , & self . private_cloud_name , & self . port_mirroring_id)) ;
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -14790,7 +15109,7 @@ pub mod workload_networks {
                     let location = get_location(headers, FinalState::Location)?;
                     if let Some(url) = location {
                         loop {
-                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::Method::Get);
+                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::http::Method::Get);
                             let bearer_token = self.client.bearer_token().await?;
                             req.insert_header(
                                 azure_core::http::headers::AUTHORIZATION,
@@ -14809,7 +15128,7 @@ pub mod workload_networks {
                             log::trace!("current provisioning_state: {provisioning_state:?}");
                             match provisioning_state {
                                 LroStatus::Succeeded => {
-                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::Method::Get);
+                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::http::Method::Get);
                                     let bearer_token = self.client.bearer_token().await?;
                                     req.insert_header(
                                         azure_core::http::headers::AUTHORIZATION,
@@ -14911,13 +15230,13 @@ pub mod workload_networks {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Delete);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Delete);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_core::EMPTY_BODY;
+                        let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
@@ -14926,10 +15245,12 @@ pub mod workload_networks {
             fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url . set_path (& format ! ("/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/portMirroringProfiles/{}" , & self . subscription_id , & self . resource_group_name , & self . private_cloud_name , & self . port_mirroring_id)) ;
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -14945,7 +15266,8 @@ pub mod workload_networks {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkPublicIPsList> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::WorkloadNetworkPublicIPsList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -14992,7 +15314,7 @@ pub mod workload_networks {
             pub(crate) private_cloud_name: String,
         }
         impl RequestBuilder {
-            pub fn into_stream(self) -> azure_core::Pageable<models::WorkloadNetworkPublicIPsList, azure_core::error::Error> {
+            pub fn into_stream(self) -> azure_openapi_core::Pageable<models::WorkloadNetworkPublicIPsList, azure_core::error::Error> {
                 let make_request = move |continuation: Option<String>| {
                     let this = self.clone();
                     async move {
@@ -15001,37 +15323,39 @@ pub mod workload_networks {
                             Some(value) => {
                                 url.set_path("");
                                 url = url.join(&value)?;
-                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
                                 req.insert_header(
                                     azure_core::http::headers::AUTHORIZATION,
                                     format!("Bearer {}", bearer_token.secret()),
                                 );
-                                let has_api_version_already =
-                                    req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                                let has_api_version_already = req
+                                    .url_mut()
+                                    .query_pairs()
+                                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                                 if !has_api_version_already {
                                     req.url_mut()
                                         .query_pairs_mut()
-                                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                 }
-                                let req_body = azure_core::EMPTY_BODY;
+                                let req_body = azure_openapi_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
                             }
                             None => {
-                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
                                 req.insert_header(
                                     azure_core::http::headers::AUTHORIZATION,
                                     format!("Bearer {}", bearer_token.secret()),
                                 );
-                                let req_body = azure_core::EMPTY_BODY;
+                                let req_body = azure_openapi_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
                             }
                         };
                         let rsp = match rsp.status() {
-                            azure_core::StatusCode::Ok => Ok(Response(rsp)),
+                            azure_core::http::StatusCode::Ok => Ok(Response(rsp)),
                             status_code => Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
                                 status: status_code,
                                 error_code: None,
@@ -15040,7 +15364,7 @@ pub mod workload_networks {
                         rsp?.into_body().await
                     }
                 };
-                azure_core::Pageable::new(make_request)
+                azure_openapi_core::Pageable::new(make_request)
             }
             fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
@@ -15048,10 +15372,12 @@ pub mod workload_networks {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/publicIPs",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -15067,7 +15393,8 @@ pub mod workload_networks {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkPublicIp> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::WorkloadNetworkPublicIp = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -15124,13 +15451,13 @@ pub mod workload_networks {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_core::EMPTY_BODY;
+                        let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
@@ -15142,10 +15469,12 @@ pub mod workload_networks {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/publicIPs/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.public_ip_id
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -15173,7 +15502,8 @@ pub mod workload_networks {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkPublicIp> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::WorkloadNetworkPublicIp = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -15240,7 +15570,7 @@ pub mod workload_networks {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Put);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Put);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
@@ -15259,10 +15589,12 @@ pub mod workload_networks {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/publicIPs/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.public_ip_id
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -15295,7 +15627,7 @@ pub mod workload_networks {
                     let location = get_location(headers, FinalState::AzureAsyncOperation)?;
                     if let Some(url) = location {
                         loop {
-                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::Method::Get);
+                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::http::Method::Get);
                             let bearer_token = self.client.bearer_token().await?;
                             req.insert_header(
                                 azure_core::http::headers::AUTHORIZATION,
@@ -15314,7 +15646,7 @@ pub mod workload_networks {
                             log::trace!("current provisioning_state: {provisioning_state:?}");
                             match provisioning_state {
                                 LroStatus::Succeeded => {
-                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::Method::Get);
+                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::http::Method::Get);
                                     let bearer_token = self.client.bearer_token().await?;
                                     req.insert_header(
                                         azure_core::http::headers::AUTHORIZATION,
@@ -15416,13 +15748,13 @@ pub mod workload_networks {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Delete);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Delete);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_core::EMPTY_BODY;
+                        let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
@@ -15434,10 +15766,12 @@ pub mod workload_networks {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/publicIPs/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.public_ip_id
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -15453,7 +15787,8 @@ pub mod workload_networks {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkSegmentsList> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::WorkloadNetworkSegmentsList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -15500,7 +15835,7 @@ pub mod workload_networks {
             pub(crate) private_cloud_name: String,
         }
         impl RequestBuilder {
-            pub fn into_stream(self) -> azure_core::Pageable<models::WorkloadNetworkSegmentsList, azure_core::error::Error> {
+            pub fn into_stream(self) -> azure_openapi_core::Pageable<models::WorkloadNetworkSegmentsList, azure_core::error::Error> {
                 let make_request = move |continuation: Option<String>| {
                     let this = self.clone();
                     async move {
@@ -15509,37 +15844,39 @@ pub mod workload_networks {
                             Some(value) => {
                                 url.set_path("");
                                 url = url.join(&value)?;
-                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
                                 req.insert_header(
                                     azure_core::http::headers::AUTHORIZATION,
                                     format!("Bearer {}", bearer_token.secret()),
                                 );
-                                let has_api_version_already =
-                                    req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                                let has_api_version_already = req
+                                    .url_mut()
+                                    .query_pairs()
+                                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                                 if !has_api_version_already {
                                     req.url_mut()
                                         .query_pairs_mut()
-                                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                 }
-                                let req_body = azure_core::EMPTY_BODY;
+                                let req_body = azure_openapi_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
                             }
                             None => {
-                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
                                 req.insert_header(
                                     azure_core::http::headers::AUTHORIZATION,
                                     format!("Bearer {}", bearer_token.secret()),
                                 );
-                                let req_body = azure_core::EMPTY_BODY;
+                                let req_body = azure_openapi_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
                             }
                         };
                         let rsp = match rsp.status() {
-                            azure_core::StatusCode::Ok => Ok(Response(rsp)),
+                            azure_core::http::StatusCode::Ok => Ok(Response(rsp)),
                             status_code => Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
                                 status: status_code,
                                 error_code: None,
@@ -15548,7 +15885,7 @@ pub mod workload_networks {
                         rsp?.into_body().await
                     }
                 };
-                azure_core::Pageable::new(make_request)
+                azure_openapi_core::Pageable::new(make_request)
             }
             fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
@@ -15556,10 +15893,12 @@ pub mod workload_networks {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/segments",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -15575,7 +15914,8 @@ pub mod workload_networks {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkSegment> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::WorkloadNetworkSegment = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -15632,13 +15972,13 @@ pub mod workload_networks {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_core::EMPTY_BODY;
+                        let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
@@ -15650,10 +15990,12 @@ pub mod workload_networks {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/segments/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.segment_id
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -15681,7 +16023,8 @@ pub mod workload_networks {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkSegment> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::WorkloadNetworkSegment = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -15748,7 +16091,7 @@ pub mod workload_networks {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Put);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Put);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
@@ -15767,10 +16110,12 @@ pub mod workload_networks {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/segments/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.segment_id
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -15803,7 +16148,7 @@ pub mod workload_networks {
                     let location = get_location(headers, FinalState::AzureAsyncOperation)?;
                     if let Some(url) = location {
                         loop {
-                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::Method::Get);
+                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::http::Method::Get);
                             let bearer_token = self.client.bearer_token().await?;
                             req.insert_header(
                                 azure_core::http::headers::AUTHORIZATION,
@@ -15822,7 +16167,7 @@ pub mod workload_networks {
                             log::trace!("current provisioning_state: {provisioning_state:?}");
                             match provisioning_state {
                                 LroStatus::Succeeded => {
-                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::Method::Get);
+                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::http::Method::Get);
                                     let bearer_token = self.client.bearer_token().await?;
                                     req.insert_header(
                                         azure_core::http::headers::AUTHORIZATION,
@@ -15859,7 +16204,8 @@ pub mod workload_networks {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkSegment> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::WorkloadNetworkSegment = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -15930,7 +16276,7 @@ pub mod workload_networks {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Patch);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Patch);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
@@ -15949,10 +16295,12 @@ pub mod workload_networks {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/segments/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.segment_id
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -15985,7 +16333,7 @@ pub mod workload_networks {
                     let location = get_location(headers, FinalState::Location)?;
                     if let Some(url) = location {
                         loop {
-                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::Method::Get);
+                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::http::Method::Get);
                             let bearer_token = self.client.bearer_token().await?;
                             req.insert_header(
                                 azure_core::http::headers::AUTHORIZATION,
@@ -16004,7 +16352,7 @@ pub mod workload_networks {
                             log::trace!("current provisioning_state: {provisioning_state:?}");
                             match provisioning_state {
                                 LroStatus::Succeeded => {
-                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::Method::Get);
+                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::http::Method::Get);
                                     let bearer_token = self.client.bearer_token().await?;
                                     req.insert_header(
                                         azure_core::http::headers::AUTHORIZATION,
@@ -16106,13 +16454,13 @@ pub mod workload_networks {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Delete);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Delete);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_core::EMPTY_BODY;
+                        let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
@@ -16124,10 +16472,12 @@ pub mod workload_networks {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/segments/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.segment_id
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -16143,7 +16493,8 @@ pub mod workload_networks {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkVirtualMachinesList> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::WorkloadNetworkVirtualMachinesList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -16190,7 +16541,7 @@ pub mod workload_networks {
             pub(crate) private_cloud_name: String,
         }
         impl RequestBuilder {
-            pub fn into_stream(self) -> azure_core::Pageable<models::WorkloadNetworkVirtualMachinesList, azure_core::error::Error> {
+            pub fn into_stream(self) -> azure_openapi_core::Pageable<models::WorkloadNetworkVirtualMachinesList, azure_core::error::Error> {
                 let make_request = move |continuation: Option<String>| {
                     let this = self.clone();
                     async move {
@@ -16199,37 +16550,39 @@ pub mod workload_networks {
                             Some(value) => {
                                 url.set_path("");
                                 url = url.join(&value)?;
-                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
                                 req.insert_header(
                                     azure_core::http::headers::AUTHORIZATION,
                                     format!("Bearer {}", bearer_token.secret()),
                                 );
-                                let has_api_version_already =
-                                    req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                                let has_api_version_already = req
+                                    .url_mut()
+                                    .query_pairs()
+                                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                                 if !has_api_version_already {
                                     req.url_mut()
                                         .query_pairs_mut()
-                                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                 }
-                                let req_body = azure_core::EMPTY_BODY;
+                                let req_body = azure_openapi_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
                             }
                             None => {
-                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
                                 req.insert_header(
                                     azure_core::http::headers::AUTHORIZATION,
                                     format!("Bearer {}", bearer_token.secret()),
                                 );
-                                let req_body = azure_core::EMPTY_BODY;
+                                let req_body = azure_openapi_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
                             }
                         };
                         let rsp = match rsp.status() {
-                            azure_core::StatusCode::Ok => Ok(Response(rsp)),
+                            azure_core::http::StatusCode::Ok => Ok(Response(rsp)),
                             status_code => Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
                                 status: status_code,
                                 error_code: None,
@@ -16238,7 +16591,7 @@ pub mod workload_networks {
                         rsp?.into_body().await
                     }
                 };
-                azure_core::Pageable::new(make_request)
+                azure_openapi_core::Pageable::new(make_request)
             }
             fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
@@ -16246,10 +16599,12 @@ pub mod workload_networks {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/virtualMachines",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -16265,7 +16620,8 @@ pub mod workload_networks {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkVirtualMachine> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::WorkloadNetworkVirtualMachine = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -16322,13 +16678,13 @@ pub mod workload_networks {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_core::EMPTY_BODY;
+                        let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
@@ -16337,10 +16693,12 @@ pub mod workload_networks {
             fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url . set_path (& format ! ("/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/virtualMachines/{}" , & self . subscription_id , & self . resource_group_name , & self . private_cloud_name , & self . virtual_machine_id)) ;
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -16368,7 +16726,8 @@ pub mod workload_networks {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkVmGroupsList> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::WorkloadNetworkVmGroupsList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -16415,7 +16774,7 @@ pub mod workload_networks {
             pub(crate) private_cloud_name: String,
         }
         impl RequestBuilder {
-            pub fn into_stream(self) -> azure_core::Pageable<models::WorkloadNetworkVmGroupsList, azure_core::error::Error> {
+            pub fn into_stream(self) -> azure_openapi_core::Pageable<models::WorkloadNetworkVmGroupsList, azure_core::error::Error> {
                 let make_request = move |continuation: Option<String>| {
                     let this = self.clone();
                     async move {
@@ -16424,37 +16783,39 @@ pub mod workload_networks {
                             Some(value) => {
                                 url.set_path("");
                                 url = url.join(&value)?;
-                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
                                 req.insert_header(
                                     azure_core::http::headers::AUTHORIZATION,
                                     format!("Bearer {}", bearer_token.secret()),
                                 );
-                                let has_api_version_already =
-                                    req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                                let has_api_version_already = req
+                                    .url_mut()
+                                    .query_pairs()
+                                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                                 if !has_api_version_already {
                                     req.url_mut()
                                         .query_pairs_mut()
-                                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                 }
-                                let req_body = azure_core::EMPTY_BODY;
+                                let req_body = azure_openapi_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
                             }
                             None => {
-                                let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                                let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                                 let bearer_token = this.client.bearer_token().await?;
                                 req.insert_header(
                                     azure_core::http::headers::AUTHORIZATION,
                                     format!("Bearer {}", bearer_token.secret()),
                                 );
-                                let req_body = azure_core::EMPTY_BODY;
+                                let req_body = azure_openapi_core::EMPTY_BODY;
                                 req.set_body(req_body);
                                 this.client.send(&mut req).await?
                             }
                         };
                         let rsp = match rsp.status() {
-                            azure_core::StatusCode::Ok => Ok(Response(rsp)),
+                            azure_core::http::StatusCode::Ok => Ok(Response(rsp)),
                             status_code => Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
                                 status: status_code,
                                 error_code: None,
@@ -16463,7 +16824,7 @@ pub mod workload_networks {
                         rsp?.into_body().await
                     }
                 };
-                azure_core::Pageable::new(make_request)
+                azure_openapi_core::Pageable::new(make_request)
             }
             fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
@@ -16471,10 +16832,12 @@ pub mod workload_networks {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/vmGroups",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -16490,7 +16853,8 @@ pub mod workload_networks {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkVmGroup> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::WorkloadNetworkVmGroup = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -16547,13 +16911,13 @@ pub mod workload_networks {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Get);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_core::EMPTY_BODY;
+                        let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
@@ -16565,10 +16929,12 @@ pub mod workload_networks {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/vmGroups/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.vm_group_id
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -16596,7 +16962,8 @@ pub mod workload_networks {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkVmGroup> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::WorkloadNetworkVmGroup = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -16663,7 +17030,7 @@ pub mod workload_networks {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Put);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Put);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
@@ -16682,10 +17049,12 @@ pub mod workload_networks {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/vmGroups/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.vm_group_id
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -16718,7 +17087,7 @@ pub mod workload_networks {
                     let location = get_location(headers, FinalState::AzureAsyncOperation)?;
                     if let Some(url) = location {
                         loop {
-                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::Method::Get);
+                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::http::Method::Get);
                             let bearer_token = self.client.bearer_token().await?;
                             req.insert_header(
                                 azure_core::http::headers::AUTHORIZATION,
@@ -16737,7 +17106,7 @@ pub mod workload_networks {
                             log::trace!("current provisioning_state: {provisioning_state:?}");
                             match provisioning_state {
                                 LroStatus::Succeeded => {
-                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::Method::Get);
+                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::http::Method::Get);
                                     let bearer_token = self.client.bearer_token().await?;
                                     req.insert_header(
                                         azure_core::http::headers::AUTHORIZATION,
@@ -16774,7 +17143,8 @@ pub mod workload_networks {
         pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkVmGroup> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::WorkloadNetworkVmGroup = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
@@ -16845,7 +17215,7 @@ pub mod workload_networks {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Patch);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Patch);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
@@ -16864,10 +17234,12 @@ pub mod workload_networks {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/vmGroups/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.vm_group_id
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -16900,7 +17272,7 @@ pub mod workload_networks {
                     let location = get_location(headers, FinalState::Location)?;
                     if let Some(url) = location {
                         loop {
-                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::Method::Get);
+                            let mut req = azure_core::http::Request::new(url.clone(), azure_core::http::Method::Get);
                             let bearer_token = self.client.bearer_token().await?;
                             req.insert_header(
                                 azure_core::http::headers::AUTHORIZATION,
@@ -16919,7 +17291,7 @@ pub mod workload_networks {
                             log::trace!("current provisioning_state: {provisioning_state:?}");
                             match provisioning_state {
                                 LroStatus::Succeeded => {
-                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::Method::Get);
+                                    let mut req = azure_core::http::Request::new(self.url()?, azure_core::http::Method::Get);
                                     let bearer_token = self.client.bearer_token().await?;
                                     req.insert_header(
                                         azure_core::http::headers::AUTHORIZATION,
@@ -17021,13 +17393,13 @@ pub mod workload_networks {
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = azure_core::http::Request::new(url, azure_core::Method::Delete);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Delete);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_core::EMPTY_BODY;
+                        let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
                         Ok(Response(this.client.send(&mut req).await?))
                     }
@@ -17039,10 +17411,12 @@ pub mod workload_networks {
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/vmGroups/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.vm_group_id
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2024-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
