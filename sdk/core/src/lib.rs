@@ -15,7 +15,7 @@
 // mod http_client;
 // mod models;
 // mod options;
-mod pageable;
+// mod pageable;
 // mod pipeline;
 // mod policies;
 // mod request;
@@ -48,7 +48,7 @@ pub mod util;
 // pub use http_client::{from_json, new_http_client, to_json, HttpClient};
 // pub use models::*;
 // pub use options::*;
-pub use pageable::*;
+// pub use pageable::*;
 // pub use pipeline::Pipeline;
 // pub use policies::*;
 // pub use request::*;
@@ -69,9 +69,9 @@ pub use pageable::*;
 // // NOTE: only used for Cosmos?
 // pub type SessionToken = String;
 
-// /// An empty HTTP body.
-// #[allow(clippy::declare_interior_mutable_const)]
-// pub const EMPTY_BODY: bytes::Bytes = bytes::Bytes::new();
+/// An empty HTTP body.
+#[allow(clippy::declare_interior_mutable_const)]
+pub const EMPTY_BODY: bytes::Bytes = bytes::Bytes::new();
 
 // /// Add a new query pair into the target URL's query string.
 // pub trait AppendToUrlQuery {

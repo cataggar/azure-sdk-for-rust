@@ -16,7 +16,7 @@ rust-version = "1.74.0"
 [dependencies]
 # async-trait = "0.1"
 # base64 = "0.22"
-# bytes = "1.0"
+bytes = "1.0"
 # dyn-clone = "1.0"
 futures = "0.3"
 # http-types = { version = "2.12", default-features = false }
@@ -62,7 +62,7 @@ default = []
 # enable_reqwest_rustls = ["reqwest/rustls-tls"]
 # hmac_rust = ["dep:sha2", "dep:hmac"]
 # hmac_openssl = ["dep:openssl"]
-# test_e2e = []
+test_e2e = []
 # azurite_workaround = []
 # xml = ["quick-xml"]
 # tokio-fs = ["tokio/fs", "tokio/sync", "tokio/io-util"]
