@@ -45,7 +45,7 @@ pub fn create_client(modules: &[String], endpoint: Option<&str>) -> Result<Token
             credential: std::sync::Arc<dyn azure_core::credentials::TokenCredential>,
             endpoint: Option<azure_core::http::Url>,
             scopes: Option<Vec<String>>,
-            options: azure_core::http::options::ClientOptions,
+            options: azure_core::http::ClientOptions,
         }
 
         #default_endpoint_code
@@ -58,7 +58,7 @@ pub fn create_client(modules: &[String], endpoint: Option<&str>) -> Result<Token
                     credential,
                     endpoint: None,
                     scopes: None,
-                    options: azure_core::http::options::ClientOptions::default(),
+                    options: azure_core::http::ClientOptions::default(),
                 }
             }
 
@@ -78,14 +78,14 @@ pub fn create_client(modules: &[String], endpoint: Option<&str>) -> Result<Token
 
             #[doc = "Set the retry options."]
             #[must_use]
-            pub fn retry(mut self, retry: impl Into<azure_core::http::options::RetryOptions>) -> Self {
+            pub fn retry(mut self, retry: impl Into<azure_core::http::RetryOptions>) -> Self {
                 self.options = self.options.retry(retry);
                 self
             }
 
             #[doc = "Set the transport options."]
             #[must_use]
-            pub fn transport(mut self, transport: impl Into<azure_core::http::options::TransportOptions>) -> Self {
+            pub fn transport(mut self, transport: impl Into<azure_core::http::TransportOptions>) -> Self {
                 self.options = self.options.transport(transport);
                 self
             }
@@ -103,7 +103,7 @@ pub fn create_client(modules: &[String], endpoint: Option<&str>) -> Result<Token
         }
 
         impl Client {
-            pub(crate) async fn bearer_token(&self) -> azure_core::Result<azure_core::auth::Secret> {
+            pub(crate) async fn bearer_token(&self) -> azure_core::Result<azure_core::credentials::Secret> {
                 let credential = self.token_credential();
                 let response = credential.get_token(&self.scopes()).await?;
                 Ok(response.token)
@@ -131,7 +131,7 @@ pub fn create_client(modules: &[String], endpoint: Option<&str>) -> Result<Token
 
             #[doc = "Create a new `Client`."]
             #[must_use]
-            pub fn new(endpoint: impl Into<azure_core::http::Url>, credential: std::sync::Arc<dyn azure_core::credentials::TokenCredential>, scopes: Vec<String>, options: azure_core::http::options::ClientOptions) -> Self {
+            pub fn new(endpoint: impl Into<azure_core::http::Url>, credential: std::sync::Arc<dyn azure_core::credentials::TokenCredential>, scopes: Vec<String>, options: azure_core::http::ClientOptions) -> Self {
                 let endpoint = endpoint.into();
                 let pipeline = azure_core::http::Pipeline::new(
                     option_env!("CARGO_PKG_NAME"),

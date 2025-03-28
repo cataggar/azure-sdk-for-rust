@@ -48,7 +48,7 @@ impl ToTokens for SetRequestCode {
 
         if !self.has_body_parameter {
             tokens.extend(quote! {
-                let req_body = azure_core::EMPTY_BODY;
+                let req_body = azure_openapi_core::EMPTY_BODY;
             });
         }
 

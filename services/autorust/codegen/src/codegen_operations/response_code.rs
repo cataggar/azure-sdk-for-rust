@@ -105,7 +105,8 @@ impl ToTokens for ResponseCode {
             };
             let into_body = quote! {
                 pub async fn into_body(self) -> azure_core::Result<#response_type> {
-                    let bytes = self.0.into_body().collect().await?;
+                    let (_, _, body) = self.0.deconstruct();
+                    let bytes = body.collect().await?;
                     #deserialize_body
                     Ok(body)
                 }
