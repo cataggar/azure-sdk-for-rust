@@ -1,8 +1,5 @@
 [workspace]
-members = [
-  "sdk/*",
-  "./eng/test/mock_transport"
-]
+members = ["sdk/core"]
 resolver = "2"
 
 [workspace.lints]
