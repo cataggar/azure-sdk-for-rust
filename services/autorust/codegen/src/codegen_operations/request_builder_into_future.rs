@@ -21,6 +21,7 @@ impl RequestBuilderIntoFutureCode {
     }
 }
 
+/// Adds the `IntoFuture` implementation to the `RequestBuilder` struct.
 impl ToTokens for RequestBuilderIntoFutureCode {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         // Skip generating IntoFuture if response is pageable
@@ -173,6 +174,7 @@ impl ToTokens for RequestBuilderIntoFutureCode {
             quote! {}
         };
 
-        tokens.extend(into_future);
+        // TODO Disabled for now.
+        // tokens.extend(into_future);
     }
 }

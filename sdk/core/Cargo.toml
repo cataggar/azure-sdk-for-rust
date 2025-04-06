@@ -14,6 +14,11 @@ edition = "2021"
 rust-version = "1.74.0"
 
 [dependencies]
+# azure_core = { path = "../../../sdk/core", version = "0.21", features = [] }
+# azure_core = { version = "0.22.0", features = [] }
+azure_core = { git = "https://github.com/Azure/azure-sdk-for-rust", branch = "main" }
+typespec_client_core = { git = "https://github.com/Azure/azure-sdk-for-rust", branch = "main" }
+
 # async-trait = "0.1"
 # base64 = "0.22"
 bytes = "1.0"

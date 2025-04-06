@@ -15,7 +15,7 @@
 // mod http_client;
 // mod models;
 // mod options;
-// mod pageable;
+mod pageable;
 // mod pipeline;
 // mod policies;
 // mod request;
@@ -48,7 +48,7 @@ pub mod util;
 // pub use http_client::{from_json, new_http_client, to_json, HttpClient};
 // pub use models::*;
 // pub use options::*;
-// pub use pageable::*;
+pub use pageable::*;
 // pub use pipeline::Pipeline;
 // pub use policies::*;
 // pub use request::*;

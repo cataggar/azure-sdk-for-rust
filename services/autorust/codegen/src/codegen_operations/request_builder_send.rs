@@ -213,7 +213,9 @@ impl ToTokens for RequestBuilderSendCode {
         } else {
             send_future
         };
-        tokens.extend(fut);
+        // TODO This is RequetBuilder::into_stream
+        // Reaplce with azure_core::http::Pager
+        // tokens.extend(fut);
         tokens.extend(urlfn)
     }
 }

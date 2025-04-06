@@ -30,8 +30,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::from_json;
     use serde::Serialize;
+    use typespec_client_core::json::from_json;
 
     #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Default)]
     pub struct SiteConfig {
@@ -53,7 +53,7 @@ mod tests {
     }
 
     #[test]
-    fn deserialize_empty() -> crate::Result<()> {
+    fn deserialize_empty() -> azure_core::Result<()> {
         let bytes = br#"{}"#;
         let site_config: SiteConfig = from_json(bytes)?;
         assert_eq!(Vec::<NameValuePair>::default(), site_config.app_settings);
@@ -61,7 +61,7 @@ mod tests {
     }
 
     #[test]
-    fn deserialize_null() -> crate::Result<()> {
+    fn deserialize_null() -> azure_core::Result<()> {
         let bytes = br#"{ "appSettings": null }"#;
         let site_config: SiteConfig = from_json(bytes)?;
         assert_eq!(Vec::<NameValuePair>::default(), site_config.app_settings);

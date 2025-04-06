@@ -91,17 +91,17 @@ declare!(+ Send);
 #[cfg(target_arch = "wasm32")]
 declare!();
 
-impl<T, E> Stream for Pageable<T, E> {
-    type Item = Result<T, E>;
+// impl<T, E> Stream for Pageable<T, E> {
+//     type Item = Result<T, E>;
 
-    fn poll_next(
-        self: std::pin::Pin<&mut Self>,
-        cx: &mut std::task::Context<'_>,
-    ) -> std::task::Poll<Option<Self::Item>> {
-        let this = self.project();
-        this.stream.poll_next(cx)
-    }
-}
+//     fn poll_next(
+//         self: std::pin::Pin<&mut Self>,
+//         cx: &mut std::task::Context<'_>,
+//     ) -> std::task::Poll<Option<Self::Item>> {
+//         let this = self.project();
+//         this.stream.poll_next(cx)
+//     }
+// }
 
 impl<T, O> std::fmt::Debug for Pageable<T, O> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
