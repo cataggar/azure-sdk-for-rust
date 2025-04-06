@@ -16,8 +16,8 @@ use std::sync::Arc;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let subscription_id = AzureCliCredential::get_subscription().await?;
-    let credential = Arc::new(AzureCliCredential::new());
+    let subscription_id = std::env::var("AZURE_SUBSCRIPTION_ID").expect("AZURE_SUBSCRIPTION_ID required");
+    let credential = AzureCliCredential::new(None)?;
     let client = azure_mgmt_vmware::Client::builder(credential).build()?;
 
     let mut count = 0;
