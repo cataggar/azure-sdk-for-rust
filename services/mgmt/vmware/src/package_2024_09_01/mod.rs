@@ -41,18 +41,6 @@ impl ClientBuilder {
         self.scopes = Some(scopes.iter().map(|scope| (*scope).to_owned()).collect());
         self
     }
-    #[doc = "Set the retry options."]
-    #[must_use]
-    pub fn retry(mut self, retry: impl Into<azure_core::http::RetryOptions>) -> Self {
-        self.options = self.options.retry(retry);
-        self
-    }
-    #[doc = "Set the transport options."]
-    #[must_use]
-    pub fn transport(mut self, transport: impl Into<azure_core::http::TransportOptions>) -> Self {
-        self.options = self.options.transport(transport);
-        self
-    }
     #[doc = "Convert the builder into a `Client` instance."]
     pub fn build(self) -> azure_core::Result<Client> {
         let endpoint = self.endpoint.unwrap_or_else(|| DEFAULT_ENDPOINT.to_owned());
