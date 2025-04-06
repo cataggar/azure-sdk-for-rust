@@ -918,7 +918,7 @@ impl ToTokens for StructCode {
 
         let struct_code = quote! {
             #doc_comment
-            #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, azure_core::http::Model)]
+            #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, typespec_macros::Model)]
             #default_code
             pub struct #struct_name_code {
                 #(#props)*

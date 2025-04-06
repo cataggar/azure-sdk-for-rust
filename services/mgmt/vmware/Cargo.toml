@@ -21,6 +21,7 @@ azure_openapi_core = { path = "../../../sdk/core", version = "0.21", features = 
 # azure_core = { version = "0.22.0", features = [] }
 azure_core = { git = "https://github.com/Azure/azure-sdk-for-rust", branch = "main" }
 typespec_client_core = { git = "https://github.com/Azure/azure-sdk-for-rust", branch = "main" }
+typespec_macros = { git = "https://github.com/Azure/azure-sdk-for-rust", branch = "main"}
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 bytes = "1.3"
