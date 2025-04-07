@@ -64,8 +64,8 @@ impl Client {
     pub(crate) fn token_credential(&self) -> &dyn azure_core::credentials::TokenCredential {
         self.credential.as_ref()
     }
-    pub(crate) fn scopes(&self) -> Vec<&str> {
-        self.scopes.iter().map(String::as_str).collect()
+    pub(crate) fn scopes(&self) -> Vec<String> {
+        self.scopes.clone()
     }
     pub(crate) async fn send(&self, request: &mut azure_core::http::Request) -> azure_core::Result<azure_core::http::Response> {
         let context = typespec_client_core::http::Context::default();
@@ -615,6 +615,7 @@ pub mod private_clouds {
     }
     pub mod list_in_subscription {
         use super::models;
+        use azure_openapi_core::Continuable;
         #[cfg(not(target_arch = "wasm32"))]
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
@@ -690,49 +691,60 @@ pub mod private_clouds {
                 key_name: &str,
             ) -> azure_core::Result<azure_core::http::Pager<models::PrivateCloudList>> {
                 // let pipeline = self.pipeline.clone();
-                let mut first_url = self.endpoint.clone();
-                let mut path = String::from("keys/{key-name}/versions");
-                path = path.replace("{key-name}", key_name);
-                first_url = first_url.join(&path)?;
-                first_url
-                    .query_pairs_mut()
-                    .append_pair("api-version", &self.api_version);
-                if let Some(maxresults) = options.maxresults {
-                    first_url
-                        .query_pairs_mut()
-                        .append_pair("maxresults", &maxresults.to_string());
-                }
-                let api_version = self.api_version.clone();
-                Ok(Pager::from_callback(move |next_link: Option<Url>| {
-                    let url = match next_link {
-                        Some(next_link) => {
-                            let qp = next_link
-                                .query_pairs()
-                                .filter(|(name, _)| name.ne("api-version"));
-                            let mut next_link = next_link.clone();
-                            next_link
-                                .query_pairs_mut()
-                                .clear()
-                                .extend_pairs(qp)
-                                .append_pair("api-version", &api_version);
-                            next_link
-                        }
-                        None => first_url.clone(),
-                    };
-                    let mut request = Request::new(url, Method::Get);
-                    request.insert_header("accept", "application/json");
-                    let ctx = options.method_options.context.clone();
-                    let pipeline = pipeline.clone();
+                // let mut first_url = self.endpoint.clone();
+                // let mut path = String::from("keys/{key-name}/versions");
+                // path = path.replace("{key-name}", key_name);
+                // first_url = first_url.join(&path)?;
+                // first_url
+                //     .query_pairs_mut()
+                //     .append_pair("api-version", &self.api_version);
+                // if let Some(maxresults) = options.maxresults {
+                //     first_url
+                //         .query_pairs_mut()
+                //         .append_pair("maxresults", &maxresults.to_string());
+                // }
+                // let api_version = self.api_version.clone();
+
+                let this = self.clone();
+                let url = self.url()?;
+                // let client = this.client.clone();
+
+                Ok(azure_core::http::Pager::from_callback(move |continuation| {
+                    // let url = match next_link {
+                    //     Some(next_link) => {
+                    //         let qp = next_link
+                    //             .query_pairs()
+                    //             .filter(|(name, _)| name.ne("api-version"));
+                    //         let mut next_link = next_link.clone();
+                    //         next_link
+                    //             .query_pairs_mut()
+                    //             .clear()
+                    //             .extend_pairs(qp)
+                    //             .append_pair("api-version", &api_version);
+                    //         next_link
+                    //     }
+                    //     None => first_url.clone(),
+                    // };
+                    // let mut url = self.url()?;
+                    let client = this.client.clone();
+                    let url = url.clone();
+
+
+                    let mut request = azure_core::http::Request::new(url, azure_core::http::Method::Get);
+                    // request.insert_header("accept", "application/json");
+                    // let ctx = options.method_options.context.clone();
+                    // let pipeline = pipeline.clone();
                     async move {
-                        let rsp: azure_core::http::Response<KeyListResult> = pipeline.send(&ctx, &mut request).await?;
+                        // let rsp: azure_core::http::Response<KeyListResult> = pipeline.send(&ctx, &mut request).await?;
+                        let rsp = client.send(&mut request).await?;
                         let (status, headers, body) = rsp.deconstruct();
                         let bytes = body.collect().await?;
-                        let res: KeyListResult = json::from_json(bytes.clone())?;
-                        let rsp = Response::from_bytes(status, headers, bytes);
-                        Ok(match res.next_link {
-                            Some(next_link) => azure_core::http::PagerResult::Continue {
+                        let res: models::PrivateCloudList = azure_core::json::from_json(bytes.clone())?;
+                        let rsp = azure_core::http::Response::from_bytes(status, headers, bytes);
+                        Ok(match res.continuation() {
+                            Some(continuation) => azure_core::http::PagerResult::Continue {
                                 response: rsp,
-                                continuation: next_link.parse()?,
+                                continuation,
                             },
                             None => azure_core::http::PagerResult::Complete { response: rsp },
                         })
@@ -782,7 +794,7 @@ pub mod private_clouds {
                     rsp?.into_body().await
                 }
             };
-            azure_core::http::Pager::from_callback(make_request)
+            Ok(azure_core::http::Pager::from_callback(make_request))
         }
     }
 }
