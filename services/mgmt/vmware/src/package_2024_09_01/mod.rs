@@ -684,8 +684,108 @@ pub mod private_clouds {
                 }
                 Ok(url)
             }
+
+            pub fn list_key_versions(
+                &self,
+                key_name: &str,
+            ) -> azure_core::Result<azure_core::http::Pager<models::PrivateCloudList>> {
+                // let pipeline = self.pipeline.clone();
+                let mut first_url = self.endpoint.clone();
+                let mut path = String::from("keys/{key-name}/versions");
+                path = path.replace("{key-name}", key_name);
+                first_url = first_url.join(&path)?;
+                first_url
+                    .query_pairs_mut()
+                    .append_pair("api-version", &self.api_version);
+                if let Some(maxresults) = options.maxresults {
+                    first_url
+                        .query_pairs_mut()
+                        .append_pair("maxresults", &maxresults.to_string());
+                }
+                let api_version = self.api_version.clone();
+                Ok(Pager::from_callback(move |next_link: Option<Url>| {
+                    let url = match next_link {
+                        Some(next_link) => {
+                            let qp = next_link
+                                .query_pairs()
+                                .filter(|(name, _)| name.ne("api-version"));
+                            let mut next_link = next_link.clone();
+                            next_link
+                                .query_pairs_mut()
+                                .clear()
+                                .extend_pairs(qp)
+                                .append_pair("api-version", &api_version);
+                            next_link
+                        }
+                        None => first_url.clone(),
+                    };
+                    let mut request = Request::new(url, Method::Get);
+                    request.insert_header("accept", "application/json");
+                    let ctx = options.method_options.context.clone();
+                    let pipeline = pipeline.clone();
+                    async move {
+                        let rsp: azure_core::http::Response<KeyListResult> = pipeline.send(&ctx, &mut request).await?;
+                        let (status, headers, body) = rsp.deconstruct();
+                        let bytes = body.collect().await?;
+                        let res: KeyListResult = json::from_json(bytes.clone())?;
+                        let rsp = Response::from_bytes(status, headers, bytes);
+                        Ok(match res.next_link {
+                            Some(next_link) => azure_core::http::PagerResult::Continue {
+                                response: rsp,
+                                continuation: next_link.parse()?,
+                            },
+                            None => azure_core::http::PagerResult::Complete { response: rsp },
+                        })
+                    }
+                }))
+        }
+
+        pub fn into_stream(self) -> azure_core::Result<azure_core::http::Pager<models::PrivateCloudList>> {
+            let make_request = move |continuation: Option<String>| {
+                let this = self.clone();
+                async move {
+                    let mut url = this.url()?;
+                    let rsp = match continuation {
+                        Some(value) => {
+                            url.set_path("");
+                            url = url.join(&value)?;
+                            let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
+                            let bearer_token = this.client.bearer_token().await?;
+                            req.insert_header(azure_core::http::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                            let has_api_version_already =
+                                req.url_mut().query_pairs().any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                            if !has_api_version_already {
+                                req.url_mut()
+                                    .query_pairs_mut()
+                                    .append_pair(azure_core::http::headers::query_param::API_VERSION, "2023-09-01");
+                            }
+                            let req_body = azure_openapi_core::EMPTY_BODY;
+                            req.set_body(req_body);
+                            this.client.send(&mut req).await?
+                        }
+                        None => {
+                            let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
+                            let bearer_token = this.client.bearer_token().await?;
+                            req.insert_header(azure_core::http::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                            let req_body = azure_openapi_core::EMPTY_BODY;
+                            req.set_body(req_body);
+                            this.client.send(&mut req).await?
+                        }
+                    };
+                    let rsp = match rsp.status() {
+                        azure_core::http::StatusCode::Ok => Ok(Response(rsp)),
+                        status_code => Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
+                            status: status_code,
+                            error_code: None,
+                        })),
+                    };
+                    rsp?.into_body().await
+                }
+            };
+            azure_core::http::Pager::from_callback(make_request)
         }
     }
+}
     pub mod list {
         use super::models;
         #[cfg(not(target_arch = "wasm32"))]
