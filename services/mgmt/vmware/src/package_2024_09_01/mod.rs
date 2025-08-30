@@ -55,7 +55,9 @@ impl ClientBuilder {
 impl Client {
     pub(crate) async fn bearer_token(&self) -> azure_core::Result<azure_core::credentials::Secret> {
         let credential = self.token_credential();
-        let response = credential.get_token(&self.scopes()).await?;
+    // Convert owned scopes to a vector of string slices for the credential API
+    let scopes: Vec<&str> = self.scopes.iter().map(String::as_str).collect();
+    let response = credential.get_token(&scopes).await?;
         Ok(response.token)
     }
     pub(crate) fn endpoint(&self) -> &azure_core::http::Url {
@@ -756,7 +758,7 @@ pub mod private_clouds {
             let make_request = move |continuation: Option<String>| {
                 let this = self.clone();
                 async move {
-                    let mut url = this.url()?;
+                    let mut url = this.url()?; // TODO use continuation if set
                     let rsp = match continuation {
                         Some(value) => {
                             url.set_path("");
@@ -784,14 +786,26 @@ pub mod private_clouds {
                             this.client.send(&mut req).await?
                         }
                     };
-                    let rsp = match rsp.status() {
-                        azure_core::http::StatusCode::Ok => Ok(Response(rsp)),
+
+                    let (status, headers, body) = rsp.deconstruct();
+                    match status {
+                        azure_core::http::StatusCode::Ok => {
+                            let bytes = body.collect().await?;
+                            let res: models::PrivateCloudList = azure_core::json::from_json(bytes.clone())?;
+                            let rsp = azure_core::http::Response::from_bytes(status, headers, bytes);
+                            Ok(match res.continuation() {
+                                Some(continuation) => azure_core::http::PagerResult::Continue {
+                                    response: rsp,
+                                    continuation,
+                                },
+                                None => azure_core::http::PagerResult::Complete { response: rsp },
+                            })
+                        },
                         status_code => Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
                             status: status_code,
                             error_code: None,
                         })),
-                    };
-                    rsp?.into_body().await
+                    }
                 }
             };
             Ok(azure_core::http::Pager::from_callback(make_request))
