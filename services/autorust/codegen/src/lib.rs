@@ -185,19 +185,6 @@ fn get_spec_folders(spec_folder: &str) -> Result<Vec<String>> {
     Ok(spec_folders)
 }
 
-fn get_readme(spec_folder_full: &dyn AsRef<Utf8Path>, readme_kind: &dyn AsRef<Utf8Path>) -> Option<Utf8PathBuf> {
-    match io::join(spec_folder_full, readme_kind) {
-        Ok(readme) => {
-            if readme.exists() {
-                Some(readme)
-            } else {
-                None
-            }
-        }
-        Err(_) => None,
-    }
-}
-
 pub struct SpecReadme {
     /// service name
     spec: String,
@@ -219,26 +206,47 @@ impl SpecReadme {
     }
 }
 
-fn get_spec_readmes(spec_folders: Vec<String>, readme: impl AsRef<Utf8Path>) -> Result<Vec<SpecReadme>> {
-    Ok(spec_folders
-        .into_iter()
-        .filter_map(|spec| match io::join(SPEC_FOLDER, &spec) {
-            Ok(spec_folder_full) => get_readme(&spec_folder_full, &readme).map(|readme| SpecReadme { spec, readme }),
-            Err(_) => None,
-        })
-        .collect())
+fn get_spec_readmes(spec_folders: Vec<String>, pattern: impl AsRef<Utf8Path>) -> Result<Vec<SpecReadme>> {
+    let pattern = pattern.as_ref();
+    let mut results: Vec<SpecReadme> = Vec::new();
+
+    for spec in spec_folders {
+        let spec_folder_full = match io::join(SPEC_FOLDER, &spec) {
+            Ok(p) => p,
+            Err(_) => continue,
+        };
+
+        // Caller must provide the desired pattern explicitly (e.g., "resource-manager/**/readme.md").
+        let absolute_pattern = io::join(&spec_folder_full, pattern)?;
+        for entry in glob::glob(absolute_pattern.as_str()).with_context(ErrorKind::Io, || format!("glob pattern {}", absolute_pattern))? {
+            if let Ok(path) = entry {
+                if let Ok(readme_path) = Utf8PathBuf::from_path_buf(path) {
+                    if !results.iter().any(|r| r.spec == spec && r.readme == readme_path) {
+                        results.push(SpecReadme {
+                            spec: spec.clone(),
+                            readme: readme_path,
+                        });
+                    }
+                }
+            }
+        }
+    }
+
+    // Deterministic order
+    results.sort_by(|a, b| a.spec.cmp(&b.spec).then(a.readme.cmp(&b.readme)));
+    Ok(results)
 }
 
 pub fn get_mgmt_readmes() -> Result<Vec<SpecReadme>> {
     let folders =
         get_spec_folders(SPEC_FOLDER).with_context(ErrorKind::Io, || format!("listing specification folders in {SPEC_FOLDER}"))?;
-    get_spec_readmes(folders, "resource-manager/readme.md")
+    get_spec_readmes(folders, "resource-manager/**/readme.md")
 }
 
 pub fn get_svc_readmes() -> Result<Vec<SpecReadme>> {
     let folders =
         get_spec_folders(SPEC_FOLDER).with_context(ErrorKind::Io, || format!("listing specification folders in {SPEC_FOLDER}"))?;
-    get_spec_readmes(folders, "data-plane/readme.md")
+    get_spec_readmes(folders, "data-plane/**/readme.md")
 }
 
 fn get_service_name(spec_name: &str) -> String {
