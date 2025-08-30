@@ -2,5 +2,9 @@
     "editor.formatOnSave": true,
     "rust-analyzer.cargo.features": [
         "test_e2e"
-    ]
+    ],
+    "[toml]": {
+        "editor.formatOnSave": false,
+        "files.insertFinalNewline": false
+    }
 }

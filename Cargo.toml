@@ -1,5 +1,8 @@
 [workspace]
-members = ["sdk/azure_openapi_core"]
+members = [
+	"sdk/azure_openapi_core",
+	"services/mgmt/vmware",
+]
 resolver = "2"
 
 [workspace.lints]
