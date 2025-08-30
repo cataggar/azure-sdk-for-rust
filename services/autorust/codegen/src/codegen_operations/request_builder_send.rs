@@ -49,7 +49,7 @@ impl ToTokens for RequestBuilderSendCode {
         for status_response in &self.response_code.status_responses {
             let status_code_name = &status_response.status_code_name;
             match_status.extend(quote! {
-                azure_core::StatusCode::#status_code_name => Ok(Response(rsp)),
+                azure_core::http::StatusCode::#status_code_name => Ok(Response(rsp)),
             });
         }
         match_status.extend(quote! {
@@ -61,20 +61,20 @@ impl ToTokens for RequestBuilderSendCode {
         let urlfn = if self.request_builder.has_param_api_version {
             let api_version = &self.request_builder.api_version;
             quote! {
-                fn url(&self) -> azure_core::Result<azure_core::Url> {
+                fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                     let mut url = self.client.endpoint().clone();
                     url.set_path(#fpath_expr);
 
-                    let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                    let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                     if !has_api_version_already {
-                        url.query_pairs_mut().append_pair(azure_core::query_param::API_VERSION, #api_version);
+                        url.query_pairs_mut().append_pair(azure_core::http::headers::query_param::API_VERSION, #api_version);
                     }
                     Ok(url)
                 }
             }
         } else {
             quote! {
-                fn url(&self) -> azure_core::Result<azure_core::Url> {
+                fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                     let mut url = self.client.endpoint().clone();
                     url.set_path(#fpath_expr);
 
@@ -115,9 +115,9 @@ impl ToTokens for RequestBuilderSendCode {
                 if request_builder.has_param_api_version {
                     let api_version = &request_builder.api_version;
                     stream_api_version.extend(quote! {
-                        let has_api_version_already = req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                        let has_api_version_already = req.url_mut().query_pairs().any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                         if !has_api_version_already {
-                            req.url_mut().query_pairs_mut().append_pair(azure_core::query_param::API_VERSION, #api_version);
+                            req.url_mut().query_pairs_mut().append_pair(azure_core::http::headers::query_param::API_VERSION, #api_version);
                         }
                     });
                 }
@@ -125,7 +125,7 @@ impl ToTokens for RequestBuilderSendCode {
                 if request_builder.has_param_x_ms_version {
                     let api_version = &request_builder.api_version;
                     stream_api_version.extend(quote! {
-                        req.insert_header(azure_core::headers::VERSION, #api_version);
+                        req.insert_header(azure_core::http::headers::VERSION, #api_version);
                     });
                 }
                 let response_type = self.response_code.response_type().expect("pageable response has a body");
@@ -135,7 +135,7 @@ impl ToTokens for RequestBuilderSendCode {
                 // but insert the continuation parameter
                 if let Some(continuable_param) = get_continuable_param(next_link_name, request_builder) {
                     quote! {
-                        pub fn into_stream(self) -> azure_core::Pageable<#response_type, azure_core::error::Error> {
+                        pub fn into_stream(self) -> azure_openapi_core::Pageable<#response_type, azure_core::error::Error> {
                             let make_request = move |continuation: Option<String>| {
                                 let this = self.clone();
                                 async move {
@@ -155,12 +155,12 @@ impl ToTokens for RequestBuilderSendCode {
                                 }
                             };
 
-                            azure_core::Pageable::new(make_request)
+                            azure_openapi_core::Pageable::new(make_request)
                         }
                     }
                 } else {
                     quote! {
-                        pub fn into_stream(self) -> azure_core::Pageable<#response_type, azure_core::error::Error> {
+                        pub fn into_stream(self) -> azure_openapi_core::Pageable<#response_type, azure_core::error::Error> {
                             let make_request = move |continuation: Option<String>| {
                                 let this = self.clone();
                                 async move {
@@ -172,7 +172,7 @@ impl ToTokens for RequestBuilderSendCode {
                                             url = url.join(&value)?;
                                             #new_request_code
                                             #stream_api_version
-                                            let req_body = azure_core::EMPTY_BODY;
+                                            let req_body = azure_openapi_core::EMPTY_BODY;
                                             req.set_body(req_body);
                                             this.client.send(&mut req).await?
                                         }
@@ -191,7 +191,7 @@ impl ToTokens for RequestBuilderSendCode {
                                 }
                             };
 
-                            azure_core::Pageable::new(make_request)
+                            azure_openapi_core::Pageable::new(make_request)
                         }
                     }
                 }
@@ -213,7 +213,9 @@ impl ToTokens for RequestBuilderSendCode {
         } else {
             send_future
         };
-        tokens.extend(fut);
+        // TODO This is RequetBuilder::into_stream
+        // Reaplce with azure_core::http::Pager
+        // tokens.extend(fut);
         tokens.extend(urlfn)
     }
 }

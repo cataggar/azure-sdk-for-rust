@@ -5,33 +5,33 @@
 pub mod models;
 #[derive(Clone)]
 pub struct Client {
-    endpoint: azure_core::Url,
-    credential: std::sync::Arc<dyn azure_core::auth::TokenCredential>,
+    endpoint: azure_core::http::Url,
+    credential: std::sync::Arc<dyn azure_core::credentials::TokenCredential>,
     scopes: Vec<String>,
-    pipeline: azure_core::Pipeline,
+    pipeline: azure_core::http::Pipeline,
 }
 #[derive(Clone)]
 pub struct ClientBuilder {
-    credential: std::sync::Arc<dyn azure_core::auth::TokenCredential>,
-    endpoint: Option<azure_core::Url>,
+    credential: std::sync::Arc<dyn azure_core::credentials::TokenCredential>,
+    endpoint: Option<azure_core::http::Url>,
     scopes: Option<Vec<String>>,
-    options: azure_core::ClientOptions,
+    options: azure_core::http::ClientOptions,
 }
 pub use azure_core::resource_manager_endpoint::AZURE_PUBLIC_CLOUD as DEFAULT_ENDPOINT;
 impl ClientBuilder {
     #[doc = "Create a new instance of `ClientBuilder`."]
     #[must_use]
-    pub fn new(credential: std::sync::Arc<dyn azure_core::auth::TokenCredential>) -> Self {
+    pub fn new(credential: std::sync::Arc<dyn azure_core::credentials::TokenCredential>) -> Self {
         Self {
             credential,
             endpoint: None,
             scopes: None,
-            options: azure_core::ClientOptions::default(),
+            options: azure_core::http::ClientOptions::default(),
         }
     }
     #[doc = "Set the endpoint."]
     #[must_use]
-    pub fn endpoint(mut self, endpoint: impl Into<azure_core::Url>) -> Self {
+    pub fn endpoint(mut self, endpoint: impl Into<azure_core::http::Url>) -> Self {
         self.endpoint = Some(endpoint.into());
         self
     }
@@ -41,63 +41,51 @@ impl ClientBuilder {
         self.scopes = Some(scopes.iter().map(|scope| (*scope).to_owned()).collect());
         self
     }
-    #[doc = "Set the retry options."]
-    #[must_use]
-    pub fn retry(mut self, retry: impl Into<azure_core::RetryOptions>) -> Self {
-        self.options = self.options.retry(retry);
-        self
-    }
-    #[doc = "Set the transport options."]
-    #[must_use]
-    pub fn transport(mut self, transport: impl Into<azure_core::TransportOptions>) -> Self {
-        self.options = self.options.transport(transport);
-        self
-    }
     #[doc = "Convert the builder into a `Client` instance."]
     pub fn build(self) -> azure_core::Result<Client> {
         let endpoint = self.endpoint.unwrap_or_else(|| DEFAULT_ENDPOINT.to_owned());
         let scopes = if let Some(scopes) = self.scopes {
             scopes
         } else {
-            vec![endpoint.join(azure_core::auth::DEFAULT_SCOPE_SUFFIX)?.to_string()]
+            vec![endpoint.join(azure_core::credentials::DEFAULT_SCOPE_SUFFIX)?.to_string()]
         };
         Ok(Client::new(endpoint, self.credential, scopes, self.options))
     }
 }
 impl Client {
-    pub(crate) async fn bearer_token(&self) -> azure_core::Result<azure_core::auth::Secret> {
+    pub(crate) async fn bearer_token(&self) -> azure_core::Result<azure_core::credentials::Secret> {
         let credential = self.token_credential();
         let response = credential.get_token(&self.scopes()).await?;
         Ok(response.token)
     }
-    pub(crate) fn endpoint(&self) -> &azure_core::Url {
+    pub(crate) fn endpoint(&self) -> &azure_core::http::Url {
         &self.endpoint
     }
-    pub(crate) fn token_credential(&self) -> &dyn azure_core::auth::TokenCredential {
+    pub(crate) fn token_credential(&self) -> &dyn azure_core::credentials::TokenCredential {
         self.credential.as_ref()
     }
     pub(crate) fn scopes(&self) -> Vec<&str> {
         self.scopes.iter().map(String::as_str).collect()
     }
-    pub(crate) async fn send(&self, request: &mut azure_core::Request) -> azure_core::Result<azure_core::Response> {
-        let context = azure_core::Context::default();
+    pub(crate) async fn send(&self, request: &mut azure_core::http::Request) -> azure_core::Result<azure_core::http::Response> {
+        let context = typespec_client_core::http::Context::default();
         self.pipeline.send(&context, request).await
     }
     #[doc = "Create a new `ClientBuilder`."]
     #[must_use]
-    pub fn builder(credential: std::sync::Arc<dyn azure_core::auth::TokenCredential>) -> ClientBuilder {
+    pub fn builder(credential: std::sync::Arc<dyn azure_core::credentials::TokenCredential>) -> ClientBuilder {
         ClientBuilder::new(credential)
     }
     #[doc = "Create a new `Client`."]
     #[must_use]
     pub fn new(
-        endpoint: impl Into<azure_core::Url>,
-        credential: std::sync::Arc<dyn azure_core::auth::TokenCredential>,
+        endpoint: impl Into<azure_core::http::Url>,
+        credential: std::sync::Arc<dyn azure_core::credentials::TokenCredential>,
         scopes: Vec<String>,
-        options: azure_core::ClientOptions,
+        options: azure_core::http::ClientOptions,
     ) -> Self {
         let endpoint = endpoint.into();
-        let pipeline = azure_core::Pipeline::new(
+        let pipeline = azure_core::http::Pipeline::new(
             option_env!("CARGO_PKG_NAME"),
             option_env!("CARGO_PKG_VERSION"),
             options,
@@ -132,6 +120,9 @@ impl Client {
     pub fn hcx_enterprise_sites_client(&self) -> hcx_enterprise_sites::Client {
         hcx_enterprise_sites::Client(self.clone())
     }
+    pub fn hosts_client(&self) -> hosts::Client {
+        hosts::Client(self.clone())
+    }
     pub fn iscsi_paths_client(&self) -> iscsi_paths::Client {
         iscsi_paths::Client(self.clone())
     }
@@ -147,6 +138,12 @@ impl Client {
     pub fn private_clouds_client(&self) -> private_clouds::Client {
         private_clouds::Client(self.clone())
     }
+    pub fn provisioned_networks_client(&self) -> provisioned_networks::Client {
+        provisioned_networks::Client(self.clone())
+    }
+    pub fn pure_storage_policies_client(&self) -> pure_storage_policies::Client {
+        pure_storage_policies::Client(self.clone())
+    }
     pub fn script_cmdlets_client(&self) -> script_cmdlets::Client {
         script_cmdlets::Client(self.clone())
     }
@@ -155,6 +152,9 @@ impl Client {
     }
     pub fn script_packages_client(&self) -> script_packages::Client {
         script_packages::Client(self.clone())
+    }
+    pub fn skus_client(&self) -> skus::Client {
+        skus::Client(self.clone())
     }
     pub fn virtual_machines_client(&self) -> virtual_machines::Client {
         virtual_machines::Client(self.clone())
@@ -183,27 +183,28 @@ pub mod operations {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::OperationListResult> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::OperationListResult = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -230,57 +231,15 @@ pub mod operations {
             pub(crate) client: super::super::Client,
         }
         impl RequestBuilder {
-            pub fn into_stream(self) -> azure_core::Pageable<models::OperationListResult, azure_core::error::Error> {
-                let make_request = move |continuation: Option<String>| {
-                    let this = self.clone();
-                    async move {
-                        let mut url = this.url()?;
-                        let rsp = match continuation {
-                            Some(value) => {
-                                url.set_path("");
-                                url = url.join(&value)?;
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                                let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                let has_api_version_already =
-                                    req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
-                                if !has_api_version_already {
-                                    req.url_mut()
-                                        .query_pairs_mut()
-                                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
-                                }
-                                let req_body = azure_core::EMPTY_BODY;
-                                req.set_body(req_body);
-                                this.client.send(&mut req).await?
-                            }
-                            None => {
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                                let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                let req_body = azure_core::EMPTY_BODY;
-                                req.set_body(req_body);
-                                this.client.send(&mut req).await?
-                            }
-                        };
-                        let rsp = match rsp.status() {
-                            azure_core::StatusCode::Ok => Ok(Response(rsp)),
-                            status_code => Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
-                                status: status_code,
-                                error_code: None,
-                            })),
-                        };
-                        rsp?.into_body().await
-                    }
-                };
-                azure_core::Pageable::new(make_request)
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path("/providers/Microsoft.AVS/operations");
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -336,27 +295,28 @@ pub mod locations {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::Quota> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::Quota = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -385,49 +345,20 @@ pub mod locations {
             pub(crate) location: String,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Post);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        let req_body = azure_core::EMPTY_BODY;
-                        req.insert_header(azure_core::headers::CONTENT_LENGTH, "0");
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/providers/Microsoft.AVS/locations/{}/checkQuotaAvailability",
                     &self.subscription_id, &self.location
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
-            }
-        }
-        impl std::future::IntoFuture for RequestBuilder {
-            type Output = azure_core::Result<models::Quota>;
-            type IntoFuture = BoxFuture<'static, azure_core::Result<models::Quota>>;
-            #[doc = "Returns a future that sends the request and returns the parsed response body."]
-            #[doc = ""]
-            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
-            #[doc = ""]
-            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
-            fn into_future(self) -> Self::IntoFuture {
-                Box::pin(async move { self.send().await?.into_body().await })
             }
         }
     }
@@ -438,27 +369,28 @@ pub mod locations {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::Trial> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::Trial = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -493,53 +425,20 @@ pub mod locations {
                 self.sku = Some(sku.into());
                 self
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Post);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        let req_body = if let Some(sku) = &this.sku {
-                            req.insert_header("content-type", "application/json");
-                            azure_core::to_json(sku)?
-                        } else {
-                            azure_core::EMPTY_BODY
-                        };
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/providers/Microsoft.AVS/locations/{}/checkTrialAvailability",
                     &self.subscription_id, &self.location
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
-            }
-        }
-        impl std::future::IntoFuture for RequestBuilder {
-            type Output = azure_core::Result<models::Trial>;
-            type IntoFuture = BoxFuture<'static, azure_core::Result<models::Trial>>;
-            #[doc = "Returns a future that sends the request and returns the parsed response body."]
-            #[doc = ""]
-            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
-            #[doc = ""]
-            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
-            fn into_future(self) -> Self::IntoFuture {
-                Box::pin(async move { self.send().await?.into_body().await })
             }
         }
     }
@@ -721,27 +620,28 @@ pub mod private_clouds {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::PrivateCloudList> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::PrivateCloudList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -769,60 +669,18 @@ pub mod private_clouds {
             pub(crate) subscription_id: String,
         }
         impl RequestBuilder {
-            pub fn into_stream(self) -> azure_core::Pageable<models::PrivateCloudList, azure_core::error::Error> {
-                let make_request = move |continuation: Option<String>| {
-                    let this = self.clone();
-                    async move {
-                        let mut url = this.url()?;
-                        let rsp = match continuation {
-                            Some(value) => {
-                                url.set_path("");
-                                url = url.join(&value)?;
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                                let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                let has_api_version_already =
-                                    req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
-                                if !has_api_version_already {
-                                    req.url_mut()
-                                        .query_pairs_mut()
-                                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
-                                }
-                                let req_body = azure_core::EMPTY_BODY;
-                                req.set_body(req_body);
-                                this.client.send(&mut req).await?
-                            }
-                            None => {
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                                let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                let req_body = azure_core::EMPTY_BODY;
-                                req.set_body(req_body);
-                                this.client.send(&mut req).await?
-                            }
-                        };
-                        let rsp = match rsp.status() {
-                            azure_core::StatusCode::Ok => Ok(Response(rsp)),
-                            status_code => Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
-                                status: status_code,
-                                error_code: None,
-                            })),
-                        };
-                        rsp?.into_body().await
-                    }
-                };
-                azure_core::Pageable::new(make_request)
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/providers/Microsoft.AVS/privateClouds",
                     &self.subscription_id
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -835,27 +693,28 @@ pub mod private_clouds {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::PrivateCloudList> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::PrivateCloudList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -884,60 +743,18 @@ pub mod private_clouds {
             pub(crate) resource_group_name: String,
         }
         impl RequestBuilder {
-            pub fn into_stream(self) -> azure_core::Pageable<models::PrivateCloudList, azure_core::error::Error> {
-                let make_request = move |continuation: Option<String>| {
-                    let this = self.clone();
-                    async move {
-                        let mut url = this.url()?;
-                        let rsp = match continuation {
-                            Some(value) => {
-                                url.set_path("");
-                                url = url.join(&value)?;
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                                let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                let has_api_version_already =
-                                    req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
-                                if !has_api_version_already {
-                                    req.url_mut()
-                                        .query_pairs_mut()
-                                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
-                                }
-                                let req_body = azure_core::EMPTY_BODY;
-                                req.set_body(req_body);
-                                this.client.send(&mut req).await?
-                            }
-                            None => {
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                                let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                let req_body = azure_core::EMPTY_BODY;
-                                req.set_body(req_body);
-                                this.client.send(&mut req).await?
-                            }
-                        };
-                        let rsp = match rsp.status() {
-                            azure_core::StatusCode::Ok => Ok(Response(rsp)),
-                            status_code => Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
-                                status: status_code,
-                                error_code: None,
-                            })),
-                        };
-                        rsp?.into_body().await
-                    }
-                };
-                azure_core::Pageable::new(make_request)
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds",
                     &self.subscription_id, &self.resource_group_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -950,27 +767,28 @@ pub mod private_clouds {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::PrivateCloud> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::PrivateCloud = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -1000,48 +818,20 @@ pub mod private_clouds {
             pub(crate) private_cloud_name: String,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        let req_body = azure_core::EMPTY_BODY;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
-            }
-        }
-        impl std::future::IntoFuture for RequestBuilder {
-            type Output = azure_core::Result<models::PrivateCloud>;
-            type IntoFuture = BoxFuture<'static, azure_core::Result<models::PrivateCloud>>;
-            #[doc = "Returns a future that sends the request and returns the parsed response body."]
-            #[doc = ""]
-            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
-            #[doc = ""]
-            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
-            fn into_future(self) -> Self::IntoFuture {
-                Box::pin(async move { self.send().await?.into_body().await })
             }
         }
     }
@@ -1052,38 +842,39 @@ pub mod private_clouds {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::PrivateCloud> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::PrivateCloud = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -1112,104 +903,20 @@ pub mod private_clouds {
             pub(crate) private_cloud: models::PrivateCloud,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Put);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::to_json(&this.private_cloud)?;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
-            }
-        }
-        impl std::future::IntoFuture for RequestBuilder {
-            type Output = azure_core::Result<models::PrivateCloud>;
-            type IntoFuture = BoxFuture<'static, azure_core::Result<models::PrivateCloud>>;
-            #[doc = "Returns a future that polls the long running operation, returning once the operation completes."]
-            #[doc = ""]
-            #[doc = "To only submit the request but not monitor the status of the operation until completion, use `send()` instead."]
-            #[doc = ""]
-            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
-            #[doc = ""]
-            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
-            fn into_future(self) -> Self::IntoFuture {
-                Box::pin(async move {
-                    use azure_core::{
-                        error::{Error, ErrorKind},
-                        lro::{
-                            get_retry_after,
-                            location::{get_location, get_provisioning_state, FinalState},
-                            LroStatus,
-                        },
-                        sleep::sleep,
-                    };
-                    use std::time::Duration;
-                    let this = self.clone();
-                    let response = this.send().await?;
-                    let headers = response.as_raw_response().headers();
-                    let location = get_location(headers, FinalState::AzureAsyncOperation)?;
-                    if let Some(url) = location {
-                        loop {
-                            let mut req = azure_core::Request::new(url.clone(), azure_core::Method::Get);
-                            let bearer_token = self.client.bearer_token().await?;
-                            req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                            let response = self.client.send(&mut req).await?;
-                            let headers = response.headers();
-                            let retry_after = get_retry_after(headers);
-                            let bytes = response.into_body().collect().await?;
-                            let provisioning_state = get_provisioning_state(&bytes).ok_or_else(|| {
-                                Error::message(
-                                    ErrorKind::Other,
-                                    "Long running operation failed (missing provisioning state)".to_string(),
-                                )
-                            })?;
-                            log::trace!("current provisioning_state: {provisioning_state:?}");
-                            match provisioning_state {
-                                LroStatus::Succeeded => {
-                                    let mut req = azure_core::Request::new(self.url()?, azure_core::Method::Get);
-                                    let bearer_token = self.client.bearer_token().await?;
-                                    req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                    let response = self.client.send(&mut req).await?;
-                                    return Response(response).into_body().await;
-                                }
-                                LroStatus::Failed => {
-                                    return Err(Error::message(ErrorKind::Other, "Long running operation failed".to_string()))
-                                }
-                                LroStatus::Canceled => {
-                                    return Err(Error::message(ErrorKind::Other, "Long running operation canceled".to_string()))
-                                }
-                                _ => {
-                                    sleep(retry_after).await;
-                                }
-                            }
-                        }
-                    } else {
-                        response.into_body().await
-                    }
-                })
             }
         }
     }
@@ -1220,42 +927,43 @@ pub mod private_clouds {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::PrivateCloud> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::PrivateCloud = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
             pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::headers::HeaderName::from_static("location"))
+                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
             }
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -1284,104 +992,20 @@ pub mod private_clouds {
             pub(crate) private_cloud_update: models::PrivateCloudUpdate,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Patch);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::to_json(&this.private_cloud_update)?;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
-            }
-        }
-        impl std::future::IntoFuture for RequestBuilder {
-            type Output = azure_core::Result<models::PrivateCloud>;
-            type IntoFuture = BoxFuture<'static, azure_core::Result<models::PrivateCloud>>;
-            #[doc = "Returns a future that polls the long running operation, returning once the operation completes."]
-            #[doc = ""]
-            #[doc = "To only submit the request but not monitor the status of the operation until completion, use `send()` instead."]
-            #[doc = ""]
-            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
-            #[doc = ""]
-            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
-            fn into_future(self) -> Self::IntoFuture {
-                Box::pin(async move {
-                    use azure_core::{
-                        error::{Error, ErrorKind},
-                        lro::{
-                            get_retry_after,
-                            location::{get_location, get_provisioning_state, FinalState},
-                            LroStatus,
-                        },
-                        sleep::sleep,
-                    };
-                    use std::time::Duration;
-                    let this = self.clone();
-                    let response = this.send().await?;
-                    let headers = response.as_raw_response().headers();
-                    let location = get_location(headers, FinalState::Location)?;
-                    if let Some(url) = location {
-                        loop {
-                            let mut req = azure_core::Request::new(url.clone(), azure_core::Method::Get);
-                            let bearer_token = self.client.bearer_token().await?;
-                            req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                            let response = self.client.send(&mut req).await?;
-                            let headers = response.headers();
-                            let retry_after = get_retry_after(headers);
-                            let bytes = response.into_body().collect().await?;
-                            let provisioning_state = get_provisioning_state(&bytes).ok_or_else(|| {
-                                Error::message(
-                                    ErrorKind::Other,
-                                    "Long running operation failed (missing provisioning state)".to_string(),
-                                )
-                            })?;
-                            log::trace!("current provisioning_state: {provisioning_state:?}");
-                            match provisioning_state {
-                                LroStatus::Succeeded => {
-                                    let mut req = azure_core::Request::new(self.url()?, azure_core::Method::Get);
-                                    let bearer_token = self.client.bearer_token().await?;
-                                    req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                    let response = self.client.send(&mut req).await?;
-                                    return Response(response).into_body().await;
-                                }
-                                LroStatus::Failed => {
-                                    return Err(Error::message(ErrorKind::Other, "Long running operation failed".to_string()))
-                                }
-                                LroStatus::Canceled => {
-                                    return Err(Error::message(ErrorKind::Other, "Long running operation canceled".to_string()))
-                                }
-                                _ => {
-                                    sleep(retry_after).await;
-                                }
-                            }
-                        }
-                    } else {
-                        response.into_body().await
-                    }
-                })
             }
         }
     }
@@ -1392,37 +1016,37 @@ pub mod private_clouds {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
             pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::headers::HeaderName::from_static("location"))
+                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
             }
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -1450,34 +1074,18 @@ pub mod private_clouds {
             pub(crate) private_cloud_name: String,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Delete);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        let req_body = azure_core::EMPTY_BODY;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -1490,27 +1098,28 @@ pub mod private_clouds {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::AdminCredentials> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::AdminCredentials = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -1540,49 +1149,20 @@ pub mod private_clouds {
             pub(crate) private_cloud_name: String,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Post);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        let req_body = azure_core::EMPTY_BODY;
-                        req.insert_header(azure_core::headers::CONTENT_LENGTH, "0");
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/listAdminCredentials",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
-            }
-        }
-        impl std::future::IntoFuture for RequestBuilder {
-            type Output = azure_core::Result<models::AdminCredentials>;
-            type IntoFuture = BoxFuture<'static, azure_core::Result<models::AdminCredentials>>;
-            #[doc = "Returns a future that sends the request and returns the parsed response body."]
-            #[doc = ""]
-            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
-            #[doc = ""]
-            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
-            fn into_future(self) -> Self::IntoFuture {
-                Box::pin(async move { self.send().await?.into_body().await })
             }
         }
     }
@@ -1593,37 +1173,37 @@ pub mod private_clouds {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
             pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::headers::HeaderName::from_static("location"))
+                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
             }
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -1651,35 +1231,18 @@ pub mod private_clouds {
             pub(crate) private_cloud_name: String,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Post);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        let req_body = azure_core::EMPTY_BODY;
-                        req.insert_header(azure_core::headers::CONTENT_LENGTH, "0");
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/rotateNsxtPassword",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -1692,37 +1255,37 @@ pub mod private_clouds {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
             pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::headers::HeaderName::from_static("location"))
+                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
             }
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -1750,35 +1313,108 @@ pub mod private_clouds {
             pub(crate) private_cloud_name: String,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Post);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        let req_body = azure_core::EMPTY_BODY;
-                        req.insert_header(azure_core::headers::CONTENT_LENGTH, "0");
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/rotateVcenterPassword",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                }
+                Ok(url)
+            }
+        }
+    }
+}
+pub mod skus {
+    use super::models;
+    #[cfg(not(target_arch = "wasm32"))]
+    use futures::future::BoxFuture;
+    #[cfg(target_arch = "wasm32")]
+    use futures::future::LocalBoxFuture as BoxFuture;
+    pub struct Client(pub(crate) super::Client);
+    impl Client {
+        #[doc = "A list of SKUs."]
+        #[doc = ""]
+        #[doc = "Arguments:"]
+        #[doc = "* `subscription_id`: The ID of the target subscription. The value must be an UUID."]
+        pub fn list(&self, subscription_id: impl Into<String>) -> list::RequestBuilder {
+            list::RequestBuilder {
+                client: self.0.clone(),
+                subscription_id: subscription_id.into(),
+            }
+        }
+    }
+    pub mod list {
+        use super::models;
+        #[cfg(not(target_arch = "wasm32"))]
+        use futures::future::BoxFuture;
+        #[cfg(target_arch = "wasm32")]
+        use futures::future::LocalBoxFuture as BoxFuture;
+        #[derive(Debug)]
+        pub struct Response(azure_core::http::Response);
+        impl Response {
+            pub async fn into_body(self) -> azure_core::Result<models::PagedResourceSku> {
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
+                let body: models::PagedResourceSku = serde_json::from_slice(&bytes)?;
+                Ok(body)
+            }
+            pub fn into_raw_response(self) -> azure_core::http::Response {
+                self.0
+            }
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+                &self.0
+            }
+        }
+        impl From<Response> for azure_core::http::Response {
+            fn from(rsp: Response) -> Self {
+                rsp.into_raw_response()
+            }
+        }
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
+                self.as_raw_response()
+            }
+        }
+        #[derive(Clone)]
+        #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
+        #[doc = r""]
+        #[doc = r" Each `RequestBuilder` parameter method call returns `Self`, so setting of multiple"]
+        #[doc = r" parameters can be chained."]
+        #[doc = r""]
+        #[doc = r" To finalize and submit the request, invoke `.await`, which"]
+        #[doc = r" which will convert the [`RequestBuilder`] into a future"]
+        #[doc = r" executes the request and returns a `Result` with the parsed"]
+        #[doc = r" response."]
+        #[doc = r""]
+        #[doc = r" In order to execute the request without polling the service"]
+        #[doc = r" until the operation completes, use `.send().await` instead."]
+        #[doc = r""]
+        #[doc = r" If you need lower-level access to the raw response details"]
+        #[doc = r" (e.g. to inspect response headers or raw body data) then you"]
+        #[doc = r" can finalize the request using the"]
+        #[doc = r" [`RequestBuilder::send()`] method which returns a future"]
+        #[doc = r" that resolves to a lower-level [`Response`] value."]
+        pub struct RequestBuilder {
+            pub(crate) client: super::super::Client,
+            pub(crate) subscription_id: String,
+        }
+        impl RequestBuilder {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
+                let mut url = self.client.endpoint().clone();
+                url.set_path(&format!("/subscriptions/{}/providers/Microsoft.AVS/skus", &self.subscription_id));
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                if !has_api_version_already {
+                    url.query_pairs_mut()
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -1889,27 +1525,28 @@ pub mod addons {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::AddonList> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::AddonList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -1939,60 +1576,18 @@ pub mod addons {
             pub(crate) private_cloud_name: String,
         }
         impl RequestBuilder {
-            pub fn into_stream(self) -> azure_core::Pageable<models::AddonList, azure_core::error::Error> {
-                let make_request = move |continuation: Option<String>| {
-                    let this = self.clone();
-                    async move {
-                        let mut url = this.url()?;
-                        let rsp = match continuation {
-                            Some(value) => {
-                                url.set_path("");
-                                url = url.join(&value)?;
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                                let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                let has_api_version_already =
-                                    req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
-                                if !has_api_version_already {
-                                    req.url_mut()
-                                        .query_pairs_mut()
-                                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
-                                }
-                                let req_body = azure_core::EMPTY_BODY;
-                                req.set_body(req_body);
-                                this.client.send(&mut req).await?
-                            }
-                            None => {
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                                let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                let req_body = azure_core::EMPTY_BODY;
-                                req.set_body(req_body);
-                                this.client.send(&mut req).await?
-                            }
-                        };
-                        let rsp = match rsp.status() {
-                            azure_core::StatusCode::Ok => Ok(Response(rsp)),
-                            status_code => Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
-                                status: status_code,
-                                error_code: None,
-                            })),
-                        };
-                        rsp?.into_body().await
-                    }
-                };
-                azure_core::Pageable::new(make_request)
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/addons",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -2005,27 +1600,28 @@ pub mod addons {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::Addon> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::Addon = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -2056,48 +1652,20 @@ pub mod addons {
             pub(crate) addon_name: String,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        let req_body = azure_core::EMPTY_BODY;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/addons/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.addon_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
-            }
-        }
-        impl std::future::IntoFuture for RequestBuilder {
-            type Output = azure_core::Result<models::Addon>;
-            type IntoFuture = BoxFuture<'static, azure_core::Result<models::Addon>>;
-            #[doc = "Returns a future that sends the request and returns the parsed response body."]
-            #[doc = ""]
-            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
-            #[doc = ""]
-            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
-            fn into_future(self) -> Self::IntoFuture {
-                Box::pin(async move { self.send().await?.into_body().await })
             }
         }
     }
@@ -2108,38 +1676,39 @@ pub mod addons {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::Addon> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::Addon = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -2169,104 +1738,20 @@ pub mod addons {
             pub(crate) addon: models::Addon,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Put);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::to_json(&this.addon)?;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/addons/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.addon_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
-            }
-        }
-        impl std::future::IntoFuture for RequestBuilder {
-            type Output = azure_core::Result<models::Addon>;
-            type IntoFuture = BoxFuture<'static, azure_core::Result<models::Addon>>;
-            #[doc = "Returns a future that polls the long running operation, returning once the operation completes."]
-            #[doc = ""]
-            #[doc = "To only submit the request but not monitor the status of the operation until completion, use `send()` instead."]
-            #[doc = ""]
-            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
-            #[doc = ""]
-            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
-            fn into_future(self) -> Self::IntoFuture {
-                Box::pin(async move {
-                    use azure_core::{
-                        error::{Error, ErrorKind},
-                        lro::{
-                            get_retry_after,
-                            location::{get_location, get_provisioning_state, FinalState},
-                            LroStatus,
-                        },
-                        sleep::sleep,
-                    };
-                    use std::time::Duration;
-                    let this = self.clone();
-                    let response = this.send().await?;
-                    let headers = response.as_raw_response().headers();
-                    let location = get_location(headers, FinalState::AzureAsyncOperation)?;
-                    if let Some(url) = location {
-                        loop {
-                            let mut req = azure_core::Request::new(url.clone(), azure_core::Method::Get);
-                            let bearer_token = self.client.bearer_token().await?;
-                            req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                            let response = self.client.send(&mut req).await?;
-                            let headers = response.headers();
-                            let retry_after = get_retry_after(headers);
-                            let bytes = response.into_body().collect().await?;
-                            let provisioning_state = get_provisioning_state(&bytes).ok_or_else(|| {
-                                Error::message(
-                                    ErrorKind::Other,
-                                    "Long running operation failed (missing provisioning state)".to_string(),
-                                )
-                            })?;
-                            log::trace!("current provisioning_state: {provisioning_state:?}");
-                            match provisioning_state {
-                                LroStatus::Succeeded => {
-                                    let mut req = azure_core::Request::new(self.url()?, azure_core::Method::Get);
-                                    let bearer_token = self.client.bearer_token().await?;
-                                    req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                    let response = self.client.send(&mut req).await?;
-                                    return Response(response).into_body().await;
-                                }
-                                LroStatus::Failed => {
-                                    return Err(Error::message(ErrorKind::Other, "Long running operation failed".to_string()))
-                                }
-                                LroStatus::Canceled => {
-                                    return Err(Error::message(ErrorKind::Other, "Long running operation canceled".to_string()))
-                                }
-                                _ => {
-                                    sleep(retry_after).await;
-                                }
-                            }
-                        }
-                    } else {
-                        response.into_body().await
-                    }
-                })
             }
         }
     }
@@ -2277,37 +1762,37 @@ pub mod addons {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
             pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::headers::HeaderName::from_static("location"))
+                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
             }
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -2336,34 +1821,18 @@ pub mod addons {
             pub(crate) addon_name: String,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Delete);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        let req_body = azure_core::EMPTY_BODY;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/addons/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.addon_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -2474,27 +1943,28 @@ pub mod authorizations {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::ExpressRouteAuthorizationList> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::ExpressRouteAuthorizationList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -2524,60 +1994,18 @@ pub mod authorizations {
             pub(crate) private_cloud_name: String,
         }
         impl RequestBuilder {
-            pub fn into_stream(self) -> azure_core::Pageable<models::ExpressRouteAuthorizationList, azure_core::error::Error> {
-                let make_request = move |continuation: Option<String>| {
-                    let this = self.clone();
-                    async move {
-                        let mut url = this.url()?;
-                        let rsp = match continuation {
-                            Some(value) => {
-                                url.set_path("");
-                                url = url.join(&value)?;
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                                let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                let has_api_version_already =
-                                    req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
-                                if !has_api_version_already {
-                                    req.url_mut()
-                                        .query_pairs_mut()
-                                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
-                                }
-                                let req_body = azure_core::EMPTY_BODY;
-                                req.set_body(req_body);
-                                this.client.send(&mut req).await?
-                            }
-                            None => {
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                                let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                let req_body = azure_core::EMPTY_BODY;
-                                req.set_body(req_body);
-                                this.client.send(&mut req).await?
-                            }
-                        };
-                        let rsp = match rsp.status() {
-                            azure_core::StatusCode::Ok => Ok(Response(rsp)),
-                            status_code => Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
-                                status: status_code,
-                                error_code: None,
-                            })),
-                        };
-                        rsp?.into_body().await
-                    }
-                };
-                azure_core::Pageable::new(make_request)
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/authorizations",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -2590,27 +2018,28 @@ pub mod authorizations {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::ExpressRouteAuthorization> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::ExpressRouteAuthorization = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -2641,48 +2070,20 @@ pub mod authorizations {
             pub(crate) authorization_name: String,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        let req_body = azure_core::EMPTY_BODY;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/authorizations/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.authorization_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
-            }
-        }
-        impl std::future::IntoFuture for RequestBuilder {
-            type Output = azure_core::Result<models::ExpressRouteAuthorization>;
-            type IntoFuture = BoxFuture<'static, azure_core::Result<models::ExpressRouteAuthorization>>;
-            #[doc = "Returns a future that sends the request and returns the parsed response body."]
-            #[doc = ""]
-            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
-            #[doc = ""]
-            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
-            fn into_future(self) -> Self::IntoFuture {
-                Box::pin(async move { self.send().await?.into_body().await })
             }
         }
     }
@@ -2693,38 +2094,39 @@ pub mod authorizations {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::ExpressRouteAuthorization> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::ExpressRouteAuthorization = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -2754,104 +2156,20 @@ pub mod authorizations {
             pub(crate) authorization: models::ExpressRouteAuthorization,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Put);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::to_json(&this.authorization)?;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/authorizations/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.authorization_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
-            }
-        }
-        impl std::future::IntoFuture for RequestBuilder {
-            type Output = azure_core::Result<models::ExpressRouteAuthorization>;
-            type IntoFuture = BoxFuture<'static, azure_core::Result<models::ExpressRouteAuthorization>>;
-            #[doc = "Returns a future that polls the long running operation, returning once the operation completes."]
-            #[doc = ""]
-            #[doc = "To only submit the request but not monitor the status of the operation until completion, use `send()` instead."]
-            #[doc = ""]
-            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
-            #[doc = ""]
-            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
-            fn into_future(self) -> Self::IntoFuture {
-                Box::pin(async move {
-                    use azure_core::{
-                        error::{Error, ErrorKind},
-                        lro::{
-                            get_retry_after,
-                            location::{get_location, get_provisioning_state, FinalState},
-                            LroStatus,
-                        },
-                        sleep::sleep,
-                    };
-                    use std::time::Duration;
-                    let this = self.clone();
-                    let response = this.send().await?;
-                    let headers = response.as_raw_response().headers();
-                    let location = get_location(headers, FinalState::AzureAsyncOperation)?;
-                    if let Some(url) = location {
-                        loop {
-                            let mut req = azure_core::Request::new(url.clone(), azure_core::Method::Get);
-                            let bearer_token = self.client.bearer_token().await?;
-                            req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                            let response = self.client.send(&mut req).await?;
-                            let headers = response.headers();
-                            let retry_after = get_retry_after(headers);
-                            let bytes = response.into_body().collect().await?;
-                            let provisioning_state = get_provisioning_state(&bytes).ok_or_else(|| {
-                                Error::message(
-                                    ErrorKind::Other,
-                                    "Long running operation failed (missing provisioning state)".to_string(),
-                                )
-                            })?;
-                            log::trace!("current provisioning_state: {provisioning_state:?}");
-                            match provisioning_state {
-                                LroStatus::Succeeded => {
-                                    let mut req = azure_core::Request::new(self.url()?, azure_core::Method::Get);
-                                    let bearer_token = self.client.bearer_token().await?;
-                                    req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                    let response = self.client.send(&mut req).await?;
-                                    return Response(response).into_body().await;
-                                }
-                                LroStatus::Failed => {
-                                    return Err(Error::message(ErrorKind::Other, "Long running operation failed".to_string()))
-                                }
-                                LroStatus::Canceled => {
-                                    return Err(Error::message(ErrorKind::Other, "Long running operation canceled".to_string()))
-                                }
-                                _ => {
-                                    sleep(retry_after).await;
-                                }
-                            }
-                        }
-                    } else {
-                        response.into_body().await
-                    }
-                })
             }
         }
     }
@@ -2862,37 +2180,37 @@ pub mod authorizations {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
             pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::headers::HeaderName::from_static("location"))
+                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
             }
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -2921,34 +2239,18 @@ pub mod authorizations {
             pub(crate) authorization_name: String,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Delete);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        let req_body = azure_core::EMPTY_BODY;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/authorizations/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.authorization_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -3059,27 +2361,28 @@ pub mod cloud_links {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::CloudLinkList> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::CloudLinkList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -3109,60 +2412,18 @@ pub mod cloud_links {
             pub(crate) private_cloud_name: String,
         }
         impl RequestBuilder {
-            pub fn into_stream(self) -> azure_core::Pageable<models::CloudLinkList, azure_core::error::Error> {
-                let make_request = move |continuation: Option<String>| {
-                    let this = self.clone();
-                    async move {
-                        let mut url = this.url()?;
-                        let rsp = match continuation {
-                            Some(value) => {
-                                url.set_path("");
-                                url = url.join(&value)?;
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                                let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                let has_api_version_already =
-                                    req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
-                                if !has_api_version_already {
-                                    req.url_mut()
-                                        .query_pairs_mut()
-                                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
-                                }
-                                let req_body = azure_core::EMPTY_BODY;
-                                req.set_body(req_body);
-                                this.client.send(&mut req).await?
-                            }
-                            None => {
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                                let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                let req_body = azure_core::EMPTY_BODY;
-                                req.set_body(req_body);
-                                this.client.send(&mut req).await?
-                            }
-                        };
-                        let rsp = match rsp.status() {
-                            azure_core::StatusCode::Ok => Ok(Response(rsp)),
-                            status_code => Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
-                                status: status_code,
-                                error_code: None,
-                            })),
-                        };
-                        rsp?.into_body().await
-                    }
-                };
-                azure_core::Pageable::new(make_request)
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/cloudLinks",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -3175,27 +2436,28 @@ pub mod cloud_links {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::CloudLink> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::CloudLink = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -3226,48 +2488,20 @@ pub mod cloud_links {
             pub(crate) cloud_link_name: String,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        let req_body = azure_core::EMPTY_BODY;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/cloudLinks/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.cloud_link_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
-            }
-        }
-        impl std::future::IntoFuture for RequestBuilder {
-            type Output = azure_core::Result<models::CloudLink>;
-            type IntoFuture = BoxFuture<'static, azure_core::Result<models::CloudLink>>;
-            #[doc = "Returns a future that sends the request and returns the parsed response body."]
-            #[doc = ""]
-            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
-            #[doc = ""]
-            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
-            fn into_future(self) -> Self::IntoFuture {
-                Box::pin(async move { self.send().await?.into_body().await })
             }
         }
     }
@@ -3278,38 +2512,39 @@ pub mod cloud_links {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::CloudLink> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::CloudLink = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -3339,104 +2574,20 @@ pub mod cloud_links {
             pub(crate) cloud_link: models::CloudLink,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Put);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::to_json(&this.cloud_link)?;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/cloudLinks/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.cloud_link_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
-            }
-        }
-        impl std::future::IntoFuture for RequestBuilder {
-            type Output = azure_core::Result<models::CloudLink>;
-            type IntoFuture = BoxFuture<'static, azure_core::Result<models::CloudLink>>;
-            #[doc = "Returns a future that polls the long running operation, returning once the operation completes."]
-            #[doc = ""]
-            #[doc = "To only submit the request but not monitor the status of the operation until completion, use `send()` instead."]
-            #[doc = ""]
-            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
-            #[doc = ""]
-            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
-            fn into_future(self) -> Self::IntoFuture {
-                Box::pin(async move {
-                    use azure_core::{
-                        error::{Error, ErrorKind},
-                        lro::{
-                            get_retry_after,
-                            location::{get_location, get_provisioning_state, FinalState},
-                            LroStatus,
-                        },
-                        sleep::sleep,
-                    };
-                    use std::time::Duration;
-                    let this = self.clone();
-                    let response = this.send().await?;
-                    let headers = response.as_raw_response().headers();
-                    let location = get_location(headers, FinalState::AzureAsyncOperation)?;
-                    if let Some(url) = location {
-                        loop {
-                            let mut req = azure_core::Request::new(url.clone(), azure_core::Method::Get);
-                            let bearer_token = self.client.bearer_token().await?;
-                            req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                            let response = self.client.send(&mut req).await?;
-                            let headers = response.headers();
-                            let retry_after = get_retry_after(headers);
-                            let bytes = response.into_body().collect().await?;
-                            let provisioning_state = get_provisioning_state(&bytes).ok_or_else(|| {
-                                Error::message(
-                                    ErrorKind::Other,
-                                    "Long running operation failed (missing provisioning state)".to_string(),
-                                )
-                            })?;
-                            log::trace!("current provisioning_state: {provisioning_state:?}");
-                            match provisioning_state {
-                                LroStatus::Succeeded => {
-                                    let mut req = azure_core::Request::new(self.url()?, azure_core::Method::Get);
-                                    let bearer_token = self.client.bearer_token().await?;
-                                    req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                    let response = self.client.send(&mut req).await?;
-                                    return Response(response).into_body().await;
-                                }
-                                LroStatus::Failed => {
-                                    return Err(Error::message(ErrorKind::Other, "Long running operation failed".to_string()))
-                                }
-                                LroStatus::Canceled => {
-                                    return Err(Error::message(ErrorKind::Other, "Long running operation canceled".to_string()))
-                                }
-                                _ => {
-                                    sleep(retry_after).await;
-                                }
-                            }
-                        }
-                    } else {
-                        response.into_body().await
-                    }
-                })
             }
         }
     }
@@ -3447,37 +2598,37 @@ pub mod cloud_links {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
             pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::headers::HeaderName::from_static("location"))
+                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
             }
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -3506,34 +2657,18 @@ pub mod cloud_links {
             pub(crate) cloud_link_name: String,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Delete);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        let req_body = azure_core::EMPTY_BODY;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/cloudLinks/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.cloud_link_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -3691,27 +2826,28 @@ pub mod clusters {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::ClusterList> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::ClusterList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -3741,60 +2877,18 @@ pub mod clusters {
             pub(crate) private_cloud_name: String,
         }
         impl RequestBuilder {
-            pub fn into_stream(self) -> azure_core::Pageable<models::ClusterList, azure_core::error::Error> {
-                let make_request = move |continuation: Option<String>| {
-                    let this = self.clone();
-                    async move {
-                        let mut url = this.url()?;
-                        let rsp = match continuation {
-                            Some(value) => {
-                                url.set_path("");
-                                url = url.join(&value)?;
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                                let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                let has_api_version_already =
-                                    req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
-                                if !has_api_version_already {
-                                    req.url_mut()
-                                        .query_pairs_mut()
-                                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
-                                }
-                                let req_body = azure_core::EMPTY_BODY;
-                                req.set_body(req_body);
-                                this.client.send(&mut req).await?
-                            }
-                            None => {
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                                let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                let req_body = azure_core::EMPTY_BODY;
-                                req.set_body(req_body);
-                                this.client.send(&mut req).await?
-                            }
-                        };
-                        let rsp = match rsp.status() {
-                            azure_core::StatusCode::Ok => Ok(Response(rsp)),
-                            status_code => Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
-                                status: status_code,
-                                error_code: None,
-                            })),
-                        };
-                        rsp?.into_body().await
-                    }
-                };
-                azure_core::Pageable::new(make_request)
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/clusters",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -3807,27 +2901,28 @@ pub mod clusters {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::Cluster> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::Cluster = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -3858,48 +2953,20 @@ pub mod clusters {
             pub(crate) cluster_name: String,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        let req_body = azure_core::EMPTY_BODY;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/clusters/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.cluster_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
-            }
-        }
-        impl std::future::IntoFuture for RequestBuilder {
-            type Output = azure_core::Result<models::Cluster>;
-            type IntoFuture = BoxFuture<'static, azure_core::Result<models::Cluster>>;
-            #[doc = "Returns a future that sends the request and returns the parsed response body."]
-            #[doc = ""]
-            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
-            #[doc = ""]
-            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
-            fn into_future(self) -> Self::IntoFuture {
-                Box::pin(async move { self.send().await?.into_body().await })
             }
         }
     }
@@ -3910,38 +2977,39 @@ pub mod clusters {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::Cluster> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::Cluster = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -3971,104 +3039,20 @@ pub mod clusters {
             pub(crate) cluster: models::Cluster,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Put);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::to_json(&this.cluster)?;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/clusters/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.cluster_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
-            }
-        }
-        impl std::future::IntoFuture for RequestBuilder {
-            type Output = azure_core::Result<models::Cluster>;
-            type IntoFuture = BoxFuture<'static, azure_core::Result<models::Cluster>>;
-            #[doc = "Returns a future that polls the long running operation, returning once the operation completes."]
-            #[doc = ""]
-            #[doc = "To only submit the request but not monitor the status of the operation until completion, use `send()` instead."]
-            #[doc = ""]
-            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
-            #[doc = ""]
-            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
-            fn into_future(self) -> Self::IntoFuture {
-                Box::pin(async move {
-                    use azure_core::{
-                        error::{Error, ErrorKind},
-                        lro::{
-                            get_retry_after,
-                            location::{get_location, get_provisioning_state, FinalState},
-                            LroStatus,
-                        },
-                        sleep::sleep,
-                    };
-                    use std::time::Duration;
-                    let this = self.clone();
-                    let response = this.send().await?;
-                    let headers = response.as_raw_response().headers();
-                    let location = get_location(headers, FinalState::AzureAsyncOperation)?;
-                    if let Some(url) = location {
-                        loop {
-                            let mut req = azure_core::Request::new(url.clone(), azure_core::Method::Get);
-                            let bearer_token = self.client.bearer_token().await?;
-                            req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                            let response = self.client.send(&mut req).await?;
-                            let headers = response.headers();
-                            let retry_after = get_retry_after(headers);
-                            let bytes = response.into_body().collect().await?;
-                            let provisioning_state = get_provisioning_state(&bytes).ok_or_else(|| {
-                                Error::message(
-                                    ErrorKind::Other,
-                                    "Long running operation failed (missing provisioning state)".to_string(),
-                                )
-                            })?;
-                            log::trace!("current provisioning_state: {provisioning_state:?}");
-                            match provisioning_state {
-                                LroStatus::Succeeded => {
-                                    let mut req = azure_core::Request::new(self.url()?, azure_core::Method::Get);
-                                    let bearer_token = self.client.bearer_token().await?;
-                                    req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                    let response = self.client.send(&mut req).await?;
-                                    return Response(response).into_body().await;
-                                }
-                                LroStatus::Failed => {
-                                    return Err(Error::message(ErrorKind::Other, "Long running operation failed".to_string()))
-                                }
-                                LroStatus::Canceled => {
-                                    return Err(Error::message(ErrorKind::Other, "Long running operation canceled".to_string()))
-                                }
-                                _ => {
-                                    sleep(retry_after).await;
-                                }
-                            }
-                        }
-                    } else {
-                        response.into_body().await
-                    }
-                })
             }
         }
     }
@@ -4079,42 +3063,43 @@ pub mod clusters {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::Cluster> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::Cluster = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
             pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::headers::HeaderName::from_static("location"))
+                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
             }
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -4144,104 +3129,20 @@ pub mod clusters {
             pub(crate) cluster_update: models::ClusterUpdate,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Patch);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::to_json(&this.cluster_update)?;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/clusters/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.cluster_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
-            }
-        }
-        impl std::future::IntoFuture for RequestBuilder {
-            type Output = azure_core::Result<models::Cluster>;
-            type IntoFuture = BoxFuture<'static, azure_core::Result<models::Cluster>>;
-            #[doc = "Returns a future that polls the long running operation, returning once the operation completes."]
-            #[doc = ""]
-            #[doc = "To only submit the request but not monitor the status of the operation until completion, use `send()` instead."]
-            #[doc = ""]
-            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
-            #[doc = ""]
-            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
-            fn into_future(self) -> Self::IntoFuture {
-                Box::pin(async move {
-                    use azure_core::{
-                        error::{Error, ErrorKind},
-                        lro::{
-                            get_retry_after,
-                            location::{get_location, get_provisioning_state, FinalState},
-                            LroStatus,
-                        },
-                        sleep::sleep,
-                    };
-                    use std::time::Duration;
-                    let this = self.clone();
-                    let response = this.send().await?;
-                    let headers = response.as_raw_response().headers();
-                    let location = get_location(headers, FinalState::Location)?;
-                    if let Some(url) = location {
-                        loop {
-                            let mut req = azure_core::Request::new(url.clone(), azure_core::Method::Get);
-                            let bearer_token = self.client.bearer_token().await?;
-                            req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                            let response = self.client.send(&mut req).await?;
-                            let headers = response.headers();
-                            let retry_after = get_retry_after(headers);
-                            let bytes = response.into_body().collect().await?;
-                            let provisioning_state = get_provisioning_state(&bytes).ok_or_else(|| {
-                                Error::message(
-                                    ErrorKind::Other,
-                                    "Long running operation failed (missing provisioning state)".to_string(),
-                                )
-                            })?;
-                            log::trace!("current provisioning_state: {provisioning_state:?}");
-                            match provisioning_state {
-                                LroStatus::Succeeded => {
-                                    let mut req = azure_core::Request::new(self.url()?, azure_core::Method::Get);
-                                    let bearer_token = self.client.bearer_token().await?;
-                                    req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                    let response = self.client.send(&mut req).await?;
-                                    return Response(response).into_body().await;
-                                }
-                                LroStatus::Failed => {
-                                    return Err(Error::message(ErrorKind::Other, "Long running operation failed".to_string()))
-                                }
-                                LroStatus::Canceled => {
-                                    return Err(Error::message(ErrorKind::Other, "Long running operation canceled".to_string()))
-                                }
-                                _ => {
-                                    sleep(retry_after).await;
-                                }
-                            }
-                        }
-                    } else {
-                        response.into_body().await
-                    }
-                })
             }
         }
     }
@@ -4252,37 +3153,37 @@ pub mod clusters {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
             pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::headers::HeaderName::from_static("location"))
+                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
             }
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -4311,34 +3212,18 @@ pub mod clusters {
             pub(crate) cluster_name: String,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Delete);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        let req_body = azure_core::EMPTY_BODY;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/clusters/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.cluster_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -4351,27 +3236,28 @@ pub mod clusters {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::ClusterZoneList> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::ClusterZoneList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -4402,49 +3288,20 @@ pub mod clusters {
             pub(crate) cluster_name: String,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Post);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        let req_body = azure_core::EMPTY_BODY;
-                        req.insert_header(azure_core::headers::CONTENT_LENGTH, "0");
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/clusters/{}/listZones",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.cluster_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
-            }
-        }
-        impl std::future::IntoFuture for RequestBuilder {
-            type Output = azure_core::Result<models::ClusterZoneList>;
-            type IntoFuture = BoxFuture<'static, azure_core::Result<models::ClusterZoneList>>;
-            #[doc = "Returns a future that sends the request and returns the parsed response body."]
-            #[doc = ""]
-            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
-            #[doc = ""]
-            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
-            fn into_future(self) -> Self::IntoFuture {
-                Box::pin(async move { self.send().await?.into_body().await })
             }
         }
     }
@@ -4565,27 +3422,28 @@ pub mod datastores {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::DatastoreList> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::DatastoreList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -4616,60 +3474,18 @@ pub mod datastores {
             pub(crate) cluster_name: String,
         }
         impl RequestBuilder {
-            pub fn into_stream(self) -> azure_core::Pageable<models::DatastoreList, azure_core::error::Error> {
-                let make_request = move |continuation: Option<String>| {
-                    let this = self.clone();
-                    async move {
-                        let mut url = this.url()?;
-                        let rsp = match continuation {
-                            Some(value) => {
-                                url.set_path("");
-                                url = url.join(&value)?;
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                                let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                let has_api_version_already =
-                                    req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
-                                if !has_api_version_already {
-                                    req.url_mut()
-                                        .query_pairs_mut()
-                                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
-                                }
-                                let req_body = azure_core::EMPTY_BODY;
-                                req.set_body(req_body);
-                                this.client.send(&mut req).await?
-                            }
-                            None => {
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                                let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                let req_body = azure_core::EMPTY_BODY;
-                                req.set_body(req_body);
-                                this.client.send(&mut req).await?
-                            }
-                        };
-                        let rsp = match rsp.status() {
-                            azure_core::StatusCode::Ok => Ok(Response(rsp)),
-                            status_code => Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
-                                status: status_code,
-                                error_code: None,
-                            })),
-                        };
-                        rsp?.into_body().await
-                    }
-                };
-                azure_core::Pageable::new(make_request)
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/clusters/{}/datastores",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.cluster_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -4682,27 +3498,28 @@ pub mod datastores {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::Datastore> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::Datastore = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -4734,48 +3551,20 @@ pub mod datastores {
             pub(crate) datastore_name: String,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        let req_body = azure_core::EMPTY_BODY;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/clusters/{}/datastores/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.cluster_name, &self.datastore_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
-            }
-        }
-        impl std::future::IntoFuture for RequestBuilder {
-            type Output = azure_core::Result<models::Datastore>;
-            type IntoFuture = BoxFuture<'static, azure_core::Result<models::Datastore>>;
-            #[doc = "Returns a future that sends the request and returns the parsed response body."]
-            #[doc = ""]
-            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
-            #[doc = ""]
-            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
-            fn into_future(self) -> Self::IntoFuture {
-                Box::pin(async move { self.send().await?.into_body().await })
             }
         }
     }
@@ -4786,38 +3575,39 @@ pub mod datastores {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::Datastore> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::Datastore = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -4848,104 +3638,20 @@ pub mod datastores {
             pub(crate) datastore: models::Datastore,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Put);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::to_json(&this.datastore)?;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/clusters/{}/datastores/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.cluster_name, &self.datastore_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
-            }
-        }
-        impl std::future::IntoFuture for RequestBuilder {
-            type Output = azure_core::Result<models::Datastore>;
-            type IntoFuture = BoxFuture<'static, azure_core::Result<models::Datastore>>;
-            #[doc = "Returns a future that polls the long running operation, returning once the operation completes."]
-            #[doc = ""]
-            #[doc = "To only submit the request but not monitor the status of the operation until completion, use `send()` instead."]
-            #[doc = ""]
-            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
-            #[doc = ""]
-            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
-            fn into_future(self) -> Self::IntoFuture {
-                Box::pin(async move {
-                    use azure_core::{
-                        error::{Error, ErrorKind},
-                        lro::{
-                            get_retry_after,
-                            location::{get_location, get_provisioning_state, FinalState},
-                            LroStatus,
-                        },
-                        sleep::sleep,
-                    };
-                    use std::time::Duration;
-                    let this = self.clone();
-                    let response = this.send().await?;
-                    let headers = response.as_raw_response().headers();
-                    let location = get_location(headers, FinalState::AzureAsyncOperation)?;
-                    if let Some(url) = location {
-                        loop {
-                            let mut req = azure_core::Request::new(url.clone(), azure_core::Method::Get);
-                            let bearer_token = self.client.bearer_token().await?;
-                            req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                            let response = self.client.send(&mut req).await?;
-                            let headers = response.headers();
-                            let retry_after = get_retry_after(headers);
-                            let bytes = response.into_body().collect().await?;
-                            let provisioning_state = get_provisioning_state(&bytes).ok_or_else(|| {
-                                Error::message(
-                                    ErrorKind::Other,
-                                    "Long running operation failed (missing provisioning state)".to_string(),
-                                )
-                            })?;
-                            log::trace!("current provisioning_state: {provisioning_state:?}");
-                            match provisioning_state {
-                                LroStatus::Succeeded => {
-                                    let mut req = azure_core::Request::new(self.url()?, azure_core::Method::Get);
-                                    let bearer_token = self.client.bearer_token().await?;
-                                    req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                    let response = self.client.send(&mut req).await?;
-                                    return Response(response).into_body().await;
-                                }
-                                LroStatus::Failed => {
-                                    return Err(Error::message(ErrorKind::Other, "Long running operation failed".to_string()))
-                                }
-                                LroStatus::Canceled => {
-                                    return Err(Error::message(ErrorKind::Other, "Long running operation canceled".to_string()))
-                                }
-                                _ => {
-                                    sleep(retry_after).await;
-                                }
-                            }
-                        }
-                    } else {
-                        response.into_body().await
-                    }
-                })
             }
         }
     }
@@ -4956,37 +3662,37 @@ pub mod datastores {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
             pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::headers::HeaderName::from_static("location"))
+                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
             }
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -5016,34 +3722,228 @@ pub mod datastores {
             pub(crate) datastore_name: String,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Delete);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        let req_body = azure_core::EMPTY_BODY;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/clusters/{}/datastores/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.cluster_name, &self.datastore_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                }
+                Ok(url)
+            }
+        }
+    }
+}
+pub mod hosts {
+    use super::models;
+    #[cfg(not(target_arch = "wasm32"))]
+    use futures::future::BoxFuture;
+    #[cfg(target_arch = "wasm32")]
+    use futures::future::LocalBoxFuture as BoxFuture;
+    pub struct Client(pub(crate) super::Client);
+    impl Client {
+        #[doc = "List Host resources by Cluster"]
+        #[doc = ""]
+        #[doc = "Arguments:"]
+        #[doc = "* `subscription_id`: The ID of the target subscription. The value must be an UUID."]
+        #[doc = "* `resource_group_name`: The name of the resource group. The name is case insensitive."]
+        #[doc = "* `private_cloud_name`: Name of the private cloud"]
+        #[doc = "* `cluster_name`: Name of the cluster"]
+        pub fn list(
+            &self,
+            subscription_id: impl Into<String>,
+            resource_group_name: impl Into<String>,
+            private_cloud_name: impl Into<String>,
+            cluster_name: impl Into<String>,
+        ) -> list::RequestBuilder {
+            list::RequestBuilder {
+                client: self.0.clone(),
+                subscription_id: subscription_id.into(),
+                resource_group_name: resource_group_name.into(),
+                private_cloud_name: private_cloud_name.into(),
+                cluster_name: cluster_name.into(),
+            }
+        }
+        #[doc = "Get a Host"]
+        #[doc = ""]
+        #[doc = "Arguments:"]
+        #[doc = "* `subscription_id`: The ID of the target subscription. The value must be an UUID."]
+        #[doc = "* `resource_group_name`: The name of the resource group. The name is case insensitive."]
+        #[doc = "* `private_cloud_name`: Name of the private cloud"]
+        #[doc = "* `cluster_name`: Name of the cluster"]
+        #[doc = "* `host_id`: The host identifier."]
+        pub fn get(
+            &self,
+            subscription_id: impl Into<String>,
+            resource_group_name: impl Into<String>,
+            private_cloud_name: impl Into<String>,
+            cluster_name: impl Into<String>,
+            host_id: impl Into<String>,
+        ) -> get::RequestBuilder {
+            get::RequestBuilder {
+                client: self.0.clone(),
+                subscription_id: subscription_id.into(),
+                resource_group_name: resource_group_name.into(),
+                private_cloud_name: private_cloud_name.into(),
+                cluster_name: cluster_name.into(),
+                host_id: host_id.into(),
+            }
+        }
+    }
+    pub mod list {
+        use super::models;
+        #[cfg(not(target_arch = "wasm32"))]
+        use futures::future::BoxFuture;
+        #[cfg(target_arch = "wasm32")]
+        use futures::future::LocalBoxFuture as BoxFuture;
+        #[derive(Debug)]
+        pub struct Response(azure_core::http::Response);
+        impl Response {
+            pub async fn into_body(self) -> azure_core::Result<models::HostListResult> {
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
+                let body: models::HostListResult = serde_json::from_slice(&bytes)?;
+                Ok(body)
+            }
+            pub fn into_raw_response(self) -> azure_core::http::Response {
+                self.0
+            }
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+                &self.0
+            }
+        }
+        impl From<Response> for azure_core::http::Response {
+            fn from(rsp: Response) -> Self {
+                rsp.into_raw_response()
+            }
+        }
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
+                self.as_raw_response()
+            }
+        }
+        #[derive(Clone)]
+        #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
+        #[doc = r""]
+        #[doc = r" Each `RequestBuilder` parameter method call returns `Self`, so setting of multiple"]
+        #[doc = r" parameters can be chained."]
+        #[doc = r""]
+        #[doc = r" To finalize and submit the request, invoke `.await`, which"]
+        #[doc = r" which will convert the [`RequestBuilder`] into a future"]
+        #[doc = r" executes the request and returns a `Result` with the parsed"]
+        #[doc = r" response."]
+        #[doc = r""]
+        #[doc = r" In order to execute the request without polling the service"]
+        #[doc = r" until the operation completes, use `.send().await` instead."]
+        #[doc = r""]
+        #[doc = r" If you need lower-level access to the raw response details"]
+        #[doc = r" (e.g. to inspect response headers or raw body data) then you"]
+        #[doc = r" can finalize the request using the"]
+        #[doc = r" [`RequestBuilder::send()`] method which returns a future"]
+        #[doc = r" that resolves to a lower-level [`Response`] value."]
+        pub struct RequestBuilder {
+            pub(crate) client: super::super::Client,
+            pub(crate) subscription_id: String,
+            pub(crate) resource_group_name: String,
+            pub(crate) private_cloud_name: String,
+            pub(crate) cluster_name: String,
+        }
+        impl RequestBuilder {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
+                let mut url = self.client.endpoint().clone();
+                url.set_path(&format!(
+                    "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/clusters/{}/hosts",
+                    &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.cluster_name
+                ));
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                if !has_api_version_already {
+                    url.query_pairs_mut()
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                }
+                Ok(url)
+            }
+        }
+    }
+    pub mod get {
+        use super::models;
+        #[cfg(not(target_arch = "wasm32"))]
+        use futures::future::BoxFuture;
+        #[cfg(target_arch = "wasm32")]
+        use futures::future::LocalBoxFuture as BoxFuture;
+        #[derive(Debug)]
+        pub struct Response(azure_core::http::Response);
+        impl Response {
+            pub async fn into_body(self) -> azure_core::Result<models::Host> {
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
+                let body: models::Host = serde_json::from_slice(&bytes)?;
+                Ok(body)
+            }
+            pub fn into_raw_response(self) -> azure_core::http::Response {
+                self.0
+            }
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+                &self.0
+            }
+        }
+        impl From<Response> for azure_core::http::Response {
+            fn from(rsp: Response) -> Self {
+                rsp.into_raw_response()
+            }
+        }
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
+                self.as_raw_response()
+            }
+        }
+        #[derive(Clone)]
+        #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
+        #[doc = r""]
+        #[doc = r" Each `RequestBuilder` parameter method call returns `Self`, so setting of multiple"]
+        #[doc = r" parameters can be chained."]
+        #[doc = r""]
+        #[doc = r" To finalize and submit the request, invoke `.await`, which"]
+        #[doc = r" which will convert the [`RequestBuilder`] into a future"]
+        #[doc = r" executes the request and returns a `Result` with the parsed"]
+        #[doc = r" response."]
+        #[doc = r""]
+        #[doc = r" In order to execute the request without polling the service"]
+        #[doc = r" until the operation completes, use `.send().await` instead."]
+        #[doc = r""]
+        #[doc = r" If you need lower-level access to the raw response details"]
+        #[doc = r" (e.g. to inspect response headers or raw body data) then you"]
+        #[doc = r" can finalize the request using the"]
+        #[doc = r" [`RequestBuilder::send()`] method which returns a future"]
+        #[doc = r" that resolves to a lower-level [`Response`] value."]
+        pub struct RequestBuilder {
+            pub(crate) client: super::super::Client,
+            pub(crate) subscription_id: String,
+            pub(crate) resource_group_name: String,
+            pub(crate) private_cloud_name: String,
+            pub(crate) cluster_name: String,
+            pub(crate) host_id: String,
+        }
+        impl RequestBuilder {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
+                let mut url = self.client.endpoint().clone();
+                url.set_path(&format!(
+                    "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/clusters/{}/hosts/{}",
+                    &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.cluster_name, &self.host_id
+                ));
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                if !has_api_version_already {
+                    url.query_pairs_mut()
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -5194,27 +4094,28 @@ pub mod placement_policies {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::PlacementPoliciesList> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::PlacementPoliciesList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -5245,60 +4146,18 @@ pub mod placement_policies {
             pub(crate) cluster_name: String,
         }
         impl RequestBuilder {
-            pub fn into_stream(self) -> azure_core::Pageable<models::PlacementPoliciesList, azure_core::error::Error> {
-                let make_request = move |continuation: Option<String>| {
-                    let this = self.clone();
-                    async move {
-                        let mut url = this.url()?;
-                        let rsp = match continuation {
-                            Some(value) => {
-                                url.set_path("");
-                                url = url.join(&value)?;
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                                let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                let has_api_version_already =
-                                    req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
-                                if !has_api_version_already {
-                                    req.url_mut()
-                                        .query_pairs_mut()
-                                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
-                                }
-                                let req_body = azure_core::EMPTY_BODY;
-                                req.set_body(req_body);
-                                this.client.send(&mut req).await?
-                            }
-                            None => {
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                                let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                let req_body = azure_core::EMPTY_BODY;
-                                req.set_body(req_body);
-                                this.client.send(&mut req).await?
-                            }
-                        };
-                        let rsp = match rsp.status() {
-                            azure_core::StatusCode::Ok => Ok(Response(rsp)),
-                            status_code => Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
-                                status: status_code,
-                                error_code: None,
-                            })),
-                        };
-                        rsp?.into_body().await
-                    }
-                };
-                azure_core::Pageable::new(make_request)
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/clusters/{}/placementPolicies",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.cluster_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -5311,27 +4170,28 @@ pub mod placement_policies {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::PlacementPolicy> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::PlacementPolicy = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -5363,25 +4223,7 @@ pub mod placement_policies {
             pub(crate) placement_policy_name: String,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        let req_body = azure_core::EMPTY_BODY;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/clusters/{}/placementPolicies/{}",
@@ -5391,24 +4233,14 @@ pub mod placement_policies {
                     &self.cluster_name,
                     &self.placement_policy_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
-            }
-        }
-        impl std::future::IntoFuture for RequestBuilder {
-            type Output = azure_core::Result<models::PlacementPolicy>;
-            type IntoFuture = BoxFuture<'static, azure_core::Result<models::PlacementPolicy>>;
-            #[doc = "Returns a future that sends the request and returns the parsed response body."]
-            #[doc = ""]
-            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
-            #[doc = ""]
-            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
-            fn into_future(self) -> Self::IntoFuture {
-                Box::pin(async move { self.send().await?.into_body().await })
             }
         }
     }
@@ -5419,38 +4251,39 @@ pub mod placement_policies {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::PlacementPolicy> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::PlacementPolicy = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -5481,26 +4314,7 @@ pub mod placement_policies {
             pub(crate) placement_policy: models::PlacementPolicy,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Put);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::to_json(&this.placement_policy)?;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/clusters/{}/placementPolicies/{}",
@@ -5510,79 +4324,14 @@ pub mod placement_policies {
                     &self.cluster_name,
                     &self.placement_policy_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
-            }
-        }
-        impl std::future::IntoFuture for RequestBuilder {
-            type Output = azure_core::Result<models::PlacementPolicy>;
-            type IntoFuture = BoxFuture<'static, azure_core::Result<models::PlacementPolicy>>;
-            #[doc = "Returns a future that polls the long running operation, returning once the operation completes."]
-            #[doc = ""]
-            #[doc = "To only submit the request but not monitor the status of the operation until completion, use `send()` instead."]
-            #[doc = ""]
-            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
-            #[doc = ""]
-            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
-            fn into_future(self) -> Self::IntoFuture {
-                Box::pin(async move {
-                    use azure_core::{
-                        error::{Error, ErrorKind},
-                        lro::{
-                            get_retry_after,
-                            location::{get_location, get_provisioning_state, FinalState},
-                            LroStatus,
-                        },
-                        sleep::sleep,
-                    };
-                    use std::time::Duration;
-                    let this = self.clone();
-                    let response = this.send().await?;
-                    let headers = response.as_raw_response().headers();
-                    let location = get_location(headers, FinalState::AzureAsyncOperation)?;
-                    if let Some(url) = location {
-                        loop {
-                            let mut req = azure_core::Request::new(url.clone(), azure_core::Method::Get);
-                            let bearer_token = self.client.bearer_token().await?;
-                            req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                            let response = self.client.send(&mut req).await?;
-                            let headers = response.headers();
-                            let retry_after = get_retry_after(headers);
-                            let bytes = response.into_body().collect().await?;
-                            let provisioning_state = get_provisioning_state(&bytes).ok_or_else(|| {
-                                Error::message(
-                                    ErrorKind::Other,
-                                    "Long running operation failed (missing provisioning state)".to_string(),
-                                )
-                            })?;
-                            log::trace!("current provisioning_state: {provisioning_state:?}");
-                            match provisioning_state {
-                                LroStatus::Succeeded => {
-                                    let mut req = azure_core::Request::new(self.url()?, azure_core::Method::Get);
-                                    let bearer_token = self.client.bearer_token().await?;
-                                    req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                    let response = self.client.send(&mut req).await?;
-                                    return Response(response).into_body().await;
-                                }
-                                LroStatus::Failed => {
-                                    return Err(Error::message(ErrorKind::Other, "Long running operation failed".to_string()))
-                                }
-                                LroStatus::Canceled => {
-                                    return Err(Error::message(ErrorKind::Other, "Long running operation canceled".to_string()))
-                                }
-                                _ => {
-                                    sleep(retry_after).await;
-                                }
-                            }
-                        }
-                    } else {
-                        response.into_body().await
-                    }
-                })
             }
         }
     }
@@ -5593,42 +4342,43 @@ pub mod placement_policies {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::PlacementPolicy> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::PlacementPolicy = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
             pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::headers::HeaderName::from_static("location"))
+                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
             }
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -5659,26 +4409,7 @@ pub mod placement_policies {
             pub(crate) placement_policy_update: models::PlacementPolicyUpdate,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Patch);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::to_json(&this.placement_policy_update)?;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/clusters/{}/placementPolicies/{}",
@@ -5688,79 +4419,14 @@ pub mod placement_policies {
                     &self.cluster_name,
                     &self.placement_policy_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
-            }
-        }
-        impl std::future::IntoFuture for RequestBuilder {
-            type Output = azure_core::Result<models::PlacementPolicy>;
-            type IntoFuture = BoxFuture<'static, azure_core::Result<models::PlacementPolicy>>;
-            #[doc = "Returns a future that polls the long running operation, returning once the operation completes."]
-            #[doc = ""]
-            #[doc = "To only submit the request but not monitor the status of the operation until completion, use `send()` instead."]
-            #[doc = ""]
-            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
-            #[doc = ""]
-            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
-            fn into_future(self) -> Self::IntoFuture {
-                Box::pin(async move {
-                    use azure_core::{
-                        error::{Error, ErrorKind},
-                        lro::{
-                            get_retry_after,
-                            location::{get_location, get_provisioning_state, FinalState},
-                            LroStatus,
-                        },
-                        sleep::sleep,
-                    };
-                    use std::time::Duration;
-                    let this = self.clone();
-                    let response = this.send().await?;
-                    let headers = response.as_raw_response().headers();
-                    let location = get_location(headers, FinalState::Location)?;
-                    if let Some(url) = location {
-                        loop {
-                            let mut req = azure_core::Request::new(url.clone(), azure_core::Method::Get);
-                            let bearer_token = self.client.bearer_token().await?;
-                            req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                            let response = self.client.send(&mut req).await?;
-                            let headers = response.headers();
-                            let retry_after = get_retry_after(headers);
-                            let bytes = response.into_body().collect().await?;
-                            let provisioning_state = get_provisioning_state(&bytes).ok_or_else(|| {
-                                Error::message(
-                                    ErrorKind::Other,
-                                    "Long running operation failed (missing provisioning state)".to_string(),
-                                )
-                            })?;
-                            log::trace!("current provisioning_state: {provisioning_state:?}");
-                            match provisioning_state {
-                                LroStatus::Succeeded => {
-                                    let mut req = azure_core::Request::new(self.url()?, azure_core::Method::Get);
-                                    let bearer_token = self.client.bearer_token().await?;
-                                    req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                    let response = self.client.send(&mut req).await?;
-                                    return Response(response).into_body().await;
-                                }
-                                LroStatus::Failed => {
-                                    return Err(Error::message(ErrorKind::Other, "Long running operation failed".to_string()))
-                                }
-                                LroStatus::Canceled => {
-                                    return Err(Error::message(ErrorKind::Other, "Long running operation canceled".to_string()))
-                                }
-                                _ => {
-                                    sleep(retry_after).await;
-                                }
-                            }
-                        }
-                    } else {
-                        response.into_body().await
-                    }
-                })
             }
         }
     }
@@ -5771,37 +4437,37 @@ pub mod placement_policies {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
             pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::headers::HeaderName::from_static("location"))
+                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
             }
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -5831,25 +4497,7 @@ pub mod placement_policies {
             pub(crate) placement_policy_name: String,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Delete);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        let req_body = azure_core::EMPTY_BODY;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/clusters/{}/placementPolicies/{}",
@@ -5859,10 +4507,12 @@ pub mod placement_policies {
                     &self.cluster_name,
                     &self.placement_policy_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -5960,27 +4610,28 @@ pub mod virtual_machines {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::VirtualMachinesList> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::VirtualMachinesList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -6011,60 +4662,18 @@ pub mod virtual_machines {
             pub(crate) cluster_name: String,
         }
         impl RequestBuilder {
-            pub fn into_stream(self) -> azure_core::Pageable<models::VirtualMachinesList, azure_core::error::Error> {
-                let make_request = move |continuation: Option<String>| {
-                    let this = self.clone();
-                    async move {
-                        let mut url = this.url()?;
-                        let rsp = match continuation {
-                            Some(value) => {
-                                url.set_path("");
-                                url = url.join(&value)?;
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                                let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                let has_api_version_already =
-                                    req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
-                                if !has_api_version_already {
-                                    req.url_mut()
-                                        .query_pairs_mut()
-                                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
-                                }
-                                let req_body = azure_core::EMPTY_BODY;
-                                req.set_body(req_body);
-                                this.client.send(&mut req).await?
-                            }
-                            None => {
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                                let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                let req_body = azure_core::EMPTY_BODY;
-                                req.set_body(req_body);
-                                this.client.send(&mut req).await?
-                            }
-                        };
-                        let rsp = match rsp.status() {
-                            azure_core::StatusCode::Ok => Ok(Response(rsp)),
-                            status_code => Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
-                                status: status_code,
-                                error_code: None,
-                            })),
-                        };
-                        rsp?.into_body().await
-                    }
-                };
-                azure_core::Pageable::new(make_request)
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/clusters/{}/virtualMachines",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.cluster_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -6077,27 +4686,28 @@ pub mod virtual_machines {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::VirtualMachine> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::VirtualMachine = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -6129,25 +4739,7 @@ pub mod virtual_machines {
             pub(crate) virtual_machine_id: String,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        let req_body = azure_core::EMPTY_BODY;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/clusters/{}/virtualMachines/{}",
@@ -6157,24 +4749,14 @@ pub mod virtual_machines {
                     &self.cluster_name,
                     &self.virtual_machine_id
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
-            }
-        }
-        impl std::future::IntoFuture for RequestBuilder {
-            type Output = azure_core::Result<models::VirtualMachine>;
-            type IntoFuture = BoxFuture<'static, azure_core::Result<models::VirtualMachine>>;
-            #[doc = "Returns a future that sends the request and returns the parsed response body."]
-            #[doc = ""]
-            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
-            #[doc = ""]
-            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
-            fn into_future(self) -> Self::IntoFuture {
-                Box::pin(async move { self.send().await?.into_body().await })
             }
         }
     }
@@ -6185,37 +4767,37 @@ pub mod virtual_machines {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
             pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::headers::HeaderName::from_static("location"))
+                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
             }
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -6246,32 +4828,15 @@ pub mod virtual_machines {
             pub(crate) restrict_movement: models::VirtualMachineRestrictMovement,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Post);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::to_json(&this.restrict_movement)?;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url . set_path (& format ! ("/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/clusters/{}/virtualMachines/{}/restrictMovement" , & self . subscription_id , & self . resource_group_name , & self . private_cloud_name , & self . cluster_name , & self . virtual_machine_id)) ;
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -6382,27 +4947,28 @@ pub mod global_reach_connections {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::GlobalReachConnectionList> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::GlobalReachConnectionList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -6432,60 +4998,18 @@ pub mod global_reach_connections {
             pub(crate) private_cloud_name: String,
         }
         impl RequestBuilder {
-            pub fn into_stream(self) -> azure_core::Pageable<models::GlobalReachConnectionList, azure_core::error::Error> {
-                let make_request = move |continuation: Option<String>| {
-                    let this = self.clone();
-                    async move {
-                        let mut url = this.url()?;
-                        let rsp = match continuation {
-                            Some(value) => {
-                                url.set_path("");
-                                url = url.join(&value)?;
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                                let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                let has_api_version_already =
-                                    req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
-                                if !has_api_version_already {
-                                    req.url_mut()
-                                        .query_pairs_mut()
-                                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
-                                }
-                                let req_body = azure_core::EMPTY_BODY;
-                                req.set_body(req_body);
-                                this.client.send(&mut req).await?
-                            }
-                            None => {
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                                let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                let req_body = azure_core::EMPTY_BODY;
-                                req.set_body(req_body);
-                                this.client.send(&mut req).await?
-                            }
-                        };
-                        let rsp = match rsp.status() {
-                            azure_core::StatusCode::Ok => Ok(Response(rsp)),
-                            status_code => Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
-                                status: status_code,
-                                error_code: None,
-                            })),
-                        };
-                        rsp?.into_body().await
-                    }
-                };
-                azure_core::Pageable::new(make_request)
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/globalReachConnections",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -6498,27 +5022,28 @@ pub mod global_reach_connections {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::GlobalReachConnection> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::GlobalReachConnection = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -6549,48 +5074,20 @@ pub mod global_reach_connections {
             pub(crate) global_reach_connection_name: String,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        let req_body = azure_core::EMPTY_BODY;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/globalReachConnections/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.global_reach_connection_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
-            }
-        }
-        impl std::future::IntoFuture for RequestBuilder {
-            type Output = azure_core::Result<models::GlobalReachConnection>;
-            type IntoFuture = BoxFuture<'static, azure_core::Result<models::GlobalReachConnection>>;
-            #[doc = "Returns a future that sends the request and returns the parsed response body."]
-            #[doc = ""]
-            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
-            #[doc = ""]
-            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
-            fn into_future(self) -> Self::IntoFuture {
-                Box::pin(async move { self.send().await?.into_body().await })
             }
         }
     }
@@ -6601,38 +5098,39 @@ pub mod global_reach_connections {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::GlobalReachConnection> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::GlobalReachConnection = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -6662,104 +5160,20 @@ pub mod global_reach_connections {
             pub(crate) global_reach_connection: models::GlobalReachConnection,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Put);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::to_json(&this.global_reach_connection)?;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/globalReachConnections/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.global_reach_connection_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
-            }
-        }
-        impl std::future::IntoFuture for RequestBuilder {
-            type Output = azure_core::Result<models::GlobalReachConnection>;
-            type IntoFuture = BoxFuture<'static, azure_core::Result<models::GlobalReachConnection>>;
-            #[doc = "Returns a future that polls the long running operation, returning once the operation completes."]
-            #[doc = ""]
-            #[doc = "To only submit the request but not monitor the status of the operation until completion, use `send()` instead."]
-            #[doc = ""]
-            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
-            #[doc = ""]
-            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
-            fn into_future(self) -> Self::IntoFuture {
-                Box::pin(async move {
-                    use azure_core::{
-                        error::{Error, ErrorKind},
-                        lro::{
-                            get_retry_after,
-                            location::{get_location, get_provisioning_state, FinalState},
-                            LroStatus,
-                        },
-                        sleep::sleep,
-                    };
-                    use std::time::Duration;
-                    let this = self.clone();
-                    let response = this.send().await?;
-                    let headers = response.as_raw_response().headers();
-                    let location = get_location(headers, FinalState::AzureAsyncOperation)?;
-                    if let Some(url) = location {
-                        loop {
-                            let mut req = azure_core::Request::new(url.clone(), azure_core::Method::Get);
-                            let bearer_token = self.client.bearer_token().await?;
-                            req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                            let response = self.client.send(&mut req).await?;
-                            let headers = response.headers();
-                            let retry_after = get_retry_after(headers);
-                            let bytes = response.into_body().collect().await?;
-                            let provisioning_state = get_provisioning_state(&bytes).ok_or_else(|| {
-                                Error::message(
-                                    ErrorKind::Other,
-                                    "Long running operation failed (missing provisioning state)".to_string(),
-                                )
-                            })?;
-                            log::trace!("current provisioning_state: {provisioning_state:?}");
-                            match provisioning_state {
-                                LroStatus::Succeeded => {
-                                    let mut req = azure_core::Request::new(self.url()?, azure_core::Method::Get);
-                                    let bearer_token = self.client.bearer_token().await?;
-                                    req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                    let response = self.client.send(&mut req).await?;
-                                    return Response(response).into_body().await;
-                                }
-                                LroStatus::Failed => {
-                                    return Err(Error::message(ErrorKind::Other, "Long running operation failed".to_string()))
-                                }
-                                LroStatus::Canceled => {
-                                    return Err(Error::message(ErrorKind::Other, "Long running operation canceled".to_string()))
-                                }
-                                _ => {
-                                    sleep(retry_after).await;
-                                }
-                            }
-                        }
-                    } else {
-                        response.into_body().await
-                    }
-                })
             }
         }
     }
@@ -6770,37 +5184,37 @@ pub mod global_reach_connections {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
             pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::headers::HeaderName::from_static("location"))
+                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
             }
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -6829,34 +5243,18 @@ pub mod global_reach_connections {
             pub(crate) global_reach_connection_name: String,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Delete);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        let req_body = azure_core::EMPTY_BODY;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/globalReachConnections/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.global_reach_connection_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -6967,27 +5365,28 @@ pub mod hcx_enterprise_sites {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::HcxEnterpriseSiteList> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::HcxEnterpriseSiteList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -7017,60 +5416,18 @@ pub mod hcx_enterprise_sites {
             pub(crate) private_cloud_name: String,
         }
         impl RequestBuilder {
-            pub fn into_stream(self) -> azure_core::Pageable<models::HcxEnterpriseSiteList, azure_core::error::Error> {
-                let make_request = move |continuation: Option<String>| {
-                    let this = self.clone();
-                    async move {
-                        let mut url = this.url()?;
-                        let rsp = match continuation {
-                            Some(value) => {
-                                url.set_path("");
-                                url = url.join(&value)?;
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                                let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                let has_api_version_already =
-                                    req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
-                                if !has_api_version_already {
-                                    req.url_mut()
-                                        .query_pairs_mut()
-                                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
-                                }
-                                let req_body = azure_core::EMPTY_BODY;
-                                req.set_body(req_body);
-                                this.client.send(&mut req).await?
-                            }
-                            None => {
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                                let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                let req_body = azure_core::EMPTY_BODY;
-                                req.set_body(req_body);
-                                this.client.send(&mut req).await?
-                            }
-                        };
-                        let rsp = match rsp.status() {
-                            azure_core::StatusCode::Ok => Ok(Response(rsp)),
-                            status_code => Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
-                                status: status_code,
-                                error_code: None,
-                            })),
-                        };
-                        rsp?.into_body().await
-                    }
-                };
-                azure_core::Pageable::new(make_request)
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/hcxEnterpriseSites",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -7083,27 +5440,28 @@ pub mod hcx_enterprise_sites {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::HcxEnterpriseSite> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::HcxEnterpriseSite = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -7134,48 +5492,20 @@ pub mod hcx_enterprise_sites {
             pub(crate) hcx_enterprise_site_name: String,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        let req_body = azure_core::EMPTY_BODY;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/hcxEnterpriseSites/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.hcx_enterprise_site_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
-            }
-        }
-        impl std::future::IntoFuture for RequestBuilder {
-            type Output = azure_core::Result<models::HcxEnterpriseSite>;
-            type IntoFuture = BoxFuture<'static, azure_core::Result<models::HcxEnterpriseSite>>;
-            #[doc = "Returns a future that sends the request and returns the parsed response body."]
-            #[doc = ""]
-            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
-            #[doc = ""]
-            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
-            fn into_future(self) -> Self::IntoFuture {
-                Box::pin(async move { self.send().await?.into_body().await })
             }
         }
     }
@@ -7186,27 +5516,28 @@ pub mod hcx_enterprise_sites {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::HcxEnterpriseSite> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::HcxEnterpriseSite = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -7238,49 +5569,20 @@ pub mod hcx_enterprise_sites {
             pub(crate) hcx_enterprise_site: models::HcxEnterpriseSite,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Put);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::to_json(&this.hcx_enterprise_site)?;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/hcxEnterpriseSites/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.hcx_enterprise_site_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
-            }
-        }
-        impl std::future::IntoFuture for RequestBuilder {
-            type Output = azure_core::Result<models::HcxEnterpriseSite>;
-            type IntoFuture = BoxFuture<'static, azure_core::Result<models::HcxEnterpriseSite>>;
-            #[doc = "Returns a future that sends the request and returns the parsed response body."]
-            #[doc = ""]
-            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
-            #[doc = ""]
-            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
-            fn into_future(self) -> Self::IntoFuture {
-                Box::pin(async move { self.send().await?.into_body().await })
             }
         }
     }
@@ -7291,22 +5593,22 @@ pub mod hcx_enterprise_sites {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -7337,34 +5639,18 @@ pub mod hcx_enterprise_sites {
             pub(crate) hcx_enterprise_site_name: String,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Delete);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        let req_body = azure_core::EMPTY_BODY;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/hcxEnterpriseSites/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.hcx_enterprise_site_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -7466,27 +5752,28 @@ pub mod iscsi_paths {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::IscsiPathListResult> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::IscsiPathListResult = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -7516,60 +5803,18 @@ pub mod iscsi_paths {
             pub(crate) private_cloud_name: String,
         }
         impl RequestBuilder {
-            pub fn into_stream(self) -> azure_core::Pageable<models::IscsiPathListResult, azure_core::error::Error> {
-                let make_request = move |continuation: Option<String>| {
-                    let this = self.clone();
-                    async move {
-                        let mut url = this.url()?;
-                        let rsp = match continuation {
-                            Some(value) => {
-                                url.set_path("");
-                                url = url.join(&value)?;
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                                let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                let has_api_version_already =
-                                    req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
-                                if !has_api_version_already {
-                                    req.url_mut()
-                                        .query_pairs_mut()
-                                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
-                                }
-                                let req_body = azure_core::EMPTY_BODY;
-                                req.set_body(req_body);
-                                this.client.send(&mut req).await?
-                            }
-                            None => {
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                                let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                let req_body = azure_core::EMPTY_BODY;
-                                req.set_body(req_body);
-                                this.client.send(&mut req).await?
-                            }
-                        };
-                        let rsp = match rsp.status() {
-                            azure_core::StatusCode::Ok => Ok(Response(rsp)),
-                            status_code => Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
-                                status: status_code,
-                                error_code: None,
-                            })),
-                        };
-                        rsp?.into_body().await
-                    }
-                };
-                azure_core::Pageable::new(make_request)
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/iscsiPaths",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -7582,27 +5827,28 @@ pub mod iscsi_paths {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::IscsiPath> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::IscsiPath = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -7632,48 +5878,20 @@ pub mod iscsi_paths {
             pub(crate) private_cloud_name: String,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        let req_body = azure_core::EMPTY_BODY;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/iscsiPaths/default",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
-            }
-        }
-        impl std::future::IntoFuture for RequestBuilder {
-            type Output = azure_core::Result<models::IscsiPath>;
-            type IntoFuture = BoxFuture<'static, azure_core::Result<models::IscsiPath>>;
-            #[doc = "Returns a future that sends the request and returns the parsed response body."]
-            #[doc = ""]
-            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
-            #[doc = ""]
-            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
-            fn into_future(self) -> Self::IntoFuture {
-                Box::pin(async move { self.send().await?.into_body().await })
             }
         }
     }
@@ -7684,38 +5902,39 @@ pub mod iscsi_paths {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::IscsiPath> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::IscsiPath = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -7744,104 +5963,20 @@ pub mod iscsi_paths {
             pub(crate) resource: models::IscsiPath,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Put);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::to_json(&this.resource)?;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/iscsiPaths/default",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
-            }
-        }
-        impl std::future::IntoFuture for RequestBuilder {
-            type Output = azure_core::Result<models::IscsiPath>;
-            type IntoFuture = BoxFuture<'static, azure_core::Result<models::IscsiPath>>;
-            #[doc = "Returns a future that polls the long running operation, returning once the operation completes."]
-            #[doc = ""]
-            #[doc = "To only submit the request but not monitor the status of the operation until completion, use `send()` instead."]
-            #[doc = ""]
-            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
-            #[doc = ""]
-            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
-            fn into_future(self) -> Self::IntoFuture {
-                Box::pin(async move {
-                    use azure_core::{
-                        error::{Error, ErrorKind},
-                        lro::{
-                            get_retry_after,
-                            location::{get_location, get_provisioning_state, FinalState},
-                            LroStatus,
-                        },
-                        sleep::sleep,
-                    };
-                    use std::time::Duration;
-                    let this = self.clone();
-                    let response = this.send().await?;
-                    let headers = response.as_raw_response().headers();
-                    let location = get_location(headers, FinalState::AzureAsyncOperation)?;
-                    if let Some(url) = location {
-                        loop {
-                            let mut req = azure_core::Request::new(url.clone(), azure_core::Method::Get);
-                            let bearer_token = self.client.bearer_token().await?;
-                            req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                            let response = self.client.send(&mut req).await?;
-                            let headers = response.headers();
-                            let retry_after = get_retry_after(headers);
-                            let bytes = response.into_body().collect().await?;
-                            let provisioning_state = get_provisioning_state(&bytes).ok_or_else(|| {
-                                Error::message(
-                                    ErrorKind::Other,
-                                    "Long running operation failed (missing provisioning state)".to_string(),
-                                )
-                            })?;
-                            log::trace!("current provisioning_state: {provisioning_state:?}");
-                            match provisioning_state {
-                                LroStatus::Succeeded => {
-                                    let mut req = azure_core::Request::new(self.url()?, azure_core::Method::Get);
-                                    let bearer_token = self.client.bearer_token().await?;
-                                    req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                    let response = self.client.send(&mut req).await?;
-                                    return Response(response).into_body().await;
-                                }
-                                LroStatus::Failed => {
-                                    return Err(Error::message(ErrorKind::Other, "Long running operation failed".to_string()))
-                                }
-                                LroStatus::Canceled => {
-                                    return Err(Error::message(ErrorKind::Other, "Long running operation canceled".to_string()))
-                                }
-                                _ => {
-                                    sleep(retry_after).await;
-                                }
-                            }
-                        }
-                    } else {
-                        response.into_body().await
-                    }
-                })
             }
         }
     }
@@ -7852,37 +5987,37 @@ pub mod iscsi_paths {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
             pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::headers::HeaderName::from_static("location"))
+                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
             }
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -7910,34 +6045,643 @@ pub mod iscsi_paths {
             pub(crate) private_cloud_name: String,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Delete);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        let req_body = azure_core::EMPTY_BODY;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/iscsiPaths/default",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                }
+                Ok(url)
+            }
+        }
+    }
+}
+pub mod provisioned_networks {
+    use super::models;
+    #[cfg(not(target_arch = "wasm32"))]
+    use futures::future::BoxFuture;
+    #[cfg(target_arch = "wasm32")]
+    use futures::future::LocalBoxFuture as BoxFuture;
+    pub struct Client(pub(crate) super::Client);
+    impl Client {
+        #[doc = "List ProvisionedNetwork resources by PrivateCloud"]
+        #[doc = ""]
+        #[doc = "Arguments:"]
+        #[doc = "* `subscription_id`: The ID of the target subscription. The value must be an UUID."]
+        #[doc = "* `resource_group_name`: The name of the resource group. The name is case insensitive."]
+        #[doc = "* `private_cloud_name`: Name of the private cloud"]
+        pub fn list(
+            &self,
+            subscription_id: impl Into<String>,
+            resource_group_name: impl Into<String>,
+            private_cloud_name: impl Into<String>,
+        ) -> list::RequestBuilder {
+            list::RequestBuilder {
+                client: self.0.clone(),
+                subscription_id: subscription_id.into(),
+                resource_group_name: resource_group_name.into(),
+                private_cloud_name: private_cloud_name.into(),
+            }
+        }
+        #[doc = "Get a ProvisionedNetwork"]
+        #[doc = ""]
+        #[doc = "Arguments:"]
+        #[doc = "* `subscription_id`: The ID of the target subscription. The value must be an UUID."]
+        #[doc = "* `resource_group_name`: The name of the resource group. The name is case insensitive."]
+        #[doc = "* `private_cloud_name`: Name of the private cloud"]
+        #[doc = "* `provisioned_network_name`: Name of the cloud link."]
+        pub fn get(
+            &self,
+            subscription_id: impl Into<String>,
+            resource_group_name: impl Into<String>,
+            private_cloud_name: impl Into<String>,
+            provisioned_network_name: impl Into<String>,
+        ) -> get::RequestBuilder {
+            get::RequestBuilder {
+                client: self.0.clone(),
+                subscription_id: subscription_id.into(),
+                resource_group_name: resource_group_name.into(),
+                private_cloud_name: private_cloud_name.into(),
+                provisioned_network_name: provisioned_network_name.into(),
+            }
+        }
+    }
+    pub mod list {
+        use super::models;
+        #[cfg(not(target_arch = "wasm32"))]
+        use futures::future::BoxFuture;
+        #[cfg(target_arch = "wasm32")]
+        use futures::future::LocalBoxFuture as BoxFuture;
+        #[derive(Debug)]
+        pub struct Response(azure_core::http::Response);
+        impl Response {
+            pub async fn into_body(self) -> azure_core::Result<models::ProvisionedNetworkListResult> {
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
+                let body: models::ProvisionedNetworkListResult = serde_json::from_slice(&bytes)?;
+                Ok(body)
+            }
+            pub fn into_raw_response(self) -> azure_core::http::Response {
+                self.0
+            }
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+                &self.0
+            }
+        }
+        impl From<Response> for azure_core::http::Response {
+            fn from(rsp: Response) -> Self {
+                rsp.into_raw_response()
+            }
+        }
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
+                self.as_raw_response()
+            }
+        }
+        #[derive(Clone)]
+        #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
+        #[doc = r""]
+        #[doc = r" Each `RequestBuilder` parameter method call returns `Self`, so setting of multiple"]
+        #[doc = r" parameters can be chained."]
+        #[doc = r""]
+        #[doc = r" To finalize and submit the request, invoke `.await`, which"]
+        #[doc = r" which will convert the [`RequestBuilder`] into a future"]
+        #[doc = r" executes the request and returns a `Result` with the parsed"]
+        #[doc = r" response."]
+        #[doc = r""]
+        #[doc = r" In order to execute the request without polling the service"]
+        #[doc = r" until the operation completes, use `.send().await` instead."]
+        #[doc = r""]
+        #[doc = r" If you need lower-level access to the raw response details"]
+        #[doc = r" (e.g. to inspect response headers or raw body data) then you"]
+        #[doc = r" can finalize the request using the"]
+        #[doc = r" [`RequestBuilder::send()`] method which returns a future"]
+        #[doc = r" that resolves to a lower-level [`Response`] value."]
+        pub struct RequestBuilder {
+            pub(crate) client: super::super::Client,
+            pub(crate) subscription_id: String,
+            pub(crate) resource_group_name: String,
+            pub(crate) private_cloud_name: String,
+        }
+        impl RequestBuilder {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
+                let mut url = self.client.endpoint().clone();
+                url.set_path(&format!(
+                    "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/provisionedNetworks",
+                    &self.subscription_id, &self.resource_group_name, &self.private_cloud_name
+                ));
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                if !has_api_version_already {
+                    url.query_pairs_mut()
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                }
+                Ok(url)
+            }
+        }
+    }
+    pub mod get {
+        use super::models;
+        #[cfg(not(target_arch = "wasm32"))]
+        use futures::future::BoxFuture;
+        #[cfg(target_arch = "wasm32")]
+        use futures::future::LocalBoxFuture as BoxFuture;
+        #[derive(Debug)]
+        pub struct Response(azure_core::http::Response);
+        impl Response {
+            pub async fn into_body(self) -> azure_core::Result<models::ProvisionedNetwork> {
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
+                let body: models::ProvisionedNetwork = serde_json::from_slice(&bytes)?;
+                Ok(body)
+            }
+            pub fn into_raw_response(self) -> azure_core::http::Response {
+                self.0
+            }
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+                &self.0
+            }
+        }
+        impl From<Response> for azure_core::http::Response {
+            fn from(rsp: Response) -> Self {
+                rsp.into_raw_response()
+            }
+        }
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
+                self.as_raw_response()
+            }
+        }
+        #[derive(Clone)]
+        #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
+        #[doc = r""]
+        #[doc = r" Each `RequestBuilder` parameter method call returns `Self`, so setting of multiple"]
+        #[doc = r" parameters can be chained."]
+        #[doc = r""]
+        #[doc = r" To finalize and submit the request, invoke `.await`, which"]
+        #[doc = r" which will convert the [`RequestBuilder`] into a future"]
+        #[doc = r" executes the request and returns a `Result` with the parsed"]
+        #[doc = r" response."]
+        #[doc = r""]
+        #[doc = r" In order to execute the request without polling the service"]
+        #[doc = r" until the operation completes, use `.send().await` instead."]
+        #[doc = r""]
+        #[doc = r" If you need lower-level access to the raw response details"]
+        #[doc = r" (e.g. to inspect response headers or raw body data) then you"]
+        #[doc = r" can finalize the request using the"]
+        #[doc = r" [`RequestBuilder::send()`] method which returns a future"]
+        #[doc = r" that resolves to a lower-level [`Response`] value."]
+        pub struct RequestBuilder {
+            pub(crate) client: super::super::Client,
+            pub(crate) subscription_id: String,
+            pub(crate) resource_group_name: String,
+            pub(crate) private_cloud_name: String,
+            pub(crate) provisioned_network_name: String,
+        }
+        impl RequestBuilder {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
+                let mut url = self.client.endpoint().clone();
+                url.set_path(&format!(
+                    "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/provisionedNetworks/{}",
+                    &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.provisioned_network_name
+                ));
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                if !has_api_version_already {
+                    url.query_pairs_mut()
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                }
+                Ok(url)
+            }
+        }
+    }
+}
+pub mod pure_storage_policies {
+    use super::models;
+    #[cfg(not(target_arch = "wasm32"))]
+    use futures::future::BoxFuture;
+    #[cfg(target_arch = "wasm32")]
+    use futures::future::LocalBoxFuture as BoxFuture;
+    pub struct Client(pub(crate) super::Client);
+    impl Client {
+        #[doc = "List PureStoragePolicy resources by PrivateCloud"]
+        #[doc = ""]
+        #[doc = "Arguments:"]
+        #[doc = "* `subscription_id`: The ID of the target subscription. The value must be an UUID."]
+        #[doc = "* `resource_group_name`: The name of the resource group. The name is case insensitive."]
+        #[doc = "* `private_cloud_name`: Name of the private cloud"]
+        pub fn list(
+            &self,
+            subscription_id: impl Into<String>,
+            resource_group_name: impl Into<String>,
+            private_cloud_name: impl Into<String>,
+        ) -> list::RequestBuilder {
+            list::RequestBuilder {
+                client: self.0.clone(),
+                subscription_id: subscription_id.into(),
+                resource_group_name: resource_group_name.into(),
+                private_cloud_name: private_cloud_name.into(),
+            }
+        }
+        #[doc = "Get a PureStoragePolicy"]
+        #[doc = ""]
+        #[doc = "Arguments:"]
+        #[doc = "* `subscription_id`: The ID of the target subscription. The value must be an UUID."]
+        #[doc = "* `resource_group_name`: The name of the resource group. The name is case insensitive."]
+        #[doc = "* `private_cloud_name`: Name of the private cloud"]
+        #[doc = "* `storage_policy_name`: Name of the storage policy."]
+        pub fn get(
+            &self,
+            subscription_id: impl Into<String>,
+            resource_group_name: impl Into<String>,
+            private_cloud_name: impl Into<String>,
+            storage_policy_name: impl Into<String>,
+        ) -> get::RequestBuilder {
+            get::RequestBuilder {
+                client: self.0.clone(),
+                subscription_id: subscription_id.into(),
+                resource_group_name: resource_group_name.into(),
+                private_cloud_name: private_cloud_name.into(),
+                storage_policy_name: storage_policy_name.into(),
+            }
+        }
+        #[doc = "Create a PureStoragePolicy"]
+        #[doc = ""]
+        #[doc = "Arguments:"]
+        #[doc = "* `subscription_id`: The ID of the target subscription. The value must be an UUID."]
+        #[doc = "* `resource_group_name`: The name of the resource group. The name is case insensitive."]
+        #[doc = "* `private_cloud_name`: Name of the private cloud"]
+        #[doc = "* `storage_policy_name`: Name of the storage policy."]
+        #[doc = "* `resource`: Resource create parameters."]
+        pub fn create_or_update(
+            &self,
+            subscription_id: impl Into<String>,
+            resource_group_name: impl Into<String>,
+            private_cloud_name: impl Into<String>,
+            storage_policy_name: impl Into<String>,
+            resource: impl Into<models::PureStoragePolicy>,
+        ) -> create_or_update::RequestBuilder {
+            create_or_update::RequestBuilder {
+                client: self.0.clone(),
+                subscription_id: subscription_id.into(),
+                resource_group_name: resource_group_name.into(),
+                private_cloud_name: private_cloud_name.into(),
+                storage_policy_name: storage_policy_name.into(),
+                resource: resource.into(),
+            }
+        }
+        #[doc = "Delete a PureStoragePolicy"]
+        #[doc = ""]
+        #[doc = "Arguments:"]
+        #[doc = "* `subscription_id`: The ID of the target subscription. The value must be an UUID."]
+        #[doc = "* `resource_group_name`: The name of the resource group. The name is case insensitive."]
+        #[doc = "* `private_cloud_name`: Name of the private cloud"]
+        #[doc = "* `storage_policy_name`: Name of the storage policy."]
+        pub fn delete(
+            &self,
+            subscription_id: impl Into<String>,
+            resource_group_name: impl Into<String>,
+            private_cloud_name: impl Into<String>,
+            storage_policy_name: impl Into<String>,
+        ) -> delete::RequestBuilder {
+            delete::RequestBuilder {
+                client: self.0.clone(),
+                subscription_id: subscription_id.into(),
+                resource_group_name: resource_group_name.into(),
+                private_cloud_name: private_cloud_name.into(),
+                storage_policy_name: storage_policy_name.into(),
+            }
+        }
+    }
+    pub mod list {
+        use super::models;
+        #[cfg(not(target_arch = "wasm32"))]
+        use futures::future::BoxFuture;
+        #[cfg(target_arch = "wasm32")]
+        use futures::future::LocalBoxFuture as BoxFuture;
+        #[derive(Debug)]
+        pub struct Response(azure_core::http::Response);
+        impl Response {
+            pub async fn into_body(self) -> azure_core::Result<models::PureStoragePolicyListResult> {
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
+                let body: models::PureStoragePolicyListResult = serde_json::from_slice(&bytes)?;
+                Ok(body)
+            }
+            pub fn into_raw_response(self) -> azure_core::http::Response {
+                self.0
+            }
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+                &self.0
+            }
+        }
+        impl From<Response> for azure_core::http::Response {
+            fn from(rsp: Response) -> Self {
+                rsp.into_raw_response()
+            }
+        }
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
+                self.as_raw_response()
+            }
+        }
+        #[derive(Clone)]
+        #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
+        #[doc = r""]
+        #[doc = r" Each `RequestBuilder` parameter method call returns `Self`, so setting of multiple"]
+        #[doc = r" parameters can be chained."]
+        #[doc = r""]
+        #[doc = r" To finalize and submit the request, invoke `.await`, which"]
+        #[doc = r" which will convert the [`RequestBuilder`] into a future"]
+        #[doc = r" executes the request and returns a `Result` with the parsed"]
+        #[doc = r" response."]
+        #[doc = r""]
+        #[doc = r" In order to execute the request without polling the service"]
+        #[doc = r" until the operation completes, use `.send().await` instead."]
+        #[doc = r""]
+        #[doc = r" If you need lower-level access to the raw response details"]
+        #[doc = r" (e.g. to inspect response headers or raw body data) then you"]
+        #[doc = r" can finalize the request using the"]
+        #[doc = r" [`RequestBuilder::send()`] method which returns a future"]
+        #[doc = r" that resolves to a lower-level [`Response`] value."]
+        pub struct RequestBuilder {
+            pub(crate) client: super::super::Client,
+            pub(crate) subscription_id: String,
+            pub(crate) resource_group_name: String,
+            pub(crate) private_cloud_name: String,
+        }
+        impl RequestBuilder {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
+                let mut url = self.client.endpoint().clone();
+                url.set_path(&format!(
+                    "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/pureStoragePolicies",
+                    &self.subscription_id, &self.resource_group_name, &self.private_cloud_name
+                ));
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                if !has_api_version_already {
+                    url.query_pairs_mut()
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                }
+                Ok(url)
+            }
+        }
+    }
+    pub mod get {
+        use super::models;
+        #[cfg(not(target_arch = "wasm32"))]
+        use futures::future::BoxFuture;
+        #[cfg(target_arch = "wasm32")]
+        use futures::future::LocalBoxFuture as BoxFuture;
+        #[derive(Debug)]
+        pub struct Response(azure_core::http::Response);
+        impl Response {
+            pub async fn into_body(self) -> azure_core::Result<models::PureStoragePolicy> {
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
+                let body: models::PureStoragePolicy = serde_json::from_slice(&bytes)?;
+                Ok(body)
+            }
+            pub fn into_raw_response(self) -> azure_core::http::Response {
+                self.0
+            }
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+                &self.0
+            }
+        }
+        impl From<Response> for azure_core::http::Response {
+            fn from(rsp: Response) -> Self {
+                rsp.into_raw_response()
+            }
+        }
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
+                self.as_raw_response()
+            }
+        }
+        #[derive(Clone)]
+        #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
+        #[doc = r""]
+        #[doc = r" Each `RequestBuilder` parameter method call returns `Self`, so setting of multiple"]
+        #[doc = r" parameters can be chained."]
+        #[doc = r""]
+        #[doc = r" To finalize and submit the request, invoke `.await`, which"]
+        #[doc = r" which will convert the [`RequestBuilder`] into a future"]
+        #[doc = r" executes the request and returns a `Result` with the parsed"]
+        #[doc = r" response."]
+        #[doc = r""]
+        #[doc = r" In order to execute the request without polling the service"]
+        #[doc = r" until the operation completes, use `.send().await` instead."]
+        #[doc = r""]
+        #[doc = r" If you need lower-level access to the raw response details"]
+        #[doc = r" (e.g. to inspect response headers or raw body data) then you"]
+        #[doc = r" can finalize the request using the"]
+        #[doc = r" [`RequestBuilder::send()`] method which returns a future"]
+        #[doc = r" that resolves to a lower-level [`Response`] value."]
+        pub struct RequestBuilder {
+            pub(crate) client: super::super::Client,
+            pub(crate) subscription_id: String,
+            pub(crate) resource_group_name: String,
+            pub(crate) private_cloud_name: String,
+            pub(crate) storage_policy_name: String,
+        }
+        impl RequestBuilder {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
+                let mut url = self.client.endpoint().clone();
+                url.set_path(&format!(
+                    "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/pureStoragePolicies/{}",
+                    &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.storage_policy_name
+                ));
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                if !has_api_version_already {
+                    url.query_pairs_mut()
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                }
+                Ok(url)
+            }
+        }
+    }
+    pub mod create_or_update {
+        use super::models;
+        #[cfg(not(target_arch = "wasm32"))]
+        use futures::future::BoxFuture;
+        #[cfg(target_arch = "wasm32")]
+        use futures::future::LocalBoxFuture as BoxFuture;
+        #[derive(Debug)]
+        pub struct Response(azure_core::http::Response);
+        impl Response {
+            pub async fn into_body(self) -> azure_core::Result<models::PureStoragePolicy> {
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
+                let body: models::PureStoragePolicy = serde_json::from_slice(&bytes)?;
+                Ok(body)
+            }
+            pub fn into_raw_response(self) -> azure_core::http::Response {
+                self.0
+            }
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+                &self.0
+            }
+            pub fn headers(&self) -> Headers {
+                Headers(self.0.headers())
+            }
+        }
+        impl From<Response> for azure_core::http::Response {
+            fn from(rsp: Response) -> Self {
+                rsp.into_raw_response()
+            }
+        }
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
+                self.as_raw_response()
+            }
+        }
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
+        impl<'a> Headers<'a> {
+            #[doc = "A link to the status monitor"]
+            pub fn azure_async_operation(&self) -> azure_core::Result<&str> {
+                self.0
+                    .get_str(&azure_core::http::headers::HeaderName::from_static("azure-asyncoperation"))
+            }
+            #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
+            pub fn retry_after(&self) -> azure_core::Result<i32> {
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
+            }
+        }
+        #[derive(Clone)]
+        #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
+        #[doc = r""]
+        #[doc = r" Each `RequestBuilder` parameter method call returns `Self`, so setting of multiple"]
+        #[doc = r" parameters can be chained."]
+        #[doc = r""]
+        #[doc = r" This `RequestBuilder` implements a Long Running Operation"]
+        #[doc = r" (LRO)."]
+        #[doc = r""]
+        #[doc = r" To finalize and submit the request, invoke `.await`, which"]
+        #[doc = r" which will convert the `RequestBuilder` into a future"]
+        #[doc = r" executes the request and polls the service until the"]
+        #[doc = r" operation completes."]
+        #[doc = r""]
+        #[doc = r" In order to execute the request without polling the service"]
+        #[doc = r" until the operation completes, use"]
+        #[doc = r" [`RequestBuilder::send()`], which will return a lower-level"]
+        #[doc = r" [`Response`] value."]
+        pub struct RequestBuilder {
+            pub(crate) client: super::super::Client,
+            pub(crate) subscription_id: String,
+            pub(crate) resource_group_name: String,
+            pub(crate) private_cloud_name: String,
+            pub(crate) storage_policy_name: String,
+            pub(crate) resource: models::PureStoragePolicy,
+        }
+        impl RequestBuilder {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
+                let mut url = self.client.endpoint().clone();
+                url.set_path(&format!(
+                    "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/pureStoragePolicies/{}",
+                    &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.storage_policy_name
+                ));
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                if !has_api_version_already {
+                    url.query_pairs_mut()
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                }
+                Ok(url)
+            }
+        }
+    }
+    pub mod delete {
+        use super::models;
+        #[cfg(not(target_arch = "wasm32"))]
+        use futures::future::BoxFuture;
+        #[cfg(target_arch = "wasm32")]
+        use futures::future::LocalBoxFuture as BoxFuture;
+        #[derive(Debug)]
+        pub struct Response(azure_core::http::Response);
+        impl Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
+                self.0
+            }
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+                &self.0
+            }
+            pub fn headers(&self) -> Headers {
+                Headers(self.0.headers())
+            }
+        }
+        impl From<Response> for azure_core::http::Response {
+            fn from(rsp: Response) -> Self {
+                rsp.into_raw_response()
+            }
+        }
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
+                self.as_raw_response()
+            }
+        }
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
+        impl<'a> Headers<'a> {
+            #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
+            pub fn location(&self) -> azure_core::Result<&str> {
+                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
+            }
+            #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
+            pub fn retry_after(&self) -> azure_core::Result<i32> {
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
+            }
+        }
+        #[derive(Clone)]
+        #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
+        #[doc = r""]
+        #[doc = r" Each `RequestBuilder` parameter method call returns `Self`, so setting of multiple"]
+        #[doc = r" parameters can be chained."]
+        #[doc = r""]
+        #[doc = r" This `RequestBuilder` implements a Long Running Operation"]
+        #[doc = r" (LRO)."]
+        #[doc = r""]
+        #[doc = r" To finalize and submit the request, invoke `.await`, which"]
+        #[doc = r" which will convert the `RequestBuilder` into a future"]
+        #[doc = r" executes the request and polls the service until the"]
+        #[doc = r" operation completes."]
+        #[doc = r""]
+        #[doc = r" In order to execute the request without polling the service"]
+        #[doc = r" until the operation completes, use"]
+        #[doc = r" [`RequestBuilder::send()`], which will return a lower-level"]
+        #[doc = r" [`Response`] value."]
+        pub struct RequestBuilder {
+            pub(crate) client: super::super::Client,
+            pub(crate) subscription_id: String,
+            pub(crate) resource_group_name: String,
+            pub(crate) private_cloud_name: String,
+            pub(crate) storage_policy_name: String,
+        }
+        impl RequestBuilder {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
+                let mut url = self.client.endpoint().clone();
+                url.set_path(&format!(
+                    "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/pureStoragePolicies/{}",
+                    &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.storage_policy_name
+                ));
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                if !has_api_version_already {
+                    url.query_pairs_mut()
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -8071,27 +6815,28 @@ pub mod script_executions {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::ScriptExecutionsList> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::ScriptExecutionsList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -8121,60 +6866,18 @@ pub mod script_executions {
             pub(crate) private_cloud_name: String,
         }
         impl RequestBuilder {
-            pub fn into_stream(self) -> azure_core::Pageable<models::ScriptExecutionsList, azure_core::error::Error> {
-                let make_request = move |continuation: Option<String>| {
-                    let this = self.clone();
-                    async move {
-                        let mut url = this.url()?;
-                        let rsp = match continuation {
-                            Some(value) => {
-                                url.set_path("");
-                                url = url.join(&value)?;
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                                let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                let has_api_version_already =
-                                    req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
-                                if !has_api_version_already {
-                                    req.url_mut()
-                                        .query_pairs_mut()
-                                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
-                                }
-                                let req_body = azure_core::EMPTY_BODY;
-                                req.set_body(req_body);
-                                this.client.send(&mut req).await?
-                            }
-                            None => {
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                                let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                let req_body = azure_core::EMPTY_BODY;
-                                req.set_body(req_body);
-                                this.client.send(&mut req).await?
-                            }
-                        };
-                        let rsp = match rsp.status() {
-                            azure_core::StatusCode::Ok => Ok(Response(rsp)),
-                            status_code => Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
-                                status: status_code,
-                                error_code: None,
-                            })),
-                        };
-                        rsp?.into_body().await
-                    }
-                };
-                azure_core::Pageable::new(make_request)
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/scriptExecutions",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -8187,27 +6890,28 @@ pub mod script_executions {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::ScriptExecution> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::ScriptExecution = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -8238,48 +6942,20 @@ pub mod script_executions {
             pub(crate) script_execution_name: String,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        let req_body = azure_core::EMPTY_BODY;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/scriptExecutions/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.script_execution_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
-            }
-        }
-        impl std::future::IntoFuture for RequestBuilder {
-            type Output = azure_core::Result<models::ScriptExecution>;
-            type IntoFuture = BoxFuture<'static, azure_core::Result<models::ScriptExecution>>;
-            #[doc = "Returns a future that sends the request and returns the parsed response body."]
-            #[doc = ""]
-            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
-            #[doc = ""]
-            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
-            fn into_future(self) -> Self::IntoFuture {
-                Box::pin(async move { self.send().await?.into_body().await })
             }
         }
     }
@@ -8290,38 +6966,39 @@ pub mod script_executions {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::ScriptExecution> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::ScriptExecution = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -8351,104 +7028,20 @@ pub mod script_executions {
             pub(crate) script_execution: models::ScriptExecution,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Put);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::to_json(&this.script_execution)?;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/scriptExecutions/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.script_execution_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
-            }
-        }
-        impl std::future::IntoFuture for RequestBuilder {
-            type Output = azure_core::Result<models::ScriptExecution>;
-            type IntoFuture = BoxFuture<'static, azure_core::Result<models::ScriptExecution>>;
-            #[doc = "Returns a future that polls the long running operation, returning once the operation completes."]
-            #[doc = ""]
-            #[doc = "To only submit the request but not monitor the status of the operation until completion, use `send()` instead."]
-            #[doc = ""]
-            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
-            #[doc = ""]
-            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
-            fn into_future(self) -> Self::IntoFuture {
-                Box::pin(async move {
-                    use azure_core::{
-                        error::{Error, ErrorKind},
-                        lro::{
-                            get_retry_after,
-                            location::{get_location, get_provisioning_state, FinalState},
-                            LroStatus,
-                        },
-                        sleep::sleep,
-                    };
-                    use std::time::Duration;
-                    let this = self.clone();
-                    let response = this.send().await?;
-                    let headers = response.as_raw_response().headers();
-                    let location = get_location(headers, FinalState::AzureAsyncOperation)?;
-                    if let Some(url) = location {
-                        loop {
-                            let mut req = azure_core::Request::new(url.clone(), azure_core::Method::Get);
-                            let bearer_token = self.client.bearer_token().await?;
-                            req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                            let response = self.client.send(&mut req).await?;
-                            let headers = response.headers();
-                            let retry_after = get_retry_after(headers);
-                            let bytes = response.into_body().collect().await?;
-                            let provisioning_state = get_provisioning_state(&bytes).ok_or_else(|| {
-                                Error::message(
-                                    ErrorKind::Other,
-                                    "Long running operation failed (missing provisioning state)".to_string(),
-                                )
-                            })?;
-                            log::trace!("current provisioning_state: {provisioning_state:?}");
-                            match provisioning_state {
-                                LroStatus::Succeeded => {
-                                    let mut req = azure_core::Request::new(self.url()?, azure_core::Method::Get);
-                                    let bearer_token = self.client.bearer_token().await?;
-                                    req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                    let response = self.client.send(&mut req).await?;
-                                    return Response(response).into_body().await;
-                                }
-                                LroStatus::Failed => {
-                                    return Err(Error::message(ErrorKind::Other, "Long running operation failed".to_string()))
-                                }
-                                LroStatus::Canceled => {
-                                    return Err(Error::message(ErrorKind::Other, "Long running operation canceled".to_string()))
-                                }
-                                _ => {
-                                    sleep(retry_after).await;
-                                }
-                            }
-                        }
-                    } else {
-                        response.into_body().await
-                    }
-                })
             }
         }
     }
@@ -8459,37 +7052,37 @@ pub mod script_executions {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
             pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::headers::HeaderName::from_static("location"))
+                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
             }
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -8518,34 +7111,18 @@ pub mod script_executions {
             pub(crate) script_execution_name: String,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Delete);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        let req_body = azure_core::EMPTY_BODY;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/scriptExecutions/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.script_execution_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -8558,27 +7135,28 @@ pub mod script_executions {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::ScriptExecution> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::ScriptExecution = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -8615,49 +7193,20 @@ pub mod script_executions {
                 self.script_output_stream_type = script_output_stream_type;
                 self
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Post);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::to_json(&this.script_output_stream_type)?;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/scriptExecutions/{}/getExecutionLogs",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.script_execution_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
-            }
-        }
-        impl std::future::IntoFuture for RequestBuilder {
-            type Output = azure_core::Result<models::ScriptExecution>;
-            type IntoFuture = BoxFuture<'static, azure_core::Result<models::ScriptExecution>>;
-            #[doc = "Returns a future that sends the request and returns the parsed response body."]
-            #[doc = ""]
-            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
-            #[doc = ""]
-            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
-            fn into_future(self) -> Self::IntoFuture {
-                Box::pin(async move { self.send().await?.into_body().await })
             }
         }
     }
@@ -8719,27 +7268,28 @@ pub mod script_packages {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::ScriptPackagesList> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::ScriptPackagesList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -8769,60 +7319,18 @@ pub mod script_packages {
             pub(crate) private_cloud_name: String,
         }
         impl RequestBuilder {
-            pub fn into_stream(self) -> azure_core::Pageable<models::ScriptPackagesList, azure_core::error::Error> {
-                let make_request = move |continuation: Option<String>| {
-                    let this = self.clone();
-                    async move {
-                        let mut url = this.url()?;
-                        let rsp = match continuation {
-                            Some(value) => {
-                                url.set_path("");
-                                url = url.join(&value)?;
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                                let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                let has_api_version_already =
-                                    req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
-                                if !has_api_version_already {
-                                    req.url_mut()
-                                        .query_pairs_mut()
-                                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
-                                }
-                                let req_body = azure_core::EMPTY_BODY;
-                                req.set_body(req_body);
-                                this.client.send(&mut req).await?
-                            }
-                            None => {
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                                let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                let req_body = azure_core::EMPTY_BODY;
-                                req.set_body(req_body);
-                                this.client.send(&mut req).await?
-                            }
-                        };
-                        let rsp = match rsp.status() {
-                            azure_core::StatusCode::Ok => Ok(Response(rsp)),
-                            status_code => Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
-                                status: status_code,
-                                error_code: None,
-                            })),
-                        };
-                        rsp?.into_body().await
-                    }
-                };
-                azure_core::Pageable::new(make_request)
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/scriptPackages",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -8835,27 +7343,28 @@ pub mod script_packages {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::ScriptPackage> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::ScriptPackage = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -8886,48 +7395,20 @@ pub mod script_packages {
             pub(crate) script_package_name: String,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        let req_body = azure_core::EMPTY_BODY;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/scriptPackages/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.script_package_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
-            }
-        }
-        impl std::future::IntoFuture for RequestBuilder {
-            type Output = azure_core::Result<models::ScriptPackage>;
-            type IntoFuture = BoxFuture<'static, azure_core::Result<models::ScriptPackage>>;
-            #[doc = "Returns a future that sends the request and returns the parsed response body."]
-            #[doc = ""]
-            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
-            #[doc = ""]
-            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
-            fn into_future(self) -> Self::IntoFuture {
-                Box::pin(async move { self.send().await?.into_body().await })
             }
         }
     }
@@ -8995,27 +7476,28 @@ pub mod script_cmdlets {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::ScriptCmdletsList> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::ScriptCmdletsList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -9046,60 +7528,18 @@ pub mod script_cmdlets {
             pub(crate) script_package_name: String,
         }
         impl RequestBuilder {
-            pub fn into_stream(self) -> azure_core::Pageable<models::ScriptCmdletsList, azure_core::error::Error> {
-                let make_request = move |continuation: Option<String>| {
-                    let this = self.clone();
-                    async move {
-                        let mut url = this.url()?;
-                        let rsp = match continuation {
-                            Some(value) => {
-                                url.set_path("");
-                                url = url.join(&value)?;
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                                let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                let has_api_version_already =
-                                    req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
-                                if !has_api_version_already {
-                                    req.url_mut()
-                                        .query_pairs_mut()
-                                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
-                                }
-                                let req_body = azure_core::EMPTY_BODY;
-                                req.set_body(req_body);
-                                this.client.send(&mut req).await?
-                            }
-                            None => {
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                                let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                let req_body = azure_core::EMPTY_BODY;
-                                req.set_body(req_body);
-                                this.client.send(&mut req).await?
-                            }
-                        };
-                        let rsp = match rsp.status() {
-                            azure_core::StatusCode::Ok => Ok(Response(rsp)),
-                            status_code => Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
-                                status: status_code,
-                                error_code: None,
-                            })),
-                        };
-                        rsp?.into_body().await
-                    }
-                };
-                azure_core::Pageable::new(make_request)
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/scriptPackages/{}/scriptCmdlets",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.script_package_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -9112,27 +7552,28 @@ pub mod script_cmdlets {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::ScriptCmdlet> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::ScriptCmdlet = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -9164,25 +7605,7 @@ pub mod script_cmdlets {
             pub(crate) script_cmdlet_name: String,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        let req_body = azure_core::EMPTY_BODY;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/scriptPackages/{}/scriptCmdlets/{}",
@@ -9192,24 +7615,14 @@ pub mod script_cmdlets {
                     &self.script_package_name,
                     &self.script_cmdlet_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
-            }
-        }
-        impl std::future::IntoFuture for RequestBuilder {
-            type Output = azure_core::Result<models::ScriptCmdlet>;
-            type IntoFuture = BoxFuture<'static, azure_core::Result<models::ScriptCmdlet>>;
-            #[doc = "Returns a future that sends the request and returns the parsed response body."]
-            #[doc = ""]
-            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
-            #[doc = ""]
-            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
-            fn into_future(self) -> Self::IntoFuture {
-                Box::pin(async move { self.send().await?.into_body().await })
             }
         }
     }
@@ -10116,27 +8529,28 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkList> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::WorkloadNetworkList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -10166,60 +8580,18 @@ pub mod workload_networks {
             pub(crate) private_cloud_name: String,
         }
         impl RequestBuilder {
-            pub fn into_stream(self) -> azure_core::Pageable<models::WorkloadNetworkList, azure_core::error::Error> {
-                let make_request = move |continuation: Option<String>| {
-                    let this = self.clone();
-                    async move {
-                        let mut url = this.url()?;
-                        let rsp = match continuation {
-                            Some(value) => {
-                                url.set_path("");
-                                url = url.join(&value)?;
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                                let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                let has_api_version_already =
-                                    req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
-                                if !has_api_version_already {
-                                    req.url_mut()
-                                        .query_pairs_mut()
-                                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
-                                }
-                                let req_body = azure_core::EMPTY_BODY;
-                                req.set_body(req_body);
-                                this.client.send(&mut req).await?
-                            }
-                            None => {
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                                let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                let req_body = azure_core::EMPTY_BODY;
-                                req.set_body(req_body);
-                                this.client.send(&mut req).await?
-                            }
-                        };
-                        let rsp = match rsp.status() {
-                            azure_core::StatusCode::Ok => Ok(Response(rsp)),
-                            status_code => Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
-                                status: status_code,
-                                error_code: None,
-                            })),
-                        };
-                        rsp?.into_body().await
-                    }
-                };
-                azure_core::Pageable::new(make_request)
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -10232,27 +8604,28 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetwork> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::WorkloadNetwork = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -10282,48 +8655,20 @@ pub mod workload_networks {
             pub(crate) private_cloud_name: String,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        let req_body = azure_core::EMPTY_BODY;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
-            }
-        }
-        impl std::future::IntoFuture for RequestBuilder {
-            type Output = azure_core::Result<models::WorkloadNetwork>;
-            type IntoFuture = BoxFuture<'static, azure_core::Result<models::WorkloadNetwork>>;
-            #[doc = "Returns a future that sends the request and returns the parsed response body."]
-            #[doc = ""]
-            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
-            #[doc = ""]
-            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
-            fn into_future(self) -> Self::IntoFuture {
-                Box::pin(async move { self.send().await?.into_body().await })
             }
         }
     }
@@ -10334,27 +8679,28 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkDhcpList> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::WorkloadNetworkDhcpList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -10384,57 +8730,15 @@ pub mod workload_networks {
             pub(crate) private_cloud_name: String,
         }
         impl RequestBuilder {
-            pub fn into_stream(self) -> azure_core::Pageable<models::WorkloadNetworkDhcpList, azure_core::error::Error> {
-                let make_request = move |continuation: Option<String>| {
-                    let this = self.clone();
-                    async move {
-                        let mut url = this.url()?;
-                        let rsp = match continuation {
-                            Some(value) => {
-                                url.set_path("");
-                                url = url.join(&value)?;
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                                let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                let has_api_version_already =
-                                    req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
-                                if !has_api_version_already {
-                                    req.url_mut()
-                                        .query_pairs_mut()
-                                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
-                                }
-                                let req_body = azure_core::EMPTY_BODY;
-                                req.set_body(req_body);
-                                this.client.send(&mut req).await?
-                            }
-                            None => {
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                                let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                let req_body = azure_core::EMPTY_BODY;
-                                req.set_body(req_body);
-                                this.client.send(&mut req).await?
-                            }
-                        };
-                        let rsp = match rsp.status() {
-                            azure_core::StatusCode::Ok => Ok(Response(rsp)),
-                            status_code => Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
-                                status: status_code,
-                                error_code: None,
-                            })),
-                        };
-                        rsp?.into_body().await
-                    }
-                };
-                azure_core::Pageable::new(make_request)
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url . set_path (& format ! ("/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/dhcpConfigurations" , & self . subscription_id , & self . resource_group_name , & self . private_cloud_name)) ;
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -10447,27 +8751,28 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkDhcp> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::WorkloadNetworkDhcp = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -10498,45 +8803,17 @@ pub mod workload_networks {
             pub(crate) private_cloud_name: String,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        let req_body = azure_core::EMPTY_BODY;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url . set_path (& format ! ("/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/dhcpConfigurations/{}" , & self . subscription_id , & self . resource_group_name , & self . private_cloud_name , & self . dhcp_id)) ;
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
-            }
-        }
-        impl std::future::IntoFuture for RequestBuilder {
-            type Output = azure_core::Result<models::WorkloadNetworkDhcp>;
-            type IntoFuture = BoxFuture<'static, azure_core::Result<models::WorkloadNetworkDhcp>>;
-            #[doc = "Returns a future that sends the request and returns the parsed response body."]
-            #[doc = ""]
-            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
-            #[doc = ""]
-            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
-            fn into_future(self) -> Self::IntoFuture {
-                Box::pin(async move { self.send().await?.into_body().await })
             }
         }
     }
@@ -10547,38 +8824,39 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkDhcp> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::WorkloadNetworkDhcp = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -10608,101 +8886,17 @@ pub mod workload_networks {
             pub(crate) workload_network_dhcp: models::WorkloadNetworkDhcp,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Put);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::to_json(&this.workload_network_dhcp)?;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url . set_path (& format ! ("/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/dhcpConfigurations/{}" , & self . subscription_id , & self . resource_group_name , & self . private_cloud_name , & self . dhcp_id)) ;
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
-            }
-        }
-        impl std::future::IntoFuture for RequestBuilder {
-            type Output = azure_core::Result<models::WorkloadNetworkDhcp>;
-            type IntoFuture = BoxFuture<'static, azure_core::Result<models::WorkloadNetworkDhcp>>;
-            #[doc = "Returns a future that polls the long running operation, returning once the operation completes."]
-            #[doc = ""]
-            #[doc = "To only submit the request but not monitor the status of the operation until completion, use `send()` instead."]
-            #[doc = ""]
-            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
-            #[doc = ""]
-            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
-            fn into_future(self) -> Self::IntoFuture {
-                Box::pin(async move {
-                    use azure_core::{
-                        error::{Error, ErrorKind},
-                        lro::{
-                            get_retry_after,
-                            location::{get_location, get_provisioning_state, FinalState},
-                            LroStatus,
-                        },
-                        sleep::sleep,
-                    };
-                    use std::time::Duration;
-                    let this = self.clone();
-                    let response = this.send().await?;
-                    let headers = response.as_raw_response().headers();
-                    let location = get_location(headers, FinalState::AzureAsyncOperation)?;
-                    if let Some(url) = location {
-                        loop {
-                            let mut req = azure_core::Request::new(url.clone(), azure_core::Method::Get);
-                            let bearer_token = self.client.bearer_token().await?;
-                            req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                            let response = self.client.send(&mut req).await?;
-                            let headers = response.headers();
-                            let retry_after = get_retry_after(headers);
-                            let bytes = response.into_body().collect().await?;
-                            let provisioning_state = get_provisioning_state(&bytes).ok_or_else(|| {
-                                Error::message(
-                                    ErrorKind::Other,
-                                    "Long running operation failed (missing provisioning state)".to_string(),
-                                )
-                            })?;
-                            log::trace!("current provisioning_state: {provisioning_state:?}");
-                            match provisioning_state {
-                                LroStatus::Succeeded => {
-                                    let mut req = azure_core::Request::new(self.url()?, azure_core::Method::Get);
-                                    let bearer_token = self.client.bearer_token().await?;
-                                    req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                    let response = self.client.send(&mut req).await?;
-                                    return Response(response).into_body().await;
-                                }
-                                LroStatus::Failed => {
-                                    return Err(Error::message(ErrorKind::Other, "Long running operation failed".to_string()))
-                                }
-                                LroStatus::Canceled => {
-                                    return Err(Error::message(ErrorKind::Other, "Long running operation canceled".to_string()))
-                                }
-                                _ => {
-                                    sleep(retry_after).await;
-                                }
-                            }
-                        }
-                    } else {
-                        response.into_body().await
-                    }
-                })
             }
         }
     }
@@ -10713,42 +8907,43 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkDhcp> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::WorkloadNetworkDhcp = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
             pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::headers::HeaderName::from_static("location"))
+                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
             }
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -10778,101 +8973,17 @@ pub mod workload_networks {
             pub(crate) workload_network_dhcp: models::WorkloadNetworkDhcp,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Patch);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::to_json(&this.workload_network_dhcp)?;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url . set_path (& format ! ("/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/dhcpConfigurations/{}" , & self . subscription_id , & self . resource_group_name , & self . private_cloud_name , & self . dhcp_id)) ;
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
-            }
-        }
-        impl std::future::IntoFuture for RequestBuilder {
-            type Output = azure_core::Result<models::WorkloadNetworkDhcp>;
-            type IntoFuture = BoxFuture<'static, azure_core::Result<models::WorkloadNetworkDhcp>>;
-            #[doc = "Returns a future that polls the long running operation, returning once the operation completes."]
-            #[doc = ""]
-            #[doc = "To only submit the request but not monitor the status of the operation until completion, use `send()` instead."]
-            #[doc = ""]
-            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
-            #[doc = ""]
-            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
-            fn into_future(self) -> Self::IntoFuture {
-                Box::pin(async move {
-                    use azure_core::{
-                        error::{Error, ErrorKind},
-                        lro::{
-                            get_retry_after,
-                            location::{get_location, get_provisioning_state, FinalState},
-                            LroStatus,
-                        },
-                        sleep::sleep,
-                    };
-                    use std::time::Duration;
-                    let this = self.clone();
-                    let response = this.send().await?;
-                    let headers = response.as_raw_response().headers();
-                    let location = get_location(headers, FinalState::Location)?;
-                    if let Some(url) = location {
-                        loop {
-                            let mut req = azure_core::Request::new(url.clone(), azure_core::Method::Get);
-                            let bearer_token = self.client.bearer_token().await?;
-                            req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                            let response = self.client.send(&mut req).await?;
-                            let headers = response.headers();
-                            let retry_after = get_retry_after(headers);
-                            let bytes = response.into_body().collect().await?;
-                            let provisioning_state = get_provisioning_state(&bytes).ok_or_else(|| {
-                                Error::message(
-                                    ErrorKind::Other,
-                                    "Long running operation failed (missing provisioning state)".to_string(),
-                                )
-                            })?;
-                            log::trace!("current provisioning_state: {provisioning_state:?}");
-                            match provisioning_state {
-                                LroStatus::Succeeded => {
-                                    let mut req = azure_core::Request::new(self.url()?, azure_core::Method::Get);
-                                    let bearer_token = self.client.bearer_token().await?;
-                                    req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                    let response = self.client.send(&mut req).await?;
-                                    return Response(response).into_body().await;
-                                }
-                                LroStatus::Failed => {
-                                    return Err(Error::message(ErrorKind::Other, "Long running operation failed".to_string()))
-                                }
-                                LroStatus::Canceled => {
-                                    return Err(Error::message(ErrorKind::Other, "Long running operation canceled".to_string()))
-                                }
-                                _ => {
-                                    sleep(retry_after).await;
-                                }
-                            }
-                        }
-                    } else {
-                        response.into_body().await
-                    }
-                })
             }
         }
     }
@@ -10883,37 +8994,37 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
             pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::headers::HeaderName::from_static("location"))
+                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
             }
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -10942,31 +9053,15 @@ pub mod workload_networks {
             pub(crate) dhcp_id: String,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Delete);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        let req_body = azure_core::EMPTY_BODY;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url . set_path (& format ! ("/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/dhcpConfigurations/{}" , & self . subscription_id , & self . resource_group_name , & self . private_cloud_name , & self . dhcp_id)) ;
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -10979,27 +9074,28 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkDnsServicesList> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::WorkloadNetworkDnsServicesList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -11029,60 +9125,18 @@ pub mod workload_networks {
             pub(crate) private_cloud_name: String,
         }
         impl RequestBuilder {
-            pub fn into_stream(self) -> azure_core::Pageable<models::WorkloadNetworkDnsServicesList, azure_core::error::Error> {
-                let make_request = move |continuation: Option<String>| {
-                    let this = self.clone();
-                    async move {
-                        let mut url = this.url()?;
-                        let rsp = match continuation {
-                            Some(value) => {
-                                url.set_path("");
-                                url = url.join(&value)?;
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                                let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                let has_api_version_already =
-                                    req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
-                                if !has_api_version_already {
-                                    req.url_mut()
-                                        .query_pairs_mut()
-                                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
-                                }
-                                let req_body = azure_core::EMPTY_BODY;
-                                req.set_body(req_body);
-                                this.client.send(&mut req).await?
-                            }
-                            None => {
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                                let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                let req_body = azure_core::EMPTY_BODY;
-                                req.set_body(req_body);
-                                this.client.send(&mut req).await?
-                            }
-                        };
-                        let rsp = match rsp.status() {
-                            azure_core::StatusCode::Ok => Ok(Response(rsp)),
-                            status_code => Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
-                                status: status_code,
-                                error_code: None,
-                            })),
-                        };
-                        rsp?.into_body().await
-                    }
-                };
-                azure_core::Pageable::new(make_request)
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/dnsServices",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -11095,27 +9149,28 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkDnsService> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::WorkloadNetworkDnsService = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -11146,48 +9201,20 @@ pub mod workload_networks {
             pub(crate) dns_service_id: String,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        let req_body = azure_core::EMPTY_BODY;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/dnsServices/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.dns_service_id
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
-            }
-        }
-        impl std::future::IntoFuture for RequestBuilder {
-            type Output = azure_core::Result<models::WorkloadNetworkDnsService>;
-            type IntoFuture = BoxFuture<'static, azure_core::Result<models::WorkloadNetworkDnsService>>;
-            #[doc = "Returns a future that sends the request and returns the parsed response body."]
-            #[doc = ""]
-            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
-            #[doc = ""]
-            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
-            fn into_future(self) -> Self::IntoFuture {
-                Box::pin(async move { self.send().await?.into_body().await })
             }
         }
     }
@@ -11198,38 +9225,39 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkDnsService> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::WorkloadNetworkDnsService = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -11259,104 +9287,20 @@ pub mod workload_networks {
             pub(crate) workload_network_dns_service: models::WorkloadNetworkDnsService,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Put);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::to_json(&this.workload_network_dns_service)?;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/dnsServices/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.dns_service_id
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
-            }
-        }
-        impl std::future::IntoFuture for RequestBuilder {
-            type Output = azure_core::Result<models::WorkloadNetworkDnsService>;
-            type IntoFuture = BoxFuture<'static, azure_core::Result<models::WorkloadNetworkDnsService>>;
-            #[doc = "Returns a future that polls the long running operation, returning once the operation completes."]
-            #[doc = ""]
-            #[doc = "To only submit the request but not monitor the status of the operation until completion, use `send()` instead."]
-            #[doc = ""]
-            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
-            #[doc = ""]
-            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
-            fn into_future(self) -> Self::IntoFuture {
-                Box::pin(async move {
-                    use azure_core::{
-                        error::{Error, ErrorKind},
-                        lro::{
-                            get_retry_after,
-                            location::{get_location, get_provisioning_state, FinalState},
-                            LroStatus,
-                        },
-                        sleep::sleep,
-                    };
-                    use std::time::Duration;
-                    let this = self.clone();
-                    let response = this.send().await?;
-                    let headers = response.as_raw_response().headers();
-                    let location = get_location(headers, FinalState::AzureAsyncOperation)?;
-                    if let Some(url) = location {
-                        loop {
-                            let mut req = azure_core::Request::new(url.clone(), azure_core::Method::Get);
-                            let bearer_token = self.client.bearer_token().await?;
-                            req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                            let response = self.client.send(&mut req).await?;
-                            let headers = response.headers();
-                            let retry_after = get_retry_after(headers);
-                            let bytes = response.into_body().collect().await?;
-                            let provisioning_state = get_provisioning_state(&bytes).ok_or_else(|| {
-                                Error::message(
-                                    ErrorKind::Other,
-                                    "Long running operation failed (missing provisioning state)".to_string(),
-                                )
-                            })?;
-                            log::trace!("current provisioning_state: {provisioning_state:?}");
-                            match provisioning_state {
-                                LroStatus::Succeeded => {
-                                    let mut req = azure_core::Request::new(self.url()?, azure_core::Method::Get);
-                                    let bearer_token = self.client.bearer_token().await?;
-                                    req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                    let response = self.client.send(&mut req).await?;
-                                    return Response(response).into_body().await;
-                                }
-                                LroStatus::Failed => {
-                                    return Err(Error::message(ErrorKind::Other, "Long running operation failed".to_string()))
-                                }
-                                LroStatus::Canceled => {
-                                    return Err(Error::message(ErrorKind::Other, "Long running operation canceled".to_string()))
-                                }
-                                _ => {
-                                    sleep(retry_after).await;
-                                }
-                            }
-                        }
-                    } else {
-                        response.into_body().await
-                    }
-                })
             }
         }
     }
@@ -11367,42 +9311,43 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkDnsService> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::WorkloadNetworkDnsService = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
             pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::headers::HeaderName::from_static("location"))
+                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
             }
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -11432,104 +9377,20 @@ pub mod workload_networks {
             pub(crate) workload_network_dns_service: models::WorkloadNetworkDnsService,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Patch);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::to_json(&this.workload_network_dns_service)?;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/dnsServices/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.dns_service_id
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
-            }
-        }
-        impl std::future::IntoFuture for RequestBuilder {
-            type Output = azure_core::Result<models::WorkloadNetworkDnsService>;
-            type IntoFuture = BoxFuture<'static, azure_core::Result<models::WorkloadNetworkDnsService>>;
-            #[doc = "Returns a future that polls the long running operation, returning once the operation completes."]
-            #[doc = ""]
-            #[doc = "To only submit the request but not monitor the status of the operation until completion, use `send()` instead."]
-            #[doc = ""]
-            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
-            #[doc = ""]
-            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
-            fn into_future(self) -> Self::IntoFuture {
-                Box::pin(async move {
-                    use azure_core::{
-                        error::{Error, ErrorKind},
-                        lro::{
-                            get_retry_after,
-                            location::{get_location, get_provisioning_state, FinalState},
-                            LroStatus,
-                        },
-                        sleep::sleep,
-                    };
-                    use std::time::Duration;
-                    let this = self.clone();
-                    let response = this.send().await?;
-                    let headers = response.as_raw_response().headers();
-                    let location = get_location(headers, FinalState::Location)?;
-                    if let Some(url) = location {
-                        loop {
-                            let mut req = azure_core::Request::new(url.clone(), azure_core::Method::Get);
-                            let bearer_token = self.client.bearer_token().await?;
-                            req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                            let response = self.client.send(&mut req).await?;
-                            let headers = response.headers();
-                            let retry_after = get_retry_after(headers);
-                            let bytes = response.into_body().collect().await?;
-                            let provisioning_state = get_provisioning_state(&bytes).ok_or_else(|| {
-                                Error::message(
-                                    ErrorKind::Other,
-                                    "Long running operation failed (missing provisioning state)".to_string(),
-                                )
-                            })?;
-                            log::trace!("current provisioning_state: {provisioning_state:?}");
-                            match provisioning_state {
-                                LroStatus::Succeeded => {
-                                    let mut req = azure_core::Request::new(self.url()?, azure_core::Method::Get);
-                                    let bearer_token = self.client.bearer_token().await?;
-                                    req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                    let response = self.client.send(&mut req).await?;
-                                    return Response(response).into_body().await;
-                                }
-                                LroStatus::Failed => {
-                                    return Err(Error::message(ErrorKind::Other, "Long running operation failed".to_string()))
-                                }
-                                LroStatus::Canceled => {
-                                    return Err(Error::message(ErrorKind::Other, "Long running operation canceled".to_string()))
-                                }
-                                _ => {
-                                    sleep(retry_after).await;
-                                }
-                            }
-                        }
-                    } else {
-                        response.into_body().await
-                    }
-                })
             }
         }
     }
@@ -11540,37 +9401,37 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
             pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::headers::HeaderName::from_static("location"))
+                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
             }
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -11599,34 +9460,18 @@ pub mod workload_networks {
             pub(crate) private_cloud_name: String,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Delete);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        let req_body = azure_core::EMPTY_BODY;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/dnsServices/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.dns_service_id
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -11639,27 +9484,28 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkDnsZonesList> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::WorkloadNetworkDnsZonesList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -11689,60 +9535,18 @@ pub mod workload_networks {
             pub(crate) private_cloud_name: String,
         }
         impl RequestBuilder {
-            pub fn into_stream(self) -> azure_core::Pageable<models::WorkloadNetworkDnsZonesList, azure_core::error::Error> {
-                let make_request = move |continuation: Option<String>| {
-                    let this = self.clone();
-                    async move {
-                        let mut url = this.url()?;
-                        let rsp = match continuation {
-                            Some(value) => {
-                                url.set_path("");
-                                url = url.join(&value)?;
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                                let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                let has_api_version_already =
-                                    req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
-                                if !has_api_version_already {
-                                    req.url_mut()
-                                        .query_pairs_mut()
-                                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
-                                }
-                                let req_body = azure_core::EMPTY_BODY;
-                                req.set_body(req_body);
-                                this.client.send(&mut req).await?
-                            }
-                            None => {
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                                let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                let req_body = azure_core::EMPTY_BODY;
-                                req.set_body(req_body);
-                                this.client.send(&mut req).await?
-                            }
-                        };
-                        let rsp = match rsp.status() {
-                            azure_core::StatusCode::Ok => Ok(Response(rsp)),
-                            status_code => Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
-                                status: status_code,
-                                error_code: None,
-                            })),
-                        };
-                        rsp?.into_body().await
-                    }
-                };
-                azure_core::Pageable::new(make_request)
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/dnsZones",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -11755,27 +9559,28 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkDnsZone> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::WorkloadNetworkDnsZone = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -11806,48 +9611,20 @@ pub mod workload_networks {
             pub(crate) dns_zone_id: String,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        let req_body = azure_core::EMPTY_BODY;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/dnsZones/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.dns_zone_id
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
-            }
-        }
-        impl std::future::IntoFuture for RequestBuilder {
-            type Output = azure_core::Result<models::WorkloadNetworkDnsZone>;
-            type IntoFuture = BoxFuture<'static, azure_core::Result<models::WorkloadNetworkDnsZone>>;
-            #[doc = "Returns a future that sends the request and returns the parsed response body."]
-            #[doc = ""]
-            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
-            #[doc = ""]
-            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
-            fn into_future(self) -> Self::IntoFuture {
-                Box::pin(async move { self.send().await?.into_body().await })
             }
         }
     }
@@ -11858,38 +9635,39 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkDnsZone> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::WorkloadNetworkDnsZone = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -11919,104 +9697,20 @@ pub mod workload_networks {
             pub(crate) workload_network_dns_zone: models::WorkloadNetworkDnsZone,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Put);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::to_json(&this.workload_network_dns_zone)?;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/dnsZones/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.dns_zone_id
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
-            }
-        }
-        impl std::future::IntoFuture for RequestBuilder {
-            type Output = azure_core::Result<models::WorkloadNetworkDnsZone>;
-            type IntoFuture = BoxFuture<'static, azure_core::Result<models::WorkloadNetworkDnsZone>>;
-            #[doc = "Returns a future that polls the long running operation, returning once the operation completes."]
-            #[doc = ""]
-            #[doc = "To only submit the request but not monitor the status of the operation until completion, use `send()` instead."]
-            #[doc = ""]
-            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
-            #[doc = ""]
-            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
-            fn into_future(self) -> Self::IntoFuture {
-                Box::pin(async move {
-                    use azure_core::{
-                        error::{Error, ErrorKind},
-                        lro::{
-                            get_retry_after,
-                            location::{get_location, get_provisioning_state, FinalState},
-                            LroStatus,
-                        },
-                        sleep::sleep,
-                    };
-                    use std::time::Duration;
-                    let this = self.clone();
-                    let response = this.send().await?;
-                    let headers = response.as_raw_response().headers();
-                    let location = get_location(headers, FinalState::AzureAsyncOperation)?;
-                    if let Some(url) = location {
-                        loop {
-                            let mut req = azure_core::Request::new(url.clone(), azure_core::Method::Get);
-                            let bearer_token = self.client.bearer_token().await?;
-                            req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                            let response = self.client.send(&mut req).await?;
-                            let headers = response.headers();
-                            let retry_after = get_retry_after(headers);
-                            let bytes = response.into_body().collect().await?;
-                            let provisioning_state = get_provisioning_state(&bytes).ok_or_else(|| {
-                                Error::message(
-                                    ErrorKind::Other,
-                                    "Long running operation failed (missing provisioning state)".to_string(),
-                                )
-                            })?;
-                            log::trace!("current provisioning_state: {provisioning_state:?}");
-                            match provisioning_state {
-                                LroStatus::Succeeded => {
-                                    let mut req = azure_core::Request::new(self.url()?, azure_core::Method::Get);
-                                    let bearer_token = self.client.bearer_token().await?;
-                                    req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                    let response = self.client.send(&mut req).await?;
-                                    return Response(response).into_body().await;
-                                }
-                                LroStatus::Failed => {
-                                    return Err(Error::message(ErrorKind::Other, "Long running operation failed".to_string()))
-                                }
-                                LroStatus::Canceled => {
-                                    return Err(Error::message(ErrorKind::Other, "Long running operation canceled".to_string()))
-                                }
-                                _ => {
-                                    sleep(retry_after).await;
-                                }
-                            }
-                        }
-                    } else {
-                        response.into_body().await
-                    }
-                })
             }
         }
     }
@@ -12027,42 +9721,43 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkDnsZone> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::WorkloadNetworkDnsZone = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
             pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::headers::HeaderName::from_static("location"))
+                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
             }
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -12092,104 +9787,20 @@ pub mod workload_networks {
             pub(crate) workload_network_dns_zone: models::WorkloadNetworkDnsZone,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Patch);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::to_json(&this.workload_network_dns_zone)?;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/dnsZones/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.dns_zone_id
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
-            }
-        }
-        impl std::future::IntoFuture for RequestBuilder {
-            type Output = azure_core::Result<models::WorkloadNetworkDnsZone>;
-            type IntoFuture = BoxFuture<'static, azure_core::Result<models::WorkloadNetworkDnsZone>>;
-            #[doc = "Returns a future that polls the long running operation, returning once the operation completes."]
-            #[doc = ""]
-            #[doc = "To only submit the request but not monitor the status of the operation until completion, use `send()` instead."]
-            #[doc = ""]
-            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
-            #[doc = ""]
-            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
-            fn into_future(self) -> Self::IntoFuture {
-                Box::pin(async move {
-                    use azure_core::{
-                        error::{Error, ErrorKind},
-                        lro::{
-                            get_retry_after,
-                            location::{get_location, get_provisioning_state, FinalState},
-                            LroStatus,
-                        },
-                        sleep::sleep,
-                    };
-                    use std::time::Duration;
-                    let this = self.clone();
-                    let response = this.send().await?;
-                    let headers = response.as_raw_response().headers();
-                    let location = get_location(headers, FinalState::Location)?;
-                    if let Some(url) = location {
-                        loop {
-                            let mut req = azure_core::Request::new(url.clone(), azure_core::Method::Get);
-                            let bearer_token = self.client.bearer_token().await?;
-                            req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                            let response = self.client.send(&mut req).await?;
-                            let headers = response.headers();
-                            let retry_after = get_retry_after(headers);
-                            let bytes = response.into_body().collect().await?;
-                            let provisioning_state = get_provisioning_state(&bytes).ok_or_else(|| {
-                                Error::message(
-                                    ErrorKind::Other,
-                                    "Long running operation failed (missing provisioning state)".to_string(),
-                                )
-                            })?;
-                            log::trace!("current provisioning_state: {provisioning_state:?}");
-                            match provisioning_state {
-                                LroStatus::Succeeded => {
-                                    let mut req = azure_core::Request::new(self.url()?, azure_core::Method::Get);
-                                    let bearer_token = self.client.bearer_token().await?;
-                                    req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                    let response = self.client.send(&mut req).await?;
-                                    return Response(response).into_body().await;
-                                }
-                                LroStatus::Failed => {
-                                    return Err(Error::message(ErrorKind::Other, "Long running operation failed".to_string()))
-                                }
-                                LroStatus::Canceled => {
-                                    return Err(Error::message(ErrorKind::Other, "Long running operation canceled".to_string()))
-                                }
-                                _ => {
-                                    sleep(retry_after).await;
-                                }
-                            }
-                        }
-                    } else {
-                        response.into_body().await
-                    }
-                })
             }
         }
     }
@@ -12200,37 +9811,37 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
             pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::headers::HeaderName::from_static("location"))
+                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
             }
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -12259,34 +9870,18 @@ pub mod workload_networks {
             pub(crate) private_cloud_name: String,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Delete);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        let req_body = azure_core::EMPTY_BODY;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/dnsZones/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.dns_zone_id
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -12299,27 +9894,28 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkGatewayList> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::WorkloadNetworkGatewayList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -12349,60 +9945,18 @@ pub mod workload_networks {
             pub(crate) private_cloud_name: String,
         }
         impl RequestBuilder {
-            pub fn into_stream(self) -> azure_core::Pageable<models::WorkloadNetworkGatewayList, azure_core::error::Error> {
-                let make_request = move |continuation: Option<String>| {
-                    let this = self.clone();
-                    async move {
-                        let mut url = this.url()?;
-                        let rsp = match continuation {
-                            Some(value) => {
-                                url.set_path("");
-                                url = url.join(&value)?;
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                                let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                let has_api_version_already =
-                                    req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
-                                if !has_api_version_already {
-                                    req.url_mut()
-                                        .query_pairs_mut()
-                                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
-                                }
-                                let req_body = azure_core::EMPTY_BODY;
-                                req.set_body(req_body);
-                                this.client.send(&mut req).await?
-                            }
-                            None => {
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                                let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                let req_body = azure_core::EMPTY_BODY;
-                                req.set_body(req_body);
-                                this.client.send(&mut req).await?
-                            }
-                        };
-                        let rsp = match rsp.status() {
-                            azure_core::StatusCode::Ok => Ok(Response(rsp)),
-                            status_code => Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
-                                status: status_code,
-                                error_code: None,
-                            })),
-                        };
-                        rsp?.into_body().await
-                    }
-                };
-                azure_core::Pageable::new(make_request)
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/gateways",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -12415,27 +9969,28 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkGateway> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::WorkloadNetworkGateway = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -12466,48 +10021,20 @@ pub mod workload_networks {
             pub(crate) gateway_id: String,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        let req_body = azure_core::EMPTY_BODY;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/gateways/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.gateway_id
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
-            }
-        }
-        impl std::future::IntoFuture for RequestBuilder {
-            type Output = azure_core::Result<models::WorkloadNetworkGateway>;
-            type IntoFuture = BoxFuture<'static, azure_core::Result<models::WorkloadNetworkGateway>>;
-            #[doc = "Returns a future that sends the request and returns the parsed response body."]
-            #[doc = ""]
-            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
-            #[doc = ""]
-            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
-            fn into_future(self) -> Self::IntoFuture {
-                Box::pin(async move { self.send().await?.into_body().await })
             }
         }
     }
@@ -12518,27 +10045,28 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkPortMirroringList> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::WorkloadNetworkPortMirroringList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -12568,57 +10096,15 @@ pub mod workload_networks {
             pub(crate) private_cloud_name: String,
         }
         impl RequestBuilder {
-            pub fn into_stream(self) -> azure_core::Pageable<models::WorkloadNetworkPortMirroringList, azure_core::error::Error> {
-                let make_request = move |continuation: Option<String>| {
-                    let this = self.clone();
-                    async move {
-                        let mut url = this.url()?;
-                        let rsp = match continuation {
-                            Some(value) => {
-                                url.set_path("");
-                                url = url.join(&value)?;
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                                let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                let has_api_version_already =
-                                    req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
-                                if !has_api_version_already {
-                                    req.url_mut()
-                                        .query_pairs_mut()
-                                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
-                                }
-                                let req_body = azure_core::EMPTY_BODY;
-                                req.set_body(req_body);
-                                this.client.send(&mut req).await?
-                            }
-                            None => {
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                                let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                let req_body = azure_core::EMPTY_BODY;
-                                req.set_body(req_body);
-                                this.client.send(&mut req).await?
-                            }
-                        };
-                        let rsp = match rsp.status() {
-                            azure_core::StatusCode::Ok => Ok(Response(rsp)),
-                            status_code => Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
-                                status: status_code,
-                                error_code: None,
-                            })),
-                        };
-                        rsp?.into_body().await
-                    }
-                };
-                azure_core::Pageable::new(make_request)
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url . set_path (& format ! ("/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/portMirroringProfiles" , & self . subscription_id , & self . resource_group_name , & self . private_cloud_name)) ;
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -12631,27 +10117,28 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkPortMirroring> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::WorkloadNetworkPortMirroring = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -12682,45 +10169,17 @@ pub mod workload_networks {
             pub(crate) port_mirroring_id: String,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        let req_body = azure_core::EMPTY_BODY;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url . set_path (& format ! ("/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/portMirroringProfiles/{}" , & self . subscription_id , & self . resource_group_name , & self . private_cloud_name , & self . port_mirroring_id)) ;
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
-            }
-        }
-        impl std::future::IntoFuture for RequestBuilder {
-            type Output = azure_core::Result<models::WorkloadNetworkPortMirroring>;
-            type IntoFuture = BoxFuture<'static, azure_core::Result<models::WorkloadNetworkPortMirroring>>;
-            #[doc = "Returns a future that sends the request and returns the parsed response body."]
-            #[doc = ""]
-            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
-            #[doc = ""]
-            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
-            fn into_future(self) -> Self::IntoFuture {
-                Box::pin(async move { self.send().await?.into_body().await })
             }
         }
     }
@@ -12731,38 +10190,39 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkPortMirroring> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::WorkloadNetworkPortMirroring = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -12792,101 +10252,17 @@ pub mod workload_networks {
             pub(crate) workload_network_port_mirroring: models::WorkloadNetworkPortMirroring,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Put);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::to_json(&this.workload_network_port_mirroring)?;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url . set_path (& format ! ("/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/portMirroringProfiles/{}" , & self . subscription_id , & self . resource_group_name , & self . private_cloud_name , & self . port_mirroring_id)) ;
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
-            }
-        }
-        impl std::future::IntoFuture for RequestBuilder {
-            type Output = azure_core::Result<models::WorkloadNetworkPortMirroring>;
-            type IntoFuture = BoxFuture<'static, azure_core::Result<models::WorkloadNetworkPortMirroring>>;
-            #[doc = "Returns a future that polls the long running operation, returning once the operation completes."]
-            #[doc = ""]
-            #[doc = "To only submit the request but not monitor the status of the operation until completion, use `send()` instead."]
-            #[doc = ""]
-            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
-            #[doc = ""]
-            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
-            fn into_future(self) -> Self::IntoFuture {
-                Box::pin(async move {
-                    use azure_core::{
-                        error::{Error, ErrorKind},
-                        lro::{
-                            get_retry_after,
-                            location::{get_location, get_provisioning_state, FinalState},
-                            LroStatus,
-                        },
-                        sleep::sleep,
-                    };
-                    use std::time::Duration;
-                    let this = self.clone();
-                    let response = this.send().await?;
-                    let headers = response.as_raw_response().headers();
-                    let location = get_location(headers, FinalState::AzureAsyncOperation)?;
-                    if let Some(url) = location {
-                        loop {
-                            let mut req = azure_core::Request::new(url.clone(), azure_core::Method::Get);
-                            let bearer_token = self.client.bearer_token().await?;
-                            req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                            let response = self.client.send(&mut req).await?;
-                            let headers = response.headers();
-                            let retry_after = get_retry_after(headers);
-                            let bytes = response.into_body().collect().await?;
-                            let provisioning_state = get_provisioning_state(&bytes).ok_or_else(|| {
-                                Error::message(
-                                    ErrorKind::Other,
-                                    "Long running operation failed (missing provisioning state)".to_string(),
-                                )
-                            })?;
-                            log::trace!("current provisioning_state: {provisioning_state:?}");
-                            match provisioning_state {
-                                LroStatus::Succeeded => {
-                                    let mut req = azure_core::Request::new(self.url()?, azure_core::Method::Get);
-                                    let bearer_token = self.client.bearer_token().await?;
-                                    req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                    let response = self.client.send(&mut req).await?;
-                                    return Response(response).into_body().await;
-                                }
-                                LroStatus::Failed => {
-                                    return Err(Error::message(ErrorKind::Other, "Long running operation failed".to_string()))
-                                }
-                                LroStatus::Canceled => {
-                                    return Err(Error::message(ErrorKind::Other, "Long running operation canceled".to_string()))
-                                }
-                                _ => {
-                                    sleep(retry_after).await;
-                                }
-                            }
-                        }
-                    } else {
-                        response.into_body().await
-                    }
-                })
             }
         }
     }
@@ -12897,42 +10273,43 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkPortMirroring> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::WorkloadNetworkPortMirroring = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
             pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::headers::HeaderName::from_static("location"))
+                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
             }
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -12962,101 +10339,17 @@ pub mod workload_networks {
             pub(crate) workload_network_port_mirroring: models::WorkloadNetworkPortMirroring,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Patch);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::to_json(&this.workload_network_port_mirroring)?;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url . set_path (& format ! ("/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/portMirroringProfiles/{}" , & self . subscription_id , & self . resource_group_name , & self . private_cloud_name , & self . port_mirroring_id)) ;
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
-            }
-        }
-        impl std::future::IntoFuture for RequestBuilder {
-            type Output = azure_core::Result<models::WorkloadNetworkPortMirroring>;
-            type IntoFuture = BoxFuture<'static, azure_core::Result<models::WorkloadNetworkPortMirroring>>;
-            #[doc = "Returns a future that polls the long running operation, returning once the operation completes."]
-            #[doc = ""]
-            #[doc = "To only submit the request but not monitor the status of the operation until completion, use `send()` instead."]
-            #[doc = ""]
-            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
-            #[doc = ""]
-            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
-            fn into_future(self) -> Self::IntoFuture {
-                Box::pin(async move {
-                    use azure_core::{
-                        error::{Error, ErrorKind},
-                        lro::{
-                            get_retry_after,
-                            location::{get_location, get_provisioning_state, FinalState},
-                            LroStatus,
-                        },
-                        sleep::sleep,
-                    };
-                    use std::time::Duration;
-                    let this = self.clone();
-                    let response = this.send().await?;
-                    let headers = response.as_raw_response().headers();
-                    let location = get_location(headers, FinalState::Location)?;
-                    if let Some(url) = location {
-                        loop {
-                            let mut req = azure_core::Request::new(url.clone(), azure_core::Method::Get);
-                            let bearer_token = self.client.bearer_token().await?;
-                            req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                            let response = self.client.send(&mut req).await?;
-                            let headers = response.headers();
-                            let retry_after = get_retry_after(headers);
-                            let bytes = response.into_body().collect().await?;
-                            let provisioning_state = get_provisioning_state(&bytes).ok_or_else(|| {
-                                Error::message(
-                                    ErrorKind::Other,
-                                    "Long running operation failed (missing provisioning state)".to_string(),
-                                )
-                            })?;
-                            log::trace!("current provisioning_state: {provisioning_state:?}");
-                            match provisioning_state {
-                                LroStatus::Succeeded => {
-                                    let mut req = azure_core::Request::new(self.url()?, azure_core::Method::Get);
-                                    let bearer_token = self.client.bearer_token().await?;
-                                    req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                    let response = self.client.send(&mut req).await?;
-                                    return Response(response).into_body().await;
-                                }
-                                LroStatus::Failed => {
-                                    return Err(Error::message(ErrorKind::Other, "Long running operation failed".to_string()))
-                                }
-                                LroStatus::Canceled => {
-                                    return Err(Error::message(ErrorKind::Other, "Long running operation canceled".to_string()))
-                                }
-                                _ => {
-                                    sleep(retry_after).await;
-                                }
-                            }
-                        }
-                    } else {
-                        response.into_body().await
-                    }
-                })
             }
         }
     }
@@ -13067,37 +10360,37 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
             pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::headers::HeaderName::from_static("location"))
+                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
             }
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -13126,31 +10419,15 @@ pub mod workload_networks {
             pub(crate) private_cloud_name: String,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Delete);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        let req_body = azure_core::EMPTY_BODY;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url . set_path (& format ! ("/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/portMirroringProfiles/{}" , & self . subscription_id , & self . resource_group_name , & self . private_cloud_name , & self . port_mirroring_id)) ;
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -13163,27 +10440,28 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkPublicIPsList> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::WorkloadNetworkPublicIPsList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -13213,60 +10491,18 @@ pub mod workload_networks {
             pub(crate) private_cloud_name: String,
         }
         impl RequestBuilder {
-            pub fn into_stream(self) -> azure_core::Pageable<models::WorkloadNetworkPublicIPsList, azure_core::error::Error> {
-                let make_request = move |continuation: Option<String>| {
-                    let this = self.clone();
-                    async move {
-                        let mut url = this.url()?;
-                        let rsp = match continuation {
-                            Some(value) => {
-                                url.set_path("");
-                                url = url.join(&value)?;
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                                let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                let has_api_version_already =
-                                    req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
-                                if !has_api_version_already {
-                                    req.url_mut()
-                                        .query_pairs_mut()
-                                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
-                                }
-                                let req_body = azure_core::EMPTY_BODY;
-                                req.set_body(req_body);
-                                this.client.send(&mut req).await?
-                            }
-                            None => {
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                                let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                let req_body = azure_core::EMPTY_BODY;
-                                req.set_body(req_body);
-                                this.client.send(&mut req).await?
-                            }
-                        };
-                        let rsp = match rsp.status() {
-                            azure_core::StatusCode::Ok => Ok(Response(rsp)),
-                            status_code => Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
-                                status: status_code,
-                                error_code: None,
-                            })),
-                        };
-                        rsp?.into_body().await
-                    }
-                };
-                azure_core::Pageable::new(make_request)
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/publicIPs",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -13279,27 +10515,28 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkPublicIp> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::WorkloadNetworkPublicIp = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -13330,48 +10567,20 @@ pub mod workload_networks {
             pub(crate) public_ip_id: String,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        let req_body = azure_core::EMPTY_BODY;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/publicIPs/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.public_ip_id
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
-            }
-        }
-        impl std::future::IntoFuture for RequestBuilder {
-            type Output = azure_core::Result<models::WorkloadNetworkPublicIp>;
-            type IntoFuture = BoxFuture<'static, azure_core::Result<models::WorkloadNetworkPublicIp>>;
-            #[doc = "Returns a future that sends the request and returns the parsed response body."]
-            #[doc = ""]
-            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
-            #[doc = ""]
-            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
-            fn into_future(self) -> Self::IntoFuture {
-                Box::pin(async move { self.send().await?.into_body().await })
             }
         }
     }
@@ -13382,38 +10591,39 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkPublicIp> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::WorkloadNetworkPublicIp = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -13443,104 +10653,20 @@ pub mod workload_networks {
             pub(crate) workload_network_public_ip: models::WorkloadNetworkPublicIp,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Put);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::to_json(&this.workload_network_public_ip)?;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/publicIPs/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.public_ip_id
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
-            }
-        }
-        impl std::future::IntoFuture for RequestBuilder {
-            type Output = azure_core::Result<models::WorkloadNetworkPublicIp>;
-            type IntoFuture = BoxFuture<'static, azure_core::Result<models::WorkloadNetworkPublicIp>>;
-            #[doc = "Returns a future that polls the long running operation, returning once the operation completes."]
-            #[doc = ""]
-            #[doc = "To only submit the request but not monitor the status of the operation until completion, use `send()` instead."]
-            #[doc = ""]
-            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
-            #[doc = ""]
-            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
-            fn into_future(self) -> Self::IntoFuture {
-                Box::pin(async move {
-                    use azure_core::{
-                        error::{Error, ErrorKind},
-                        lro::{
-                            get_retry_after,
-                            location::{get_location, get_provisioning_state, FinalState},
-                            LroStatus,
-                        },
-                        sleep::sleep,
-                    };
-                    use std::time::Duration;
-                    let this = self.clone();
-                    let response = this.send().await?;
-                    let headers = response.as_raw_response().headers();
-                    let location = get_location(headers, FinalState::AzureAsyncOperation)?;
-                    if let Some(url) = location {
-                        loop {
-                            let mut req = azure_core::Request::new(url.clone(), azure_core::Method::Get);
-                            let bearer_token = self.client.bearer_token().await?;
-                            req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                            let response = self.client.send(&mut req).await?;
-                            let headers = response.headers();
-                            let retry_after = get_retry_after(headers);
-                            let bytes = response.into_body().collect().await?;
-                            let provisioning_state = get_provisioning_state(&bytes).ok_or_else(|| {
-                                Error::message(
-                                    ErrorKind::Other,
-                                    "Long running operation failed (missing provisioning state)".to_string(),
-                                )
-                            })?;
-                            log::trace!("current provisioning_state: {provisioning_state:?}");
-                            match provisioning_state {
-                                LroStatus::Succeeded => {
-                                    let mut req = azure_core::Request::new(self.url()?, azure_core::Method::Get);
-                                    let bearer_token = self.client.bearer_token().await?;
-                                    req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                    let response = self.client.send(&mut req).await?;
-                                    return Response(response).into_body().await;
-                                }
-                                LroStatus::Failed => {
-                                    return Err(Error::message(ErrorKind::Other, "Long running operation failed".to_string()))
-                                }
-                                LroStatus::Canceled => {
-                                    return Err(Error::message(ErrorKind::Other, "Long running operation canceled".to_string()))
-                                }
-                                _ => {
-                                    sleep(retry_after).await;
-                                }
-                            }
-                        }
-                    } else {
-                        response.into_body().await
-                    }
-                })
             }
         }
     }
@@ -13551,37 +10677,37 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
             pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::headers::HeaderName::from_static("location"))
+                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
             }
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -13610,34 +10736,18 @@ pub mod workload_networks {
             pub(crate) private_cloud_name: String,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Delete);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        let req_body = azure_core::EMPTY_BODY;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/publicIPs/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.public_ip_id
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -13650,27 +10760,28 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkSegmentsList> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::WorkloadNetworkSegmentsList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -13700,60 +10811,18 @@ pub mod workload_networks {
             pub(crate) private_cloud_name: String,
         }
         impl RequestBuilder {
-            pub fn into_stream(self) -> azure_core::Pageable<models::WorkloadNetworkSegmentsList, azure_core::error::Error> {
-                let make_request = move |continuation: Option<String>| {
-                    let this = self.clone();
-                    async move {
-                        let mut url = this.url()?;
-                        let rsp = match continuation {
-                            Some(value) => {
-                                url.set_path("");
-                                url = url.join(&value)?;
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                                let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                let has_api_version_already =
-                                    req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
-                                if !has_api_version_already {
-                                    req.url_mut()
-                                        .query_pairs_mut()
-                                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
-                                }
-                                let req_body = azure_core::EMPTY_BODY;
-                                req.set_body(req_body);
-                                this.client.send(&mut req).await?
-                            }
-                            None => {
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                                let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                let req_body = azure_core::EMPTY_BODY;
-                                req.set_body(req_body);
-                                this.client.send(&mut req).await?
-                            }
-                        };
-                        let rsp = match rsp.status() {
-                            azure_core::StatusCode::Ok => Ok(Response(rsp)),
-                            status_code => Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
-                                status: status_code,
-                                error_code: None,
-                            })),
-                        };
-                        rsp?.into_body().await
-                    }
-                };
-                azure_core::Pageable::new(make_request)
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/segments",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -13766,27 +10835,28 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkSegment> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::WorkloadNetworkSegment = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -13817,48 +10887,20 @@ pub mod workload_networks {
             pub(crate) segment_id: String,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        let req_body = azure_core::EMPTY_BODY;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/segments/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.segment_id
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
-            }
-        }
-        impl std::future::IntoFuture for RequestBuilder {
-            type Output = azure_core::Result<models::WorkloadNetworkSegment>;
-            type IntoFuture = BoxFuture<'static, azure_core::Result<models::WorkloadNetworkSegment>>;
-            #[doc = "Returns a future that sends the request and returns the parsed response body."]
-            #[doc = ""]
-            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
-            #[doc = ""]
-            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
-            fn into_future(self) -> Self::IntoFuture {
-                Box::pin(async move { self.send().await?.into_body().await })
             }
         }
     }
@@ -13869,38 +10911,39 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkSegment> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::WorkloadNetworkSegment = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -13930,104 +10973,20 @@ pub mod workload_networks {
             pub(crate) workload_network_segment: models::WorkloadNetworkSegment,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Put);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::to_json(&this.workload_network_segment)?;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/segments/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.segment_id
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
-            }
-        }
-        impl std::future::IntoFuture for RequestBuilder {
-            type Output = azure_core::Result<models::WorkloadNetworkSegment>;
-            type IntoFuture = BoxFuture<'static, azure_core::Result<models::WorkloadNetworkSegment>>;
-            #[doc = "Returns a future that polls the long running operation, returning once the operation completes."]
-            #[doc = ""]
-            #[doc = "To only submit the request but not monitor the status of the operation until completion, use `send()` instead."]
-            #[doc = ""]
-            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
-            #[doc = ""]
-            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
-            fn into_future(self) -> Self::IntoFuture {
-                Box::pin(async move {
-                    use azure_core::{
-                        error::{Error, ErrorKind},
-                        lro::{
-                            get_retry_after,
-                            location::{get_location, get_provisioning_state, FinalState},
-                            LroStatus,
-                        },
-                        sleep::sleep,
-                    };
-                    use std::time::Duration;
-                    let this = self.clone();
-                    let response = this.send().await?;
-                    let headers = response.as_raw_response().headers();
-                    let location = get_location(headers, FinalState::AzureAsyncOperation)?;
-                    if let Some(url) = location {
-                        loop {
-                            let mut req = azure_core::Request::new(url.clone(), azure_core::Method::Get);
-                            let bearer_token = self.client.bearer_token().await?;
-                            req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                            let response = self.client.send(&mut req).await?;
-                            let headers = response.headers();
-                            let retry_after = get_retry_after(headers);
-                            let bytes = response.into_body().collect().await?;
-                            let provisioning_state = get_provisioning_state(&bytes).ok_or_else(|| {
-                                Error::message(
-                                    ErrorKind::Other,
-                                    "Long running operation failed (missing provisioning state)".to_string(),
-                                )
-                            })?;
-                            log::trace!("current provisioning_state: {provisioning_state:?}");
-                            match provisioning_state {
-                                LroStatus::Succeeded => {
-                                    let mut req = azure_core::Request::new(self.url()?, azure_core::Method::Get);
-                                    let bearer_token = self.client.bearer_token().await?;
-                                    req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                    let response = self.client.send(&mut req).await?;
-                                    return Response(response).into_body().await;
-                                }
-                                LroStatus::Failed => {
-                                    return Err(Error::message(ErrorKind::Other, "Long running operation failed".to_string()))
-                                }
-                                LroStatus::Canceled => {
-                                    return Err(Error::message(ErrorKind::Other, "Long running operation canceled".to_string()))
-                                }
-                                _ => {
-                                    sleep(retry_after).await;
-                                }
-                            }
-                        }
-                    } else {
-                        response.into_body().await
-                    }
-                })
             }
         }
     }
@@ -14038,42 +10997,43 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkSegment> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::WorkloadNetworkSegment = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
             pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::headers::HeaderName::from_static("location"))
+                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
             }
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -14103,104 +11063,20 @@ pub mod workload_networks {
             pub(crate) workload_network_segment: models::WorkloadNetworkSegment,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Patch);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::to_json(&this.workload_network_segment)?;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/segments/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.segment_id
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
-            }
-        }
-        impl std::future::IntoFuture for RequestBuilder {
-            type Output = azure_core::Result<models::WorkloadNetworkSegment>;
-            type IntoFuture = BoxFuture<'static, azure_core::Result<models::WorkloadNetworkSegment>>;
-            #[doc = "Returns a future that polls the long running operation, returning once the operation completes."]
-            #[doc = ""]
-            #[doc = "To only submit the request but not monitor the status of the operation until completion, use `send()` instead."]
-            #[doc = ""]
-            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
-            #[doc = ""]
-            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
-            fn into_future(self) -> Self::IntoFuture {
-                Box::pin(async move {
-                    use azure_core::{
-                        error::{Error, ErrorKind},
-                        lro::{
-                            get_retry_after,
-                            location::{get_location, get_provisioning_state, FinalState},
-                            LroStatus,
-                        },
-                        sleep::sleep,
-                    };
-                    use std::time::Duration;
-                    let this = self.clone();
-                    let response = this.send().await?;
-                    let headers = response.as_raw_response().headers();
-                    let location = get_location(headers, FinalState::Location)?;
-                    if let Some(url) = location {
-                        loop {
-                            let mut req = azure_core::Request::new(url.clone(), azure_core::Method::Get);
-                            let bearer_token = self.client.bearer_token().await?;
-                            req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                            let response = self.client.send(&mut req).await?;
-                            let headers = response.headers();
-                            let retry_after = get_retry_after(headers);
-                            let bytes = response.into_body().collect().await?;
-                            let provisioning_state = get_provisioning_state(&bytes).ok_or_else(|| {
-                                Error::message(
-                                    ErrorKind::Other,
-                                    "Long running operation failed (missing provisioning state)".to_string(),
-                                )
-                            })?;
-                            log::trace!("current provisioning_state: {provisioning_state:?}");
-                            match provisioning_state {
-                                LroStatus::Succeeded => {
-                                    let mut req = azure_core::Request::new(self.url()?, azure_core::Method::Get);
-                                    let bearer_token = self.client.bearer_token().await?;
-                                    req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                    let response = self.client.send(&mut req).await?;
-                                    return Response(response).into_body().await;
-                                }
-                                LroStatus::Failed => {
-                                    return Err(Error::message(ErrorKind::Other, "Long running operation failed".to_string()))
-                                }
-                                LroStatus::Canceled => {
-                                    return Err(Error::message(ErrorKind::Other, "Long running operation canceled".to_string()))
-                                }
-                                _ => {
-                                    sleep(retry_after).await;
-                                }
-                            }
-                        }
-                    } else {
-                        response.into_body().await
-                    }
-                })
             }
         }
     }
@@ -14211,37 +11087,37 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
             pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::headers::HeaderName::from_static("location"))
+                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
             }
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -14270,34 +11146,18 @@ pub mod workload_networks {
             pub(crate) segment_id: String,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Delete);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        let req_body = azure_core::EMPTY_BODY;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/segments/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.segment_id
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -14310,27 +11170,28 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkVirtualMachinesList> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::WorkloadNetworkVirtualMachinesList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -14360,60 +11221,18 @@ pub mod workload_networks {
             pub(crate) private_cloud_name: String,
         }
         impl RequestBuilder {
-            pub fn into_stream(self) -> azure_core::Pageable<models::WorkloadNetworkVirtualMachinesList, azure_core::error::Error> {
-                let make_request = move |continuation: Option<String>| {
-                    let this = self.clone();
-                    async move {
-                        let mut url = this.url()?;
-                        let rsp = match continuation {
-                            Some(value) => {
-                                url.set_path("");
-                                url = url.join(&value)?;
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                                let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                let has_api_version_already =
-                                    req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
-                                if !has_api_version_already {
-                                    req.url_mut()
-                                        .query_pairs_mut()
-                                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
-                                }
-                                let req_body = azure_core::EMPTY_BODY;
-                                req.set_body(req_body);
-                                this.client.send(&mut req).await?
-                            }
-                            None => {
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                                let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                let req_body = azure_core::EMPTY_BODY;
-                                req.set_body(req_body);
-                                this.client.send(&mut req).await?
-                            }
-                        };
-                        let rsp = match rsp.status() {
-                            azure_core::StatusCode::Ok => Ok(Response(rsp)),
-                            status_code => Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
-                                status: status_code,
-                                error_code: None,
-                            })),
-                        };
-                        rsp?.into_body().await
-                    }
-                };
-                azure_core::Pageable::new(make_request)
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/virtualMachines",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -14426,27 +11245,28 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkVirtualMachine> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::WorkloadNetworkVirtualMachine = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -14477,45 +11297,17 @@ pub mod workload_networks {
             pub(crate) virtual_machine_id: String,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        let req_body = azure_core::EMPTY_BODY;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url . set_path (& format ! ("/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/virtualMachines/{}" , & self . subscription_id , & self . resource_group_name , & self . private_cloud_name , & self . virtual_machine_id)) ;
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
-            }
-        }
-        impl std::future::IntoFuture for RequestBuilder {
-            type Output = azure_core::Result<models::WorkloadNetworkVirtualMachine>;
-            type IntoFuture = BoxFuture<'static, azure_core::Result<models::WorkloadNetworkVirtualMachine>>;
-            #[doc = "Returns a future that sends the request and returns the parsed response body."]
-            #[doc = ""]
-            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
-            #[doc = ""]
-            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
-            fn into_future(self) -> Self::IntoFuture {
-                Box::pin(async move { self.send().await?.into_body().await })
             }
         }
     }
@@ -14526,27 +11318,28 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkVmGroupsList> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::WorkloadNetworkVmGroupsList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -14576,60 +11369,18 @@ pub mod workload_networks {
             pub(crate) private_cloud_name: String,
         }
         impl RequestBuilder {
-            pub fn into_stream(self) -> azure_core::Pageable<models::WorkloadNetworkVmGroupsList, azure_core::error::Error> {
-                let make_request = move |continuation: Option<String>| {
-                    let this = self.clone();
-                    async move {
-                        let mut url = this.url()?;
-                        let rsp = match continuation {
-                            Some(value) => {
-                                url.set_path("");
-                                url = url.join(&value)?;
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                                let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                let has_api_version_already =
-                                    req.url_mut().query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
-                                if !has_api_version_already {
-                                    req.url_mut()
-                                        .query_pairs_mut()
-                                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
-                                }
-                                let req_body = azure_core::EMPTY_BODY;
-                                req.set_body(req_body);
-                                this.client.send(&mut req).await?
-                            }
-                            None => {
-                                let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                                let bearer_token = this.client.bearer_token().await?;
-                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                let req_body = azure_core::EMPTY_BODY;
-                                req.set_body(req_body);
-                                this.client.send(&mut req).await?
-                            }
-                        };
-                        let rsp = match rsp.status() {
-                            azure_core::StatusCode::Ok => Ok(Response(rsp)),
-                            status_code => Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
-                                status: status_code,
-                                error_code: None,
-                            })),
-                        };
-                        rsp?.into_body().await
-                    }
-                };
-                azure_core::Pageable::new(make_request)
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/vmGroups",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }
@@ -14642,27 +11393,28 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkVmGroup> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::WorkloadNetworkVmGroup = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
@@ -14693,48 +11445,20 @@ pub mod workload_networks {
             pub(crate) vm_group_id: String,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Get);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        let req_body = azure_core::EMPTY_BODY;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/vmGroups/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.vm_group_id
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
-            }
-        }
-        impl std::future::IntoFuture for RequestBuilder {
-            type Output = azure_core::Result<models::WorkloadNetworkVmGroup>;
-            type IntoFuture = BoxFuture<'static, azure_core::Result<models::WorkloadNetworkVmGroup>>;
-            #[doc = "Returns a future that sends the request and returns the parsed response body."]
-            #[doc = ""]
-            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
-            #[doc = ""]
-            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
-            fn into_future(self) -> Self::IntoFuture {
-                Box::pin(async move { self.send().await?.into_body().await })
             }
         }
     }
@@ -14745,38 +11469,39 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkVmGroup> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::WorkloadNetworkVmGroup = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -14806,104 +11531,20 @@ pub mod workload_networks {
             pub(crate) workload_network_vm_group: models::WorkloadNetworkVmGroup,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Put);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::to_json(&this.workload_network_vm_group)?;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/vmGroups/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.vm_group_id
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
-            }
-        }
-        impl std::future::IntoFuture for RequestBuilder {
-            type Output = azure_core::Result<models::WorkloadNetworkVmGroup>;
-            type IntoFuture = BoxFuture<'static, azure_core::Result<models::WorkloadNetworkVmGroup>>;
-            #[doc = "Returns a future that polls the long running operation, returning once the operation completes."]
-            #[doc = ""]
-            #[doc = "To only submit the request but not monitor the status of the operation until completion, use `send()` instead."]
-            #[doc = ""]
-            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
-            #[doc = ""]
-            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
-            fn into_future(self) -> Self::IntoFuture {
-                Box::pin(async move {
-                    use azure_core::{
-                        error::{Error, ErrorKind},
-                        lro::{
-                            get_retry_after,
-                            location::{get_location, get_provisioning_state, FinalState},
-                            LroStatus,
-                        },
-                        sleep::sleep,
-                    };
-                    use std::time::Duration;
-                    let this = self.clone();
-                    let response = this.send().await?;
-                    let headers = response.as_raw_response().headers();
-                    let location = get_location(headers, FinalState::AzureAsyncOperation)?;
-                    if let Some(url) = location {
-                        loop {
-                            let mut req = azure_core::Request::new(url.clone(), azure_core::Method::Get);
-                            let bearer_token = self.client.bearer_token().await?;
-                            req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                            let response = self.client.send(&mut req).await?;
-                            let headers = response.headers();
-                            let retry_after = get_retry_after(headers);
-                            let bytes = response.into_body().collect().await?;
-                            let provisioning_state = get_provisioning_state(&bytes).ok_or_else(|| {
-                                Error::message(
-                                    ErrorKind::Other,
-                                    "Long running operation failed (missing provisioning state)".to_string(),
-                                )
-                            })?;
-                            log::trace!("current provisioning_state: {provisioning_state:?}");
-                            match provisioning_state {
-                                LroStatus::Succeeded => {
-                                    let mut req = azure_core::Request::new(self.url()?, azure_core::Method::Get);
-                                    let bearer_token = self.client.bearer_token().await?;
-                                    req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                    let response = self.client.send(&mut req).await?;
-                                    return Response(response).into_body().await;
-                                }
-                                LroStatus::Failed => {
-                                    return Err(Error::message(ErrorKind::Other, "Long running operation failed".to_string()))
-                                }
-                                LroStatus::Canceled => {
-                                    return Err(Error::message(ErrorKind::Other, "Long running operation canceled".to_string()))
-                                }
-                                _ => {
-                                    sleep(retry_after).await;
-                                }
-                            }
-                        }
-                    } else {
-                        response.into_body().await
-                    }
-                })
             }
         }
     }
@@ -14914,42 +11555,43 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkVmGroup> {
-                let bytes = self.0.into_body().collect().await?;
+                let (_, _, body) = self.0.deconstruct();
+                let bytes = body.collect().await?;
                 let body: models::WorkloadNetworkVmGroup = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
             pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::headers::HeaderName::from_static("location"))
+                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
             }
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -14979,104 +11621,20 @@ pub mod workload_networks {
             pub(crate) workload_network_vm_group: models::WorkloadNetworkVmGroup,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Patch);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::to_json(&this.workload_network_vm_group)?;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/vmGroups/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.vm_group_id
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
-            }
-        }
-        impl std::future::IntoFuture for RequestBuilder {
-            type Output = azure_core::Result<models::WorkloadNetworkVmGroup>;
-            type IntoFuture = BoxFuture<'static, azure_core::Result<models::WorkloadNetworkVmGroup>>;
-            #[doc = "Returns a future that polls the long running operation, returning once the operation completes."]
-            #[doc = ""]
-            #[doc = "To only submit the request but not monitor the status of the operation until completion, use `send()` instead."]
-            #[doc = ""]
-            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
-            #[doc = ""]
-            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
-            fn into_future(self) -> Self::IntoFuture {
-                Box::pin(async move {
-                    use azure_core::{
-                        error::{Error, ErrorKind},
-                        lro::{
-                            get_retry_after,
-                            location::{get_location, get_provisioning_state, FinalState},
-                            LroStatus,
-                        },
-                        sleep::sleep,
-                    };
-                    use std::time::Duration;
-                    let this = self.clone();
-                    let response = this.send().await?;
-                    let headers = response.as_raw_response().headers();
-                    let location = get_location(headers, FinalState::Location)?;
-                    if let Some(url) = location {
-                        loop {
-                            let mut req = azure_core::Request::new(url.clone(), azure_core::Method::Get);
-                            let bearer_token = self.client.bearer_token().await?;
-                            req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                            let response = self.client.send(&mut req).await?;
-                            let headers = response.headers();
-                            let retry_after = get_retry_after(headers);
-                            let bytes = response.into_body().collect().await?;
-                            let provisioning_state = get_provisioning_state(&bytes).ok_or_else(|| {
-                                Error::message(
-                                    ErrorKind::Other,
-                                    "Long running operation failed (missing provisioning state)".to_string(),
-                                )
-                            })?;
-                            log::trace!("current provisioning_state: {provisioning_state:?}");
-                            match provisioning_state {
-                                LroStatus::Succeeded => {
-                                    let mut req = azure_core::Request::new(self.url()?, azure_core::Method::Get);
-                                    let bearer_token = self.client.bearer_token().await?;
-                                    req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                    let response = self.client.send(&mut req).await?;
-                                    return Response(response).into_body().await;
-                                }
-                                LroStatus::Failed => {
-                                    return Err(Error::message(ErrorKind::Other, "Long running operation failed".to_string()))
-                                }
-                                LroStatus::Canceled => {
-                                    return Err(Error::message(ErrorKind::Other, "Long running operation canceled".to_string()))
-                                }
-                                _ => {
-                                    sleep(retry_after).await;
-                                }
-                            }
-                        }
-                    } else {
-                        response.into_body().await
-                    }
-                })
             }
         }
     }
@@ -15087,37 +11645,37 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::Response);
+        pub struct Response(azure_core::http::Response);
         impl Response {
-            pub fn into_raw_response(self) -> azure_core::Response {
+            pub fn into_raw_response(self) -> azure_core::http::Response {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::Response {
+            pub fn as_raw_response(&self) -> &azure_core::http::Response {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::Response {
+        impl From<Response> for azure_core::http::Response {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::Response> for Response {
-            fn as_ref(&self) -> &azure_core::Response {
+        impl AsRef<azure_core::http::Response> for Response {
+            fn as_ref(&self) -> &azure_core::http::Response {
                 self.as_raw_response()
             }
         }
-        pub struct Headers<'a>(&'a azure_core::headers::Headers);
+        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
         impl<'a> Headers<'a> {
             #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
             pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::headers::HeaderName::from_static("location"))
+                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
             }
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::headers::HeaderName::from_static("retry-after"))
+                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
         #[derive(Clone)]
@@ -15146,34 +11704,18 @@ pub mod workload_networks {
             pub(crate) private_cloud_name: String,
         }
         impl RequestBuilder {
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
-                Box::pin({
-                    let this = self.clone();
-                    async move {
-                        let url = this.url()?;
-                        let mut req = azure_core::Request::new(url, azure_core::Method::Delete);
-                        let bearer_token = this.client.bearer_token().await?;
-                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                        let req_body = azure_core::EMPTY_BODY;
-                        req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
-                    }
-                })
-            }
-            fn url(&self) -> azure_core::Result<azure_core::Url> {
+            fn url(&self) -> azure_core::Result<azure_core::http::Url> {
                 let mut url = self.client.endpoint().clone();
                 url.set_path(&format!(
                     "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.AVS/privateClouds/{}/workloadNetworks/default/vmGroups/{}",
                     &self.subscription_id, &self.resource_group_name, &self.private_cloud_name, &self.vm_group_id
                 ));
-                let has_api_version_already = url.query_pairs().any(|(k, _)| k == azure_core::query_param::API_VERSION);
+                let has_api_version_already = url
+                    .query_pairs()
+                    .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
                 if !has_api_version_already {
                     url.query_pairs_mut()
-                        .append_pair(azure_core::query_param::API_VERSION, "2023-09-01");
+                        .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
             }

@@ -918,7 +918,7 @@ impl ToTokens for StructCode {
 
         let struct_code = quote! {
             #doc_comment
-            #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+            #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, typespec_macros::Model)]
             #default_code
             pub struct #struct_name_code {
                 #(#props)*
@@ -1077,7 +1077,7 @@ fn create_struct(
                 serde.add_with("azure_core::date::rfc1123::option");
             } else if type_name.is_vec() {
                 serde.add_default();
-                serde.add_deserialize_with("azure_core::util::deserialize_null_as_default");
+                serde.add_deserialize_with("azure_openapi_core::util::deserialize_null_as_default");
                 serde.add_skip_serializing_if("Vec::is_empty");
             } else {
                 serde.add_default();
@@ -1192,7 +1192,7 @@ impl ToTokens for ContinuableCode {
             if let Some(is_required) = is_required {
                 if *is_required {
                     tokens.extend(quote! {
-                        impl azure_core::Continuable for #struct_name {
+                        impl azure_openapi_core::Continuable for #struct_name {
                             type Continuation = String;
                             fn continuation(&self) -> Option<Self::Continuation> {
                                 if self.#field_name.is_empty() {
@@ -1205,7 +1205,7 @@ impl ToTokens for ContinuableCode {
                     });
                 } else {
                     tokens.extend(quote! {
-                        impl azure_core::Continuable for #struct_name {
+                        impl azure_openapi_core::Continuable for #struct_name {
                             type Continuation = String;
                             fn continuation(&self) -> Option<Self::Continuation> {
                                 self.#field_name.clone().filter(|value| !value.is_empty())
@@ -1219,7 +1219,7 @@ impl ToTokens for ContinuableCode {
                 // field doesn't exist in the response schema.  Handle that by
                 // adding a Continuable that always returns None.
                 tokens.extend(quote! {
-                    impl azure_core::Continuable for #struct_name {
+                    impl azure_openapi_core::Continuable for #struct_name {
                         type Continuation = String;
                         fn continuation(&self) -> Option<Self::Continuation> {
                             None
@@ -1234,7 +1234,7 @@ impl ToTokens for ContinuableCode {
             //
             // Handle that by // adding a Continuable that always returns None.
             tokens.extend(quote! {
-                impl azure_core::Continuable for #struct_name {
+                impl azure_openapi_core::Continuable for #struct_name {
                     type Continuation = String;
                     fn continuation(&self) -> Option<Self::Continuation> {
                         None

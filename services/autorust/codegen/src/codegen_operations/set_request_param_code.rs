@@ -114,7 +114,7 @@ impl ToTokens for SetRequestParamsCode {
                     let encoder = if !self.params.has_content_type_header() && self.content_type.starts_with("application/xml") {
                         quote! {azure_core::xml::to_xml}
                     } else {
-                        quote! { azure_core::to_json }
+                        quote! { azure_core::json::to_json }
                     };
 
                     if !param.is_optional() || is_vec {
@@ -129,7 +129,7 @@ impl ToTokens for SetRequestParamsCode {
                                     #set_content_type
                                     #encoder(#param_name_var)?
                                 } else {
-                                    azure_core::EMPTY_BODY
+                                    azure_openapi_core::EMPTY_BODY
                                 };
                         });
                     }

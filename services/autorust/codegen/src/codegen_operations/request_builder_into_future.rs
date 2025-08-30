@@ -21,6 +21,7 @@ impl RequestBuilderIntoFutureCode {
     }
 }
 
+/// Adds the `IntoFuture` implementation to the `RequestBuilder` struct.
 impl ToTokens for RequestBuilderIntoFutureCode {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         // Skip generating IntoFuture if response is pageable
@@ -56,9 +57,9 @@ impl ToTokens for RequestBuilderIntoFutureCode {
                                 let location = get_location(headers, FinalState::#final_state)?;
                                 if let Some(url) = location {
                                     loop {
-                                        let mut req = azure_core::Request::new(url.clone(), azure_core::Method::Get);
+                                        let mut req = azure_core::http::Request::new(url.clone(), azure_core::http::Method::Get);
                                         let bearer_token = self.client.bearer_token().await?;
-                                        req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                        req.insert_header(azure_core::http::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
                                         let response = self.client.send(&mut req).await?;
                                         let headers = response.headers();
                                         let retry_after = get_retry_after(headers);
@@ -69,9 +70,9 @@ impl ToTokens for RequestBuilderIntoFutureCode {
                                         log::trace!("current provisioning_state: {provisioning_state:?}");
                                         match provisioning_state {
                                             LroStatus::Succeeded => {
-                                                let mut req = azure_core::Request::new(self.url()?, azure_core::Method::Get);
+                                                let mut req = azure_core::http::Request::new(self.url()?, azure_core::http::Method::Get);
                                                 let bearer_token = self.client.bearer_token().await?;
-                                                req.insert_header(azure_core::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                                req.insert_header(azure_core::http::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
                                                 let response = self.client.send(&mut req).await?;
                                                 return Response(response).into_body().await
                                             }
@@ -173,6 +174,7 @@ impl ToTokens for RequestBuilderIntoFutureCode {
             quote! {}
         };
 
-        tokens.extend(into_future);
+        // TODO Disabled for now.
+        // tokens.extend(into_future);
     }
 }
