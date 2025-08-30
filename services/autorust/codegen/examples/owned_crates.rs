@@ -2,7 +2,8 @@
 // Validates that the GitHub team has ownership of all crates.
 // If not, it prints the command to add the crate.
 
-use autorust_codegen::crates::list_crate_names;
+use autorust_codegen::crates::list_crates;
+use std::path::PathBuf;
 
 /// https://github.com/orgs/Azure/teams/azure-sdk-publish-rust
 /// https://crates.io/teams/github:azure:azure-sdk-publish-rust
@@ -13,7 +14,7 @@ pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 fn main() -> Result<()> {
     let client = &SyncClient::new("azure-sdk-for-rust", std::time::Duration::from_millis(1000))?;
-    for crate_name in &list_crate_names()? {
+    for crate_name in &list_crates(&PathBuf::from("./services"))? {
         if !is_owner(client, crate_name)? {
             println!("cargo owner --add {TEAM} -- {crate_name}")
         }

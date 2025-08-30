@@ -1,7 +1,10 @@
 [workspace]
 members = [
 	"sdk/azure_openapi_core",
-	"services/mgmt/vmware",
+	# "services/mgmt/vmware",
+	"services/autorust/codegen",
+	"services/autorust/openapi",
+	"services/autorust/azure-autorust",
 ]
 resolver = "2"
 

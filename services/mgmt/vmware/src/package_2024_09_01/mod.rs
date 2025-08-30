@@ -183,7 +183,8 @@ pub mod operations {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
+        // pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::OperationListResult> {
                 let (_, _, body) = self.0.deconstruct();

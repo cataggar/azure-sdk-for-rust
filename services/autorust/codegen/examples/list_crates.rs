@@ -8,12 +8,13 @@
 // git clone https://github.com/rust-lang/crates.io-index
 
 use autorust_codegen::crates::has_version;
-use autorust_codegen::crates::list_crate_names;
+use autorust_codegen::crates::list_crates;
+use std::path::PathBuf;
 pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 fn main() -> Result<()> {
     let version = std::env::args().nth(1);
-    let names = list_crate_names()?;
+    let names = list_crates(&PathBuf::from("./services"))?;
     match &version {
         Some(version) => {
             for name in names.iter() {
