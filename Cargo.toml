@@ -1,5 +1,5 @@
 [workspace]
-members = ["sdk/core"]
+members = ["sdk/azure_openapi_core"]
 resolver = "2"
 
 [workspace.lints]
