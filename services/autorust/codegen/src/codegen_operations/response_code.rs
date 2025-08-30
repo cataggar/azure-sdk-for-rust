@@ -87,7 +87,7 @@ impl ToTokens for ResponseCode {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         tokens.extend(quote! {
             #[derive(Debug)]
-            pub struct Response(azure_core::http::Response);
+            pub struct Response(typespec_client_core::http::response::RawResponse);
         });
         let body_fn = if let Some(response_type) = self.response_type() {
             let deserialize_body = if response_type.is_bytes() {

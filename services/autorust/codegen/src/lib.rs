@@ -165,11 +165,11 @@ fn write_file<P: AsRef<Utf8Path>>(file: P, tokens: &TokenStream, print_writing_f
     Ok(())
 }
 
-const SPEC_FOLDER: &str = "../../../azure-rest-api-specs/specification";
+const SPEC_FOLDER: &str = "../azure-rest-api-specs/specification";
 
 // gets a sorted list of folders in azure-rest-api-specs/specification
 fn get_spec_folders(spec_folder: &str) -> Result<Vec<String>> {
-    let paths = fs::read_dir(spec_folder)?;
+    let paths = fs::read_dir(spec_folder).with_context(ErrorKind::Io, || format!("read dir {spec_folder}"))?;
     let mut spec_folders = Vec::new();
     for path in paths {
         let path = path?;
@@ -230,29 +230,15 @@ fn get_spec_readmes(spec_folders: Vec<String>, readme: impl AsRef<Utf8Path>) -> 
 }
 
 pub fn get_mgmt_readmes() -> Result<Vec<SpecReadme>> {
-    get_spec_readmes(get_spec_folders(SPEC_FOLDER)?, "resource-manager/readme.md")
+    let folders =
+        get_spec_folders(SPEC_FOLDER).with_context(ErrorKind::Io, || format!("listing specification folders in {SPEC_FOLDER}"))?;
+    get_spec_readmes(folders, "resource-manager/readme.md")
 }
 
 pub fn get_svc_readmes() -> Result<Vec<SpecReadme>> {
-    let mut readmes = get_spec_readmes(get_spec_folders(SPEC_FOLDER)?, "data-plane/readme.md")?;
-    // the storage data-plane specs do not follow the pattern
-    readmes.push(SpecReadme {
-        spec: "blobstorage".to_owned(),
-        readme: io::join(SPEC_FOLDER, "storage/data-plane/Microsoft.BlobStorage/readme.md")?,
-    });
-    readmes.push(SpecReadme {
-        spec: "filestorage".to_owned(),
-        readme: io::join(SPEC_FOLDER, "storage/data-plane/Microsoft.FileStorage/readme.md")?,
-    });
-    readmes.push(SpecReadme {
-        spec: "queuestorage".to_owned(),
-        readme: io::join(SPEC_FOLDER, "storage/data-plane/Microsoft.QueueStorage/readme.md")?,
-    });
-    readmes.push(SpecReadme {
-        spec: "storagedatalake".to_owned(),
-        readme: io::join(SPEC_FOLDER, "storage/data-plane/Microsoft.StorageDataLake/readme.md")?,
-    });
-    Ok(readmes)
+    let folders =
+        get_spec_folders(SPEC_FOLDER).with_context(ErrorKind::Io, || format!("listing specification folders in {SPEC_FOLDER}"))?;
+    get_spec_readmes(folders, "data-plane/readme.md")
 }
 
 fn get_service_name(spec_name: &str) -> String {

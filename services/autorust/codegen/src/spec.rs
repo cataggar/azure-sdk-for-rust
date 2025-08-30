@@ -1,5 +1,5 @@
 use crate::io;
-use crate::{Error, ErrorKind, Result};
+use crate::{Error, ErrorKind, Result, ResultExt};
 use autorust_openapi::{
     AdditionalProperties, CollectionFormat, DataType, MsExamples, MsLongRunningOperationOptions, MsPageable, OpenAPI, Operation, Parameter,
     ParameterIn, PathItem, Reference, ReferenceOr, Response, Schema, SchemaCommon, StatusCode,
@@ -64,11 +64,13 @@ impl Spec {
     fn read_file(docs: &mut IndexMap<Utf8PathBuf, OpenAPI>, file_path: impl AsRef<Utf8Path>) -> Result<()> {
         let file_path = file_path.as_ref();
         if !docs.contains_key(file_path) {
-            let doc = openapi::parse(file_path)?;
+            let doc = openapi::parse(file_path)
+                .with_context(ErrorKind::Parse, || format!("parse OpenAPI file {file_path}"))?;
             let ref_files = openapi::get_reference_file_paths(file_path, &doc);
             docs.insert(Utf8PathBuf::from(file_path), doc);
             for ref_file in ref_files {
-                let child_path = io::join(file_path, ref_file)?;
+                let child_path = io::join(file_path, ref_file)
+                    .with_context(ErrorKind::Io, || format!("joining reference path to {file_path}"))?;
                 Self::read_file(docs, &child_path)?;
             }
         }

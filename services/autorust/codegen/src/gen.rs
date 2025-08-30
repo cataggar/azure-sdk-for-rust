@@ -31,17 +31,17 @@ pub fn gen_crate(package_name: &str, spec: &SpecReadme, run_config: &RunConfig, 
     let lib_rs_path = &io::join(&src_folder, "lib.rs")?;
 
     if src_folder.exists() {
-        fs::remove_dir_all(&src_folder)?;
+        fs::remove_dir_all(&src_folder).with_context(ErrorKind::Io, || format!("remove dir {src_folder}"))?;
     }
 
     let readme_path = io::join(output_folder, "README.md")?;
     if readme_path.exists() {
-        std::fs::remove_file(&readme_path)?;
+        std::fs::remove_file(&readme_path).with_context(ErrorKind::Io, || format!("remove file {readme_path}"))?;
     }
 
     let cargo_toml_path = io::join(output_folder, "Cargo.toml")?;
     if cargo_toml_path.exists() {
-        std::fs::remove_file(&cargo_toml_path)?;
+        std::fs::remove_file(&cargo_toml_path).with_context(ErrorKind::Io, || format!("remove file {cargo_toml_path}"))?;
     }
 
     let tags = &package_config.filter_tags(spec_config.tags());

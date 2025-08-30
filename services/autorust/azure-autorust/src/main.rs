@@ -9,6 +9,7 @@ use autorust_codegen::{
 };
 use clap::Parser;
 use rayon::prelude::*;
+use std::error::Error as StdError;
 use std::{collections::BTreeSet, path::PathBuf};
 
 #[derive(Debug, clap::Parser)]
@@ -32,11 +33,23 @@ impl Args {
     }
 }
 
-fn main() -> Result<()> {
+fn main() {
+    if let Err(err) = try_main() {
+        eprintln!("Error: {}", err);
+        let mut source = err.source();
+        while let Some(src) = source {
+            eprintln!("  caused by: {}", src);
+            source = src.source();
+        }
+        std::process::exit(1);
+    }
+}
+
+fn try_main() -> Result<()> {
     let args = Args::parse();
     let packages = &args.packages();
 
-    let existing_crates = list_crates(&PathBuf::from("../"))?;
+    let existing_crates = list_crates(&PathBuf::from("./services/"))?;
     let generated = gen_crates(packages)?;
     gen_services_workspace(&generated)?;
 
@@ -117,7 +130,15 @@ fn gen_crates(only_packages: &[&str]) -> Result<BTreeSet<String>> {
 
     if !errors.is_empty() {
         for error in &errors {
-            eprintln!("{error:#?}");
+            // Print a concise chain with the error kind and any source causes.
+            eprintln!("Error kind: {}", error.kind());
+            eprintln!("Error: {error}");
+            let mut src: Option<&dyn StdError> = error.source();
+            while let Some(s) = src {
+                eprintln!("  caused by: {s}");
+                src = s.source();
+            }
+            eprintln!("");
         }
         return Err(Error::new(ErrorKind::CodeGen, "Failed to generate some crates"));
     }

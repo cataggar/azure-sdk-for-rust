@@ -1,4 +1,4 @@
-use crate::{ErrorKind, Result, ResultExt};
+use crate::{Error, ErrorKind, Result, ResultExt};
 use camino::{Utf8Path, Utf8PathBuf};
 use cargo_toml::Manifest;
 use serde::Deserialize;
@@ -13,7 +13,7 @@ use std::{
 /// Get all directories below the given directory.
 fn list_dirs_in(dir: impl AsRef<Utf8Path>) -> Result<Vec<Utf8PathBuf>> {
     let mut dirs = Vec::new();
-    let paths = fs::read_dir(dir.as_ref())?;
+    let paths = fs::read_dir(dir.as_ref()).with_context(ErrorKind::Io, || format!("read dir {}", dir.as_ref()))?;
     for path in paths.flatten() {
         if let Some(path) = Utf8Path::from_path(&path.path()) {
             if path.is_dir() && path.join("Cargo.toml").exists() {
@@ -27,11 +27,16 @@ fn list_dirs_in(dir: impl AsRef<Utf8Path>) -> Result<Vec<Utf8PathBuf>> {
 pub fn list_crates(services_dir: &Path) -> Result<BTreeSet<String>> {
     let mut package_names = BTreeSet::new();
     let base_path = services_dir.join("Cargo.toml");
-    let manifest = Manifest::from_path(base_path)?;
+    let manifest = Manifest::from_path(&base_path)
+        .with_context(ErrorKind::Parse, || format!("opening workspace manifest {}", base_path.display()))?;
     if let Some(workspaces) = manifest.workspace {
         for member in workspaces.members {
             let member_path = services_dir.join(member).join("Cargo.toml");
-            let Ok(manifest) = Manifest::from_path(member_path) else { continue };
+            let Ok(manifest) = Manifest::from_path(&member_path)
+                .map_err(|e| Error::full(ErrorKind::Parse, e, format!("opening member manifest {}", member_path.display())))
+            else {
+                continue
+            };
             let Some(package) = manifest.package else {
                 continue;
             };
