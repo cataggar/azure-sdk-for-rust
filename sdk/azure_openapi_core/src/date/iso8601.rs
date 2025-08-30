@@ -1,4 +1,4 @@
-use crate::error::{ErrorKind, ResultExt};
+use azure_core::error::{ErrorKind, ResultExt};
 use serde::{de, Deserialize, Deserializer, Serializer};
 use time::{
     format_description::well_known::{
@@ -15,14 +15,14 @@ const SERDE_CONFIG: EncodedConfig = Config::DEFAULT
     })
     .encode();
 
-pub fn parse_iso8601(s: &str) -> crate::Result<OffsetDateTime> {
+pub fn parse_iso8601(s: &str) -> azure_core::Result<OffsetDateTime> {
     OffsetDateTime::parse(s, &Iso8601::<SERDE_CONFIG>)
         .with_context(ErrorKind::DataConversion, || {
             format!("unable to parse iso8601 date '{s}")
         })
 }
 
-pub fn to_iso8601(date: &OffsetDateTime) -> crate::Result<String> {
+pub fn to_iso8601(date: &OffsetDateTime) -> azure_core::Result<String> {
     date.format(&Iso8601::<SERDE_CONFIG>)
         .with_context(ErrorKind::DataConversion, || {
             format!("unable to format date '{date:?}")

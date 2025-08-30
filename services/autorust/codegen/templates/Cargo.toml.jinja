@@ -16,12 +16,11 @@ rust-version = "1.64.0"
 doctest = false
 
 [dependencies]
-azure_openapi_core = { path = "../../../sdk/core", version = "0.21", features = [] }
+azure_openapi_core = { path = "../../../sdk/azure_openapi_core", features = [] }
 # azure_core = { path = "../../../sdk/core", version = "0.21", features = [{%- for feature in azure_core_features -%}"{{feature}}", {%- endfor -%}] }
 # azure_core = { version = "0.22.0", features = [{%- for feature in azure_core_features -%}"{{feature}}", {%- endfor -%}] }
 azure_core = { git = "https://github.com/Azure/azure-sdk-for-rust", branch = "main" }
-typespec_client_core = { git = "https://github.com/Azure/azure-sdk-for-rust", branch = "main" }
-typespec_macros = { git = "https://github.com/Azure/azure-sdk-for-rust", branch = "main"}
+typespec_client_core = { git = "https://github.com/Azure/azure-sdk-for-rust", branch = "main", features = ["derive"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 bytes = "1.3"
@@ -40,9 +39,7 @@ anyhow = "1.0"
 all-features = true
 
 [features]
-default = ["default_tag", "reqwest"]
-reqwest = ["azure_core/reqwest"]
-reqwest_rustls = ["azure_core/reqwest_rustls"]
+default = ["default_tag"]
 default_tag = ["{{default_tag}}"]
 {%- for feature in features %}
 "{{feature}}" = []

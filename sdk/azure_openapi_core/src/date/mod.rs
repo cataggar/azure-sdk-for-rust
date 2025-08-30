@@ -3,7 +3,7 @@
 // RFC 3339 vs ISO 8601
 // <https://ijmacd.github.io/rfc3339-iso8601/>
 
-use crate::error::{ErrorKind, ResultExt};
+use azure_core::error::{ErrorKind, ResultExt};
 use std::time::Duration;
 use time::{
     format_description::{well_known::Rfc3339, FormatItem},
@@ -24,7 +24,7 @@ pub mod rfc1123;
 /// In Azure REST API specifications it is specified as `"format": "date-time"`.
 ///
 /// 1985-04-12T23:20:50.52Z
-pub fn parse_rfc3339(s: &str) -> crate::Result<OffsetDateTime> {
+pub fn parse_rfc3339(s: &str) -> azure_core::Result<OffsetDateTime> {
     OffsetDateTime::parse(s, &Rfc3339).with_context(ErrorKind::DataConversion, || {
         format!("unable to parse rfc3339 date '{s}")
     })
@@ -55,7 +55,7 @@ pub fn to_rfc3339(date: &OffsetDateTime) -> String {
 /// <https://httpwg.org/specs/rfc9110.html#http.date>
 ///
 /// Sun, 06 Nov 1994 08:49:37 GMT
-pub fn parse_rfc1123(s: &str) -> crate::Result<OffsetDateTime> {
+pub fn parse_rfc1123(s: &str) -> azure_core::Result<OffsetDateTime> {
     Ok(PrimitiveDateTime::parse(s, RFC1123_FORMAT)
         .with_context(ErrorKind::DataConversion, || {
             format!("unable to parse rfc1123 date '{s}")
@@ -91,7 +91,7 @@ pub fn to_rfc1123(date: &OffsetDateTime) -> String {
 /// <https://docs.microsoft.com/rest/api/cosmos-db/patch-a-document>
 ///
 /// x-ms-last-state-change-utc: Fri, 25 Mar 2016 21:27:20.035 GMT
-pub fn parse_last_state_change(s: &str) -> crate::Result<OffsetDateTime> {
+pub fn parse_last_state_change(s: &str) -> azure_core::Result<OffsetDateTime> {
     Ok(PrimitiveDateTime::parse(s, LAST_STATE_CHANGE_FORMAT)
         .with_context(ErrorKind::DataConversion, || {
             format!("unable to parse last state change date '{s}")
@@ -137,7 +137,7 @@ pub fn diff(first: OffsetDateTime, second: OffsetDateTime) -> Duration {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::from_json;
+    use azure_core::json::from_json;
     use serde::{Deserialize, Serialize};
     use time::macros::datetime;
 
@@ -152,7 +152,7 @@ mod tests {
     }
 
     #[test]
-    fn test_roundtrip_rfc3339() -> crate::Result<()> {
+    fn test_roundtrip_rfc3339() -> azure_core::Result<()> {
         let s = "2019-10-12T07:20:50.52Z";
         let dt = parse_rfc3339(s)?;
         assert_eq!(s, to_rfc3339(&dt));
@@ -160,7 +160,7 @@ mod tests {
     }
 
     #[test]
-    fn test_device_update_dates() -> crate::Result<()> {
+    fn test_device_update_dates() -> azure_core::Result<()> {
         let created = parse_rfc3339("1999-09-10T21:59:22Z")?;
         let last_action = parse_rfc3339("1999-09-10T03:05:07.3845533+01:00")?;
         assert_eq!(created, datetime!(1999-09-10 21:59:22 UTC));
@@ -169,21 +169,21 @@ mod tests {
     }
 
     #[test]
-    fn test_to_rfc1123() -> crate::Result<()> {
+    fn test_to_rfc1123() -> azure_core::Result<()> {
         let dt = datetime!(1994-11-06 08:49:37 UTC);
         assert_eq!("Sun, 06 Nov 1994 08:49:37 GMT", to_rfc1123(&dt));
         Ok(())
     }
 
     #[test]
-    fn test_parse_rfc1123() -> crate::Result<()> {
+    fn test_parse_rfc1123() -> azure_core::Result<()> {
         let dt = datetime!(1994-11-06 08:49:37 UTC);
         assert_eq!(parse_rfc1123("Sun, 06 Nov 1994 08:49:37 GMT")?, dt);
         Ok(())
     }
 
     #[test]
-    fn test_parse_last_state_change() -> crate::Result<()> {
+    fn test_parse_last_state_change() -> azure_core::Result<()> {
         assert_eq!(
             datetime!(2020-01-15 23:39:44.369 UTC),
             parse_last_state_change("Wed, 15 Jan 2020 23:39:44.369 GMT")?
@@ -192,7 +192,7 @@ mod tests {
     }
 
     #[test]
-    fn test_list_blob_creation_time() -> crate::Result<()> {
+    fn test_list_blob_creation_time() -> azure_core::Result<()> {
         let creation_time = "Thu, 01 Jul 2021 10:45:02 GMT";
         assert_eq!(
             datetime!(2021-07-01 10:45:02 UTC),
@@ -202,7 +202,7 @@ mod tests {
     }
 
     #[test]
-    fn test_serde_rfc3339_none_optional() -> crate::Result<()> {
+    fn test_serde_rfc3339_none_optional() -> azure_core::Result<()> {
         let json_state = r#"{
             "created_time": "2021-07-01T10:45:02Z"
         }"#;
@@ -216,7 +216,7 @@ mod tests {
     }
 
     #[test]
-    fn test_serde_rfc3339_some_optional() -> crate::Result<()> {
+    fn test_serde_rfc3339_some_optional() -> azure_core::Result<()> {
         let json_state = r#"{
             "created_time": "2021-07-01T10:45:02Z",
             "deleted_time": "2022-03-28T11:05:31Z"

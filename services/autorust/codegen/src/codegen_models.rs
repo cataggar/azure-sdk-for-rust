@@ -918,7 +918,7 @@ impl ToTokens for StructCode {
 
         let struct_code = quote! {
             #doc_comment
-            #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, typespec_macros::Model)]
+            #[derive(Clone, PartialEq, Serialize, Deserialize, typespec_client_core::fmt::SafeDebug)]
             #default_code
             pub struct #struct_name_code {
                 #(#props)*
@@ -1062,19 +1062,19 @@ fn create_struct(
         #[allow(clippy::collapsible_else_if)]
         if is_required {
             if type_name.is_date_time() {
-                serde.add_with("azure_core::date::rfc3339");
+                serde.add_with("azure_openapi_core::date::rfc3339");
             } else if type_name.is_date_time_rfc1123() {
-                serde.add_with("azure_core::date::rfc1123");
+                serde.add_with("azure_openapi_core::date::rfc1123");
             }
         } else {
             if type_name.is_date_time() {
                 // Must specify `default` when using `with` for `Option`
                 serde.add_default();
-                serde.add_with("azure_core::date::rfc3339::option");
+                serde.add_with("azure_openapi_core::date::rfc3339::option");
             } else if type_name.is_date_time_rfc1123() {
                 // Must specify `default` when using `with` for `Option`
                 serde.add_default();
-                serde.add_with("azure_core::date::rfc1123::option");
+                serde.add_with("azure_openapi_core::date::rfc1123::option");
             } else if type_name.is_vec() {
                 serde.add_default();
                 serde.add_deserialize_with("azure_openapi_core::util::deserialize_null_as_default");

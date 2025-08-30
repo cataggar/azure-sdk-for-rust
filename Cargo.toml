@@ -1,11 +1,11 @@
 [workspace]
+resolver = "2"
 members = [
 	"sdk/azure_openapi_core",
-	# "services/mgmt/vmware",
+	"services/autorust/azure-autorust",
 	"services/autorust/codegen",
 	"services/autorust/openapi",
-	"services/autorust/azure-autorust",
+	"services/mgmt/vmware",
 ]
-resolver = "2"
 
 [workspace.lints]

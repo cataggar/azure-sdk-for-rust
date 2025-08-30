@@ -80,7 +80,7 @@ fn try_main() -> Result<()> {
 }
 
 fn gen_crate(only_packages: &[&str], crate_type: &str, spec: &SpecReadme) -> Result<Option<(String, Vec<String>)>> {
-    let output_folder = format!("../{crate_type}");
+    let output_folder = format!("./services/{crate_type}");
     let prefix = format!("azure_{crate_type}_");
 
     let run_config = RunConfig::new(&prefix);
@@ -166,7 +166,7 @@ fn gen_services_workspace(only_packages: &BTreeSet<String>) -> Result<()> {
         .map(|p| p.replace("azure_mgmt_", "mgmt/").replace("azure_svc_", "svc/"))
         .collect();
     let toml = WorkspaceCargoToml { dirs };
-    toml.create("../Cargo.toml")?;
+    toml.create("./services/Cargo.toml")?;
     Ok(())
 }
 
@@ -174,7 +174,7 @@ fn gen_workflow_check_all_services(packages: &BTreeSet<String>) -> Result<()> {
     let packages = &packages.iter().map(String::as_str).collect();
 
     let yml = CheckAllServicesYml { packages };
-    yml.create("../../.github/workflows/check-all-services.yml")?;
+    yml.create("./.github/workflows/check-all-services.yml")?;
     Ok(())
 }
 
@@ -194,13 +194,13 @@ fn gen_workflow_publish_sdks() -> Result<()> {
         "azure_storage_queues",
     ];
     let yml = PublishSdksYml { packages };
-    yml.create("../../.github/workflows/publish-sdks.yml")?;
+    yml.create("./.github/workflows/publish-sdks.yml")?;
     Ok(())
 }
 
 fn gen_workflow_publish_services(packages: &BTreeSet<String>) -> Result<()> {
     let packages = &packages.iter().map(String::as_str).collect();
     let yml = PublishServicesYml { packages };
-    yml.create("../../.github/workflows/publish-services.yml")?;
+    yml.create("./.github/workflows/publish-services.yml")?;
     Ok(())
 }

@@ -9,7 +9,7 @@
 
 This is an unofficial, unsupported generated [Azure SDK for Rust](https://github.com/Azure/azure-sdk-for-rust/tree/legacy) crate from the Azure REST API specifications listed in:
 
-https://github.com/Azure/azure-rest-api-specs/blob/main/specification/vmware/resource-manager/readme.md
+../azure-rest-api-specs/specification/vmware/resource-manager/Microsoft.AVS/AVS/readme.md
 
 To get started with these generated service crates, see the [examples](https://github.com/Azure/azure-sdk-for-rust/blob/legacy/services/README.md#examples).
 

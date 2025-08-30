@@ -55,7 +55,7 @@ impl ClientBuilder {
 impl Client {
     pub(crate) async fn bearer_token(&self) -> azure_core::Result<azure_core::credentials::Secret> {
         let credential = self.token_credential();
-        let response = credential.get_token(&self.scopes()).await?;
+        let response = credential.get_token(&self.scopes(), None).await?;
         Ok(response.token)
     }
     pub(crate) fn endpoint(&self) -> &azure_core::http::Url {
@@ -67,7 +67,10 @@ impl Client {
     pub(crate) fn scopes(&self) -> Vec<&str> {
         self.scopes.iter().map(String::as_str).collect()
     }
-    pub(crate) async fn send(&self, request: &mut azure_core::http::Request) -> azure_core::Result<azure_core::http::Response> {
+    pub(crate) async fn send(
+        &self,
+        request: &mut typespec_client_core::http::request::Request,
+    ) -> azure_core::Result<typespec_client_core::http::response::RawResponse> {
         let context = typespec_client_core::http::Context::default();
         self.pipeline.send(&context, request).await
     }
@@ -184,7 +187,6 @@ pub mod operations {
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
         pub struct Response(typespec_client_core::http::response::RawResponse);
-        // pub struct Response(azure_core::http::Response);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::OperationListResult> {
                 let (_, _, body) = self.0.deconstruct();
@@ -192,20 +194,20 @@ pub mod operations {
                 let body: models::OperationListResult = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -296,7 +298,7 @@ pub mod locations {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::Quota> {
                 let (_, _, body) = self.0.deconstruct();
@@ -304,20 +306,20 @@ pub mod locations {
                 let body: models::Quota = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -370,7 +372,7 @@ pub mod locations {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::Trial> {
                 let (_, _, body) = self.0.deconstruct();
@@ -378,20 +380,20 @@ pub mod locations {
                 let body: models::Trial = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -521,7 +523,7 @@ pub mod private_clouds {
         #[doc = "* `subscription_id`: The ID of the target subscription. The value must be an UUID."]
         #[doc = "* `resource_group_name`: The name of the resource group. The name is case insensitive."]
         #[doc = "* `private_cloud_name`: Name of the private cloud"]
-        #[doc = "* `private_cloud_update`: The private cloud properties to be updated."]
+        #[doc = "* `private_cloud_update`: The resource properties to be updated."]
         pub fn update(
             &self,
             subscription_id: impl Into<String>,
@@ -621,7 +623,7 @@ pub mod private_clouds {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::PrivateCloudList> {
                 let (_, _, body) = self.0.deconstruct();
@@ -629,20 +631,20 @@ pub mod private_clouds {
                 let body: models::PrivateCloudList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -694,7 +696,7 @@ pub mod private_clouds {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::PrivateCloudList> {
                 let (_, _, body) = self.0.deconstruct();
@@ -702,20 +704,20 @@ pub mod private_clouds {
                 let body: models::PrivateCloudList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -768,7 +770,7 @@ pub mod private_clouds {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::PrivateCloud> {
                 let (_, _, body) = self.0.deconstruct();
@@ -776,20 +778,20 @@ pub mod private_clouds {
                 let body: models::PrivateCloud = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -843,7 +845,7 @@ pub mod private_clouds {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::PrivateCloud> {
                 let (_, _, body) = self.0.deconstruct();
@@ -851,23 +853,23 @@ pub mod private_clouds {
                 let body: models::PrivateCloud = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -928,7 +930,7 @@ pub mod private_clouds {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::PrivateCloud> {
                 let (_, _, body) = self.0.deconstruct();
@@ -936,23 +938,23 @@ pub mod private_clouds {
                 let body: models::PrivateCloud = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -1017,25 +1019,25 @@ pub mod private_clouds {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -1099,7 +1101,7 @@ pub mod private_clouds {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::AdminCredentials> {
                 let (_, _, body) = self.0.deconstruct();
@@ -1107,20 +1109,20 @@ pub mod private_clouds {
                 let body: models::AdminCredentials = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -1174,25 +1176,25 @@ pub mod private_clouds {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -1256,25 +1258,25 @@ pub mod private_clouds {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -1358,7 +1360,7 @@ pub mod skus {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::PagedResourceSku> {
                 let (_, _, body) = self.0.deconstruct();
@@ -1366,20 +1368,20 @@ pub mod skus {
                 let body: models::PagedResourceSku = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -1526,7 +1528,7 @@ pub mod addons {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::AddonList> {
                 let (_, _, body) = self.0.deconstruct();
@@ -1534,20 +1536,20 @@ pub mod addons {
                 let body: models::AddonList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -1601,7 +1603,7 @@ pub mod addons {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::Addon> {
                 let (_, _, body) = self.0.deconstruct();
@@ -1609,20 +1611,20 @@ pub mod addons {
                 let body: models::Addon = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -1677,7 +1679,7 @@ pub mod addons {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::Addon> {
                 let (_, _, body) = self.0.deconstruct();
@@ -1685,23 +1687,23 @@ pub mod addons {
                 let body: models::Addon = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -1763,25 +1765,25 @@ pub mod addons {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -1944,7 +1946,7 @@ pub mod authorizations {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::ExpressRouteAuthorizationList> {
                 let (_, _, body) = self.0.deconstruct();
@@ -1952,20 +1954,20 @@ pub mod authorizations {
                 let body: models::ExpressRouteAuthorizationList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -2019,7 +2021,7 @@ pub mod authorizations {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::ExpressRouteAuthorization> {
                 let (_, _, body) = self.0.deconstruct();
@@ -2027,20 +2029,20 @@ pub mod authorizations {
                 let body: models::ExpressRouteAuthorization = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -2095,7 +2097,7 @@ pub mod authorizations {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::ExpressRouteAuthorization> {
                 let (_, _, body) = self.0.deconstruct();
@@ -2103,23 +2105,23 @@ pub mod authorizations {
                 let body: models::ExpressRouteAuthorization = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -2181,25 +2183,25 @@ pub mod authorizations {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -2362,7 +2364,7 @@ pub mod cloud_links {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::CloudLinkList> {
                 let (_, _, body) = self.0.deconstruct();
@@ -2370,20 +2372,20 @@ pub mod cloud_links {
                 let body: models::CloudLinkList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -2437,7 +2439,7 @@ pub mod cloud_links {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::CloudLink> {
                 let (_, _, body) = self.0.deconstruct();
@@ -2445,20 +2447,20 @@ pub mod cloud_links {
                 let body: models::CloudLink = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -2513,7 +2515,7 @@ pub mod cloud_links {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::CloudLink> {
                 let (_, _, body) = self.0.deconstruct();
@@ -2521,23 +2523,23 @@ pub mod cloud_links {
                 let body: models::CloudLink = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -2599,25 +2601,25 @@ pub mod cloud_links {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -2757,7 +2759,7 @@ pub mod clusters {
         #[doc = "* `resource_group_name`: The name of the resource group. The name is case insensitive."]
         #[doc = "* `private_cloud_name`: Name of the private cloud"]
         #[doc = "* `cluster_name`: Name of the cluster"]
-        #[doc = "* `cluster_update`: The cluster properties to be updated."]
+        #[doc = "* `cluster_update`: The resource properties to be updated."]
         pub fn update(
             &self,
             subscription_id: impl Into<String>,
@@ -2827,7 +2829,7 @@ pub mod clusters {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::ClusterList> {
                 let (_, _, body) = self.0.deconstruct();
@@ -2835,20 +2837,20 @@ pub mod clusters {
                 let body: models::ClusterList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -2902,7 +2904,7 @@ pub mod clusters {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::Cluster> {
                 let (_, _, body) = self.0.deconstruct();
@@ -2910,20 +2912,20 @@ pub mod clusters {
                 let body: models::Cluster = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -2978,7 +2980,7 @@ pub mod clusters {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::Cluster> {
                 let (_, _, body) = self.0.deconstruct();
@@ -2986,23 +2988,23 @@ pub mod clusters {
                 let body: models::Cluster = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -3064,7 +3066,7 @@ pub mod clusters {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::Cluster> {
                 let (_, _, body) = self.0.deconstruct();
@@ -3072,23 +3074,23 @@ pub mod clusters {
                 let body: models::Cluster = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -3154,25 +3156,25 @@ pub mod clusters {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -3237,7 +3239,7 @@ pub mod clusters {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::ClusterZoneList> {
                 let (_, _, body) = self.0.deconstruct();
@@ -3245,20 +3247,20 @@ pub mod clusters {
                 let body: models::ClusterZoneList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -3423,7 +3425,7 @@ pub mod datastores {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::DatastoreList> {
                 let (_, _, body) = self.0.deconstruct();
@@ -3431,20 +3433,20 @@ pub mod datastores {
                 let body: models::DatastoreList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -3499,7 +3501,7 @@ pub mod datastores {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::Datastore> {
                 let (_, _, body) = self.0.deconstruct();
@@ -3507,20 +3509,20 @@ pub mod datastores {
                 let body: models::Datastore = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -3576,7 +3578,7 @@ pub mod datastores {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::Datastore> {
                 let (_, _, body) = self.0.deconstruct();
@@ -3584,23 +3586,23 @@ pub mod datastores {
                 let body: models::Datastore = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -3663,25 +3665,25 @@ pub mod datastores {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -3804,7 +3806,7 @@ pub mod hosts {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::HostListResult> {
                 let (_, _, body) = self.0.deconstruct();
@@ -3812,20 +3814,20 @@ pub mod hosts {
                 let body: models::HostListResult = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -3880,7 +3882,7 @@ pub mod hosts {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::Host> {
                 let (_, _, body) = self.0.deconstruct();
@@ -3888,20 +3890,20 @@ pub mod hosts {
                 let body: models::Host = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -4042,7 +4044,7 @@ pub mod placement_policies {
         #[doc = "* `private_cloud_name`: Name of the private cloud"]
         #[doc = "* `cluster_name`: Name of the cluster"]
         #[doc = "* `placement_policy_name`: Name of the placement policy."]
-        #[doc = "* `placement_policy_update`: The placement policy properties to be updated."]
+        #[doc = "* `placement_policy_update`: The resource properties to be updated."]
         pub fn update(
             &self,
             subscription_id: impl Into<String>,
@@ -4095,7 +4097,7 @@ pub mod placement_policies {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::PlacementPoliciesList> {
                 let (_, _, body) = self.0.deconstruct();
@@ -4103,20 +4105,20 @@ pub mod placement_policies {
                 let body: models::PlacementPoliciesList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -4171,7 +4173,7 @@ pub mod placement_policies {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::PlacementPolicy> {
                 let (_, _, body) = self.0.deconstruct();
@@ -4179,20 +4181,20 @@ pub mod placement_policies {
                 let body: models::PlacementPolicy = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -4252,7 +4254,7 @@ pub mod placement_policies {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::PlacementPolicy> {
                 let (_, _, body) = self.0.deconstruct();
@@ -4260,23 +4262,23 @@ pub mod placement_policies {
                 let body: models::PlacementPolicy = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -4343,7 +4345,7 @@ pub mod placement_policies {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::PlacementPolicy> {
                 let (_, _, body) = self.0.deconstruct();
@@ -4351,23 +4353,23 @@ pub mod placement_policies {
                 let body: models::PlacementPolicy = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -4438,25 +4440,25 @@ pub mod placement_policies {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -4583,7 +4585,7 @@ pub mod virtual_machines {
         #[doc = "* `private_cloud_name`: Name of the private cloud"]
         #[doc = "* `cluster_name`: Name of the cluster"]
         #[doc = "* `virtual_machine_id`: ID of the virtual machine."]
-        #[doc = "* `restrict_movement`: The body type of the operation request."]
+        #[doc = "* `restrict_movement`: The content of the action request"]
         pub fn restrict_movement(
             &self,
             subscription_id: impl Into<String>,
@@ -4611,7 +4613,7 @@ pub mod virtual_machines {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::VirtualMachinesList> {
                 let (_, _, body) = self.0.deconstruct();
@@ -4619,20 +4621,20 @@ pub mod virtual_machines {
                 let body: models::VirtualMachinesList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -4687,7 +4689,7 @@ pub mod virtual_machines {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::VirtualMachine> {
                 let (_, _, body) = self.0.deconstruct();
@@ -4695,20 +4697,20 @@ pub mod virtual_machines {
                 let body: models::VirtualMachine = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -4768,25 +4770,25 @@ pub mod virtual_machines {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -4948,7 +4950,7 @@ pub mod global_reach_connections {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::GlobalReachConnectionList> {
                 let (_, _, body) = self.0.deconstruct();
@@ -4956,20 +4958,20 @@ pub mod global_reach_connections {
                 let body: models::GlobalReachConnectionList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -5023,7 +5025,7 @@ pub mod global_reach_connections {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::GlobalReachConnection> {
                 let (_, _, body) = self.0.deconstruct();
@@ -5031,20 +5033,20 @@ pub mod global_reach_connections {
                 let body: models::GlobalReachConnection = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -5099,7 +5101,7 @@ pub mod global_reach_connections {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::GlobalReachConnection> {
                 let (_, _, body) = self.0.deconstruct();
@@ -5107,23 +5109,23 @@ pub mod global_reach_connections {
                 let body: models::GlobalReachConnection = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -5185,25 +5187,25 @@ pub mod global_reach_connections {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -5366,7 +5368,7 @@ pub mod hcx_enterprise_sites {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::HcxEnterpriseSiteList> {
                 let (_, _, body) = self.0.deconstruct();
@@ -5374,20 +5376,20 @@ pub mod hcx_enterprise_sites {
                 let body: models::HcxEnterpriseSiteList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -5441,7 +5443,7 @@ pub mod hcx_enterprise_sites {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::HcxEnterpriseSite> {
                 let (_, _, body) = self.0.deconstruct();
@@ -5449,20 +5451,20 @@ pub mod hcx_enterprise_sites {
                 let body: models::HcxEnterpriseSite = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -5517,7 +5519,7 @@ pub mod hcx_enterprise_sites {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::HcxEnterpriseSite> {
                 let (_, _, body) = self.0.deconstruct();
@@ -5525,20 +5527,20 @@ pub mod hcx_enterprise_sites {
                 let body: models::HcxEnterpriseSite = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -5594,22 +5596,22 @@ pub mod hcx_enterprise_sites {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -5753,7 +5755,7 @@ pub mod iscsi_paths {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::IscsiPathListResult> {
                 let (_, _, body) = self.0.deconstruct();
@@ -5761,20 +5763,20 @@ pub mod iscsi_paths {
                 let body: models::IscsiPathListResult = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -5828,7 +5830,7 @@ pub mod iscsi_paths {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::IscsiPath> {
                 let (_, _, body) = self.0.deconstruct();
@@ -5836,20 +5838,20 @@ pub mod iscsi_paths {
                 let body: models::IscsiPath = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -5903,7 +5905,7 @@ pub mod iscsi_paths {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::IscsiPath> {
                 let (_, _, body) = self.0.deconstruct();
@@ -5911,23 +5913,23 @@ pub mod iscsi_paths {
                 let body: models::IscsiPath = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -5988,25 +5990,25 @@ pub mod iscsi_paths {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -6121,7 +6123,7 @@ pub mod provisioned_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::ProvisionedNetworkListResult> {
                 let (_, _, body) = self.0.deconstruct();
@@ -6129,20 +6131,20 @@ pub mod provisioned_networks {
                 let body: models::ProvisionedNetworkListResult = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -6196,7 +6198,7 @@ pub mod provisioned_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::ProvisionedNetwork> {
                 let (_, _, body) = self.0.deconstruct();
@@ -6204,20 +6206,20 @@ pub mod provisioned_networks {
                 let body: models::ProvisionedNetwork = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -6370,7 +6372,7 @@ pub mod pure_storage_policies {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::PureStoragePolicyListResult> {
                 let (_, _, body) = self.0.deconstruct();
@@ -6378,20 +6380,20 @@ pub mod pure_storage_policies {
                 let body: models::PureStoragePolicyListResult = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -6445,7 +6447,7 @@ pub mod pure_storage_policies {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::PureStoragePolicy> {
                 let (_, _, body) = self.0.deconstruct();
@@ -6453,20 +6455,20 @@ pub mod pure_storage_policies {
                 let body: models::PureStoragePolicy = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -6521,7 +6523,7 @@ pub mod pure_storage_policies {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::PureStoragePolicy> {
                 let (_, _, body) = self.0.deconstruct();
@@ -6529,23 +6531,23 @@ pub mod pure_storage_policies {
                 let body: models::PureStoragePolicy = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -6612,25 +6614,25 @@ pub mod pure_storage_policies {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -6816,7 +6818,7 @@ pub mod script_executions {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::ScriptExecutionsList> {
                 let (_, _, body) = self.0.deconstruct();
@@ -6824,20 +6826,20 @@ pub mod script_executions {
                 let body: models::ScriptExecutionsList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -6891,7 +6893,7 @@ pub mod script_executions {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::ScriptExecution> {
                 let (_, _, body) = self.0.deconstruct();
@@ -6899,20 +6901,20 @@ pub mod script_executions {
                 let body: models::ScriptExecution = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -6967,7 +6969,7 @@ pub mod script_executions {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::ScriptExecution> {
                 let (_, _, body) = self.0.deconstruct();
@@ -6975,23 +6977,23 @@ pub mod script_executions {
                 let body: models::ScriptExecution = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -7053,25 +7055,25 @@ pub mod script_executions {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -7136,7 +7138,7 @@ pub mod script_executions {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::ScriptExecution> {
                 let (_, _, body) = self.0.deconstruct();
@@ -7144,20 +7146,20 @@ pub mod script_executions {
                 let body: models::ScriptExecution = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -7269,7 +7271,7 @@ pub mod script_packages {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::ScriptPackagesList> {
                 let (_, _, body) = self.0.deconstruct();
@@ -7277,20 +7279,20 @@ pub mod script_packages {
                 let body: models::ScriptPackagesList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -7344,7 +7346,7 @@ pub mod script_packages {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::ScriptPackage> {
                 let (_, _, body) = self.0.deconstruct();
@@ -7352,20 +7354,20 @@ pub mod script_packages {
                 let body: models::ScriptPackage = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -7477,7 +7479,7 @@ pub mod script_cmdlets {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::ScriptCmdletsList> {
                 let (_, _, body) = self.0.deconstruct();
@@ -7485,20 +7487,20 @@ pub mod script_cmdlets {
                 let body: models::ScriptCmdletsList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -7553,7 +7555,7 @@ pub mod script_cmdlets {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::ScriptCmdlet> {
                 let (_, _, body) = self.0.deconstruct();
@@ -7561,20 +7563,20 @@ pub mod script_cmdlets {
                 let body: models::ScriptCmdlet = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -8530,7 +8532,7 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkList> {
                 let (_, _, body) = self.0.deconstruct();
@@ -8538,20 +8540,20 @@ pub mod workload_networks {
                 let body: models::WorkloadNetworkList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -8605,7 +8607,7 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetwork> {
                 let (_, _, body) = self.0.deconstruct();
@@ -8613,20 +8615,20 @@ pub mod workload_networks {
                 let body: models::WorkloadNetwork = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -8680,7 +8682,7 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkDhcpList> {
                 let (_, _, body) = self.0.deconstruct();
@@ -8688,20 +8690,20 @@ pub mod workload_networks {
                 let body: models::WorkloadNetworkDhcpList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -8752,7 +8754,7 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkDhcp> {
                 let (_, _, body) = self.0.deconstruct();
@@ -8760,20 +8762,20 @@ pub mod workload_networks {
                 let body: models::WorkloadNetworkDhcp = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -8825,7 +8827,7 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkDhcp> {
                 let (_, _, body) = self.0.deconstruct();
@@ -8833,23 +8835,23 @@ pub mod workload_networks {
                 let body: models::WorkloadNetworkDhcp = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -8908,7 +8910,7 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkDhcp> {
                 let (_, _, body) = self.0.deconstruct();
@@ -8916,23 +8918,23 @@ pub mod workload_networks {
                 let body: models::WorkloadNetworkDhcp = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -8995,25 +8997,25 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -9075,7 +9077,7 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkDnsServicesList> {
                 let (_, _, body) = self.0.deconstruct();
@@ -9083,20 +9085,20 @@ pub mod workload_networks {
                 let body: models::WorkloadNetworkDnsServicesList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -9150,7 +9152,7 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkDnsService> {
                 let (_, _, body) = self.0.deconstruct();
@@ -9158,20 +9160,20 @@ pub mod workload_networks {
                 let body: models::WorkloadNetworkDnsService = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -9226,7 +9228,7 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkDnsService> {
                 let (_, _, body) = self.0.deconstruct();
@@ -9234,23 +9236,23 @@ pub mod workload_networks {
                 let body: models::WorkloadNetworkDnsService = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -9312,7 +9314,7 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkDnsService> {
                 let (_, _, body) = self.0.deconstruct();
@@ -9320,23 +9322,23 @@ pub mod workload_networks {
                 let body: models::WorkloadNetworkDnsService = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -9402,25 +9404,25 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -9485,7 +9487,7 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkDnsZonesList> {
                 let (_, _, body) = self.0.deconstruct();
@@ -9493,20 +9495,20 @@ pub mod workload_networks {
                 let body: models::WorkloadNetworkDnsZonesList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -9560,7 +9562,7 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkDnsZone> {
                 let (_, _, body) = self.0.deconstruct();
@@ -9568,20 +9570,20 @@ pub mod workload_networks {
                 let body: models::WorkloadNetworkDnsZone = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -9636,7 +9638,7 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkDnsZone> {
                 let (_, _, body) = self.0.deconstruct();
@@ -9644,23 +9646,23 @@ pub mod workload_networks {
                 let body: models::WorkloadNetworkDnsZone = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -9722,7 +9724,7 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkDnsZone> {
                 let (_, _, body) = self.0.deconstruct();
@@ -9730,23 +9732,23 @@ pub mod workload_networks {
                 let body: models::WorkloadNetworkDnsZone = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -9812,25 +9814,25 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -9895,7 +9897,7 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkGatewayList> {
                 let (_, _, body) = self.0.deconstruct();
@@ -9903,20 +9905,20 @@ pub mod workload_networks {
                 let body: models::WorkloadNetworkGatewayList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -9970,7 +9972,7 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkGateway> {
                 let (_, _, body) = self.0.deconstruct();
@@ -9978,20 +9980,20 @@ pub mod workload_networks {
                 let body: models::WorkloadNetworkGateway = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -10046,7 +10048,7 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkPortMirroringList> {
                 let (_, _, body) = self.0.deconstruct();
@@ -10054,20 +10056,20 @@ pub mod workload_networks {
                 let body: models::WorkloadNetworkPortMirroringList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -10118,7 +10120,7 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkPortMirroring> {
                 let (_, _, body) = self.0.deconstruct();
@@ -10126,20 +10128,20 @@ pub mod workload_networks {
                 let body: models::WorkloadNetworkPortMirroring = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -10191,7 +10193,7 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkPortMirroring> {
                 let (_, _, body) = self.0.deconstruct();
@@ -10199,23 +10201,23 @@ pub mod workload_networks {
                 let body: models::WorkloadNetworkPortMirroring = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -10274,7 +10276,7 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkPortMirroring> {
                 let (_, _, body) = self.0.deconstruct();
@@ -10282,23 +10284,23 @@ pub mod workload_networks {
                 let body: models::WorkloadNetworkPortMirroring = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -10361,25 +10363,25 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -10441,7 +10443,7 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkPublicIPsList> {
                 let (_, _, body) = self.0.deconstruct();
@@ -10449,20 +10451,20 @@ pub mod workload_networks {
                 let body: models::WorkloadNetworkPublicIPsList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -10516,7 +10518,7 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkPublicIp> {
                 let (_, _, body) = self.0.deconstruct();
@@ -10524,20 +10526,20 @@ pub mod workload_networks {
                 let body: models::WorkloadNetworkPublicIp = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -10592,7 +10594,7 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkPublicIp> {
                 let (_, _, body) = self.0.deconstruct();
@@ -10600,23 +10602,23 @@ pub mod workload_networks {
                 let body: models::WorkloadNetworkPublicIp = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -10678,25 +10680,25 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -10761,7 +10763,7 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkSegmentsList> {
                 let (_, _, body) = self.0.deconstruct();
@@ -10769,20 +10771,20 @@ pub mod workload_networks {
                 let body: models::WorkloadNetworkSegmentsList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -10836,7 +10838,7 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkSegment> {
                 let (_, _, body) = self.0.deconstruct();
@@ -10844,20 +10846,20 @@ pub mod workload_networks {
                 let body: models::WorkloadNetworkSegment = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -10912,7 +10914,7 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkSegment> {
                 let (_, _, body) = self.0.deconstruct();
@@ -10920,23 +10922,23 @@ pub mod workload_networks {
                 let body: models::WorkloadNetworkSegment = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -10998,7 +11000,7 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkSegment> {
                 let (_, _, body) = self.0.deconstruct();
@@ -11006,23 +11008,23 @@ pub mod workload_networks {
                 let body: models::WorkloadNetworkSegment = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -11088,25 +11090,25 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -11171,7 +11173,7 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkVirtualMachinesList> {
                 let (_, _, body) = self.0.deconstruct();
@@ -11179,20 +11181,20 @@ pub mod workload_networks {
                 let body: models::WorkloadNetworkVirtualMachinesList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -11246,7 +11248,7 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkVirtualMachine> {
                 let (_, _, body) = self.0.deconstruct();
@@ -11254,20 +11256,20 @@ pub mod workload_networks {
                 let body: models::WorkloadNetworkVirtualMachine = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -11319,7 +11321,7 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkVmGroupsList> {
                 let (_, _, body) = self.0.deconstruct();
@@ -11327,20 +11329,20 @@ pub mod workload_networks {
                 let body: models::WorkloadNetworkVmGroupsList = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -11394,7 +11396,7 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkVmGroup> {
                 let (_, _, body) = self.0.deconstruct();
@@ -11402,20 +11404,20 @@ pub mod workload_networks {
                 let body: models::WorkloadNetworkVmGroup = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -11470,7 +11472,7 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkVmGroup> {
                 let (_, _, body) = self.0.deconstruct();
@@ -11478,23 +11480,23 @@ pub mod workload_networks {
                 let body: models::WorkloadNetworkVmGroup = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -11556,7 +11558,7 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
             pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkVmGroup> {
                 let (_, _, body) = self.0.deconstruct();
@@ -11564,23 +11566,23 @@ pub mod workload_networks {
                 let body: models::WorkloadNetworkVmGroup = serde_json::from_slice(&bytes)?;
                 Ok(body)
             }
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }
@@ -11646,25 +11648,25 @@ pub mod workload_networks {
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
         #[derive(Debug)]
-        pub struct Response(azure_core::http::Response);
+        pub struct Response(typespec_client_core::http::response::RawResponse);
         impl Response {
-            pub fn into_raw_response(self) -> azure_core::http::Response {
+            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                 self.0
             }
-            pub fn as_raw_response(&self) -> &azure_core::http::Response {
+            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
             pub fn headers(&self) -> Headers {
                 Headers(self.0.headers())
             }
         }
-        impl From<Response> for azure_core::http::Response {
+        impl From<Response> for typespec_client_core::http::response::RawResponse {
             fn from(rsp: Response) -> Self {
                 rsp.into_raw_response()
             }
         }
-        impl AsRef<azure_core::http::Response> for Response {
-            fn as_ref(&self) -> &azure_core::http::Response {
+        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                 self.as_raw_response()
             }
         }

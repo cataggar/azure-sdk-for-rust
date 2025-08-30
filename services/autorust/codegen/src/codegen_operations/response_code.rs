@@ -125,21 +125,21 @@ impl ToTokens for ResponseCode {
         tokens.extend(quote! {
             impl Response {
                 #body_fn
-                pub fn into_raw_response(self) -> azure_core::http::Response {
+                pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
                     self.0
                 }
-                pub fn as_raw_response(&self) -> &azure_core::http::Response {
+                pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                     &self.0
                 }
                 #headers_fn
             }
-            impl From<Response> for azure_core::http::Response {
+            impl From<Response> for typespec_client_core::http::response::RawResponse {
                 fn from(rsp: Response) -> Self {
                     rsp.into_raw_response()
                 }
             }
-            impl AsRef<azure_core::http::Response> for Response {
-                fn as_ref(&self) -> &azure_core::http::Response {
+            impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
+                fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
                     self.as_raw_response()
                 }
             }
