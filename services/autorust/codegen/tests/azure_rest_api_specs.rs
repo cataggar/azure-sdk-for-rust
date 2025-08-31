@@ -9,74 +9,102 @@ use spec::TypedReference;
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
-const COMMON_TYPES_SPEC: &str = "../../../../azure-rest-api-specs/specification/security/resource-manager/common/v1/types.json";
-const VMWARE_SPEC: &str =
-    "../../../../azure-rest-api-specs/specification/vmware/resource-manager/Microsoft.AVS/stable/2020-03-20/vmware.json";
+fn specs_root() -> Utf8PathBuf {
+    fn canonicalize_utf8(p: Utf8PathBuf) -> Utf8PathBuf {
+        match std::fs::canonicalize(&p) {
+            Ok(abs) => Utf8PathBuf::from_path_buf(abs).unwrap_or(p),
+            Err(_) => p,
+        }
+    }
+    if let Ok(root) = std::env::var("AZURE_REST_API_SPECS") {
+        return canonicalize_utf8(Utf8PathBuf::from(root));
+    }
+    // Fallback to the historical relative location from this crate
+    let joined = Utf8PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../../azure-rest-api-specs");
+    canonicalize_utf8(joined)
+}
+
+fn common_types_spec() -> Utf8PathBuf {
+    specs_root().join("specification/security/resource-manager/common/v1/types.json")
+}
+
+fn vmware_spec() -> Utf8PathBuf {
+    specs_root().join("specification/vmware/resource-manager/Microsoft.AVS/AVS/stable/2020-03-20/vmware.json")
+}
 
 #[test]
 fn refs_count_security_common() -> Result<()> {
-    let doc_file = COMMON_TYPES_SPEC;
-    let api = &spec::openapi::parse(doc_file)?;
-    let refs = spec::openapi::get_references(doc_file, api);
+    let doc_file = common_types_spec();
+    let api = &spec::openapi::parse(&doc_file)?;
+    let refs = spec::openapi::get_references(&doc_file, api);
     assert_eq!(15, refs.len());
     Ok(())
 }
 
 #[test]
 fn refs_count_avs() -> Result<()> {
-    let doc_file = VMWARE_SPEC;
-    let api = &spec::openapi::parse(doc_file)?;
-    let refs = spec::openapi::get_references(doc_file, api);
+    let doc_file = vmware_spec();
+    let api = &spec::openapi::parse(&doc_file)?;
+    let refs = spec::openapi::get_references(&doc_file, api);
     assert_eq!(199, refs.len());
     Ok(())
 }
 
 #[test]
 fn ref_files() -> Result<()> {
-    let doc_file = VMWARE_SPEC;
-    let api = &spec::openapi::parse(doc_file)?;
-    let files = spec::openapi::get_reference_file_paths(doc_file, api);
+    let doc_file = vmware_spec();
+    let api = &spec::openapi::parse(&doc_file)?;
+    let files = spec::openapi::get_reference_file_paths(&doc_file, api);
     assert_eq!(1, files.len());
-    assert!(files.contains("../../../../../common-types/resource-management/v1/types.json"));
+    // Join the discovered reference with the doc file dir and compare to the canonical common-types path
+    let joined: Vec<Utf8PathBuf> = files
+        .iter()
+        .map(|f| autorust_codegen::io::join(&doc_file, f).expect("join should succeed"))
+        .collect();
+    let expected = specs_root().join("specification/common-types/resource-management/v1/types.json");
+    assert!(
+        joined.iter().any(|p| p == &expected),
+        "expected reference to {} not found in {:?}",
+        expected,
+        joined
+    );
     Ok(())
 }
 
 #[test]
 fn read_spec_avs() -> Result<()> {
-    let spec = &Spec::read_files(&[VMWARE_SPEC])?;
+    let vmware = vmware_spec();
+    let spec = &Spec::read_files(&[&vmware])?;
     assert_eq!(2, spec.docs().len());
-    assert!(spec.docs().contains_key(Utf8Path::new(
-        "../../../../azure-rest-api-specs/specification/common-types/resource-management/v1/types.json"
-    )));
+    let common = specs_root().join("specification/common-types/resource-management/v1/types.json");
+    assert!(spec.docs().contains_key(common.as_path()));
     Ok(())
 }
 
 #[test]
 fn test_resolve_schema_ref() -> Result<()> {
-    let file = Utf8PathBuf::from(VMWARE_SPEC);
+    let file = vmware_spec();
     let spec = &Spec::read_files(&[&file])?;
     spec.resolve_schema_ref(&file, &Reference::parse("#/definitions/OperationList").unwrap())?;
-    spec.resolve_schema_ref(
-        &file,
-        &Reference::parse("../../../../../common-types/resource-management/v1/types.json#/definitions/ErrorResponse").unwrap(),
-    )?;
+    // Resolve a schema from the common-types file using its absolute path to avoid brittle ../../ joins
+    let common = specs_root().join("specification/common-types/resource-management/v1/types.json");
+    spec.resolve_schema_ref(&common, &Reference::parse("#/definitions/ErrorResponse").unwrap())?;
     Ok(())
 }
 
 #[test]
 fn test_resolve_parameter_ref() -> Result<()> {
-    let file = VMWARE_SPEC;
+    let file = vmware_spec();
     let spec = &Spec::read_files(&[&file])?;
-    spec.resolve_parameter_ref(
-        file,
-        Reference::parse("../../../../../common-types/resource-management/v1/types.json#/parameters/ApiVersionParameter").unwrap(),
-    )?;
+    // Resolve a parameter from the common-types file using its absolute path
+    let common = specs_root().join("specification/common-types/resource-management/v1/types.json");
+    spec.resolve_parameter_ref(&common, Reference::parse("#/parameters/ApiVersionParameter").unwrap())?;
     Ok(())
 }
 
 #[test]
 fn test_resolve_all_refs() -> Result<()> {
-    let doc_file = VMWARE_SPEC;
+    let doc_file = vmware_spec();
     let spec = &Spec::read_files(&[&doc_file])?;
     for (doc_file, api) in spec.docs() {
         let refs = spec::openapi::get_references(doc_file, api);

@@ -36,8 +36,10 @@ mod tests {
 
     #[test]
     fn test_path_join() -> Result<()> {
-        let a = "../../../azure-rest-api-specs/specification/vmware/resource-manager/Microsoft.AVS/stable/2020-03-20/vmware.json";
-        let b = "../../../../../common-types/resource-management/v1/types.json";
+        let a = "../../../azure-rest-api-specs/specification/vmware/resource-manager/Microsoft.AVS/AVS/stable/2020-03-20/vmware.json";
+    // Need to traverse 6 levels up from the vmware.json directory to reach specification/common-types
+    // Levels: 2020-03-20 -> stable -> AVS -> Microsoft.AVS -> resource-manager -> vmware
+    let b = "../../../../../../common-types/resource-management/v1/types.json";
         let c = join(a, b)?;
         assert_eq!(
             c,

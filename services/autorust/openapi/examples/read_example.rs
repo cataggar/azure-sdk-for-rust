@@ -4,7 +4,7 @@ use std::{fs, process::exit};
 pub type Error = Box<dyn std::error::Error>;
 pub type Result<T> = std::result::Result<T, Error>;
 
-// cargo run --example read_example -- ../azure-rest-api-specs/specification/vmware/resource-manager/Microsoft.AVS/stable/2020-03-20/examples/PrivateClouds_List.json
+// cargo run --example read_example -- ../azure-rest-api-specs/specification/vmware/resource-manager/Microsoft.AVS/AVS/stable/2020-03-20/examples/PrivateClouds_List.json
 fn main() -> Result<()> {
     match std::env::args().nth(1) {
         None => {
