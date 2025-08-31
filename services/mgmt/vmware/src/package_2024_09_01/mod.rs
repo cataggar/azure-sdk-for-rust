@@ -689,23 +689,46 @@ pub mod private_clouds {
                 Ok(url)
             }
 
+            #[doc = "Sends the request and returns the low-level response"]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        req.insert_header(azure_core::http::headers::ACCEPT, "application/json");
+                        req.set_body(azure_openapi_core::EMPTY_BODY);
+                        let rsp = this.client.send(&mut req).await?;
+                        Ok(Response(rsp))
+                    }
+                })
+            }
+
             #[doc = "Return a Pager over PrivateCloudList pages (experimental)"]
             pub fn into_pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::PrivateCloudList>> {
-                let first_url = self.url()?;
                 let client = self.client.clone();
                 let api_version = String::from("2024-09-01");
+                let initial = self.clone();
 
                 Ok(azure_core::http::pager::Pager::from_callback(
                     move |state: azure_core::http::pager::PagerState<String>| {
                         let client = client.clone();
                         let api_version = api_version.clone();
-                        let first_url = first_url.clone();
+                        let initial = initial.clone();
                         async move {
-                            // Resolve the URL for this fetch
-                            let mut url = match state {
-                                azure_core::http::pager::PagerState::Initial => first_url,
+                            // Send the request (initial via send(); continuation via constructed URL)
+                            let rsp = match state {
+                                azure_core::http::pager::PagerState::Initial => {
+                                    // Use the extracted send() for the first page
+                                    initial.clone().send().await?.into_raw_response()
+                                }
                                 azure_core::http::pager::PagerState::More(next_url) => {
-                                    // Join the next_link (can be absolute or relative) against endpoint
+                                    // Build URL from continuation
                                     let mut u = client.endpoint().clone();
                                     u.set_path("");
                                     let mut u = u.join(next_url.as_ref())?;
@@ -716,21 +739,18 @@ pub mod private_clouds {
                                         u.query_pairs_mut()
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, &api_version);
                                     }
-                                    u
+                                    // Build and send the continuation request
+                                    let mut req = typespec_client_core::http::request::Request::new(u, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    req.insert_header(azure_core::http::headers::ACCEPT, "application/json");
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    client.send(&mut req).await?
                                 }
                             };
-
-                            // Build and send the request
-                            let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
-                            let bearer_token = client.bearer_token().await?;
-                            req.insert_header(
-                                azure_core::http::headers::AUTHORIZATION,
-                                format!("Bearer {}", bearer_token.secret()),
-                            );
-                            req.insert_header(azure_core::http::headers::ACCEPT, "application/json");
-                            req.set_body(azure_openapi_core::EMPTY_BODY);
-
-                            let rsp = client.send(&mut req).await?;
                             if !rsp.status().is_success() {
                                 return Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
                                     status: rsp.status(),
