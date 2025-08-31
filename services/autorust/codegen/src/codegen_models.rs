@@ -894,6 +894,8 @@ pub struct StructCode {
     default_code: TokenStream,
     props: Vec<StructPropCode>,
     continuable: Option<ContinuableCode>,
+    // When set, also emit an impl of azure_core::http::pager::Page for this struct
+    page_impl: Option<(Ident, TypeNameCode)>,
     implement_default: bool,
     new_fn_params: Vec<TokenStream>,
     new_fn_body: TokenStream,
@@ -909,12 +911,30 @@ impl ToTokens for StructCode {
             default_code,
             props,
             continuable,
+            page_impl,
             implement_default,
             new_fn_params,
             new_fn_body,
             mod_code,
             ns,
         } = self;
+
+        // Optional Page impl tokens
+        let page_impl_tokens: TokenStream = if let Some((field_name, field_type)) = page_impl {
+            quote! {
+                #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
+                #[cfg_attr(target_arch = "wasm32", async_trait::async_trait(?Send))]
+                impl azure_core::http::pager::Page for #struct_name_code {
+                    type Item = <#field_type as IntoIterator>::Item;
+                    type IntoIter = <#field_type as IntoIterator>::IntoIter;
+                    async fn into_items(self) -> azure_core::Result<Self::IntoIter> {
+                        Ok(self.#field_name.into_iter())
+                    }
+                }
+            }
+        } else {
+            TokenStream::new()
+        };
 
         let struct_code = quote! {
             #doc_comment
@@ -924,6 +944,7 @@ impl ToTokens for StructCode {
                 #(#props)*
             }
             #continuable
+            #page_impl_tokens
         };
         tokens.extend(struct_code);
 
@@ -1132,12 +1153,26 @@ fn create_struct(
 
     let continuable = ContinuableCode::from_pageable(struct_name_code.clone(), pageable, field_names)?;
 
+    // Determine if we can implement Page for this model based on x-ms-pageable.itemName (default 'value')
+    let page_impl: Option<(Ident, TypeNameCode)> = if let Some(pageable) = pageable {
+        let item_field = pageable.item_name.as_deref().unwrap_or("value");
+        let item_ident = item_field.to_snake_case_ident()?;
+        if let Some(prop) = props.iter().find(|p| p.field_name == item_ident) {
+            Some((prop.field_name.clone(), prop.field_type.clone()))
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+
     Ok(StructCode {
         doc_comment,
         struct_name_code,
         default_code,
         props,
         continuable,
+        page_impl,
         implement_default: schema.implement_default(),
         new_fn_params,
         new_fn_body,

@@ -246,6 +246,81 @@ pub mod operations {
                 }
                 Ok(url)
             }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
+            }
+            #[doc = "Return a Pager over pages (experimental)"]
+            pub fn into_pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::OperationListResult>> {
+                let client = self.client.clone();
+                let initial = self.clone();
+                Ok(azure_core::http::pager::Pager::from_callback(
+                    move |state: azure_core::http::pager::PagerState<String>| {
+                        let client = client.clone();
+                        let initial = initial.clone();
+                        async move {
+                            let rsp = match state {
+                                azure_core::http::pager::PagerState::Initial => initial.clone().send().await?.into_raw_response(),
+                                azure_core::http::pager::PagerState::More(next_url) => {
+                                    let mut url = client.endpoint().clone();
+                                    url.set_path("");
+                                    let url = url.join(next_url.as_ref())?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    let has_api_version_already = req
+                                        .url_mut()
+                                        .query_pairs()
+                                        .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                                    if !has_api_version_already {
+                                        req.url_mut()
+                                            .query_pairs_mut()
+                                            .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                                    }
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    client.send(&mut req).await?
+                                }
+                            };
+                            if !rsp.status().is_success() {
+                                return Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
+                                    status: rsp.status(),
+                                    error_code: None,
+                                }));
+                            }
+                            let (status, headers, body) = rsp.deconstruct();
+                            let bytes = body.collect().await?;
+                            let page: models::OperationListResult = serde_json::from_slice(&bytes)?;
+                            let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
+                            let response: azure_core::http::response::Response<models::OperationListResult, azure_core::http::JsonFormat> =
+                                raw.into();
+                            Ok(match azure_openapi_core::Continuable::continuation(&page) {
+                                Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
+                                None => azure_core::http::pager::PagerResult::Done { response },
+                            })
+                        }
+                    },
+                ))
+            }
         }
     }
 }
@@ -363,6 +438,28 @@ pub mod locations {
                 }
                 Ok(url)
             }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Post);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.insert_header(azure_core::http::headers::CONTENT_LENGTH, "0");
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
+            }
         }
     }
     pub mod check_trial_availability {
@@ -442,6 +539,32 @@ pub mod locations {
                         .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
+            }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Post);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = if let Some(sku) = &this.sku {
+                            req.insert_header("content-type", "application/json");
+                            azure_core::json::to_json(sku)?
+                        } else {
+                            azure_openapi_core::EMPTY_BODY
+                        };
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
             }
         }
     }
@@ -618,7 +741,6 @@ pub mod private_clouds {
     }
     pub mod list_in_subscription {
         use super::models;
-        use azure_openapi_core::Continuable as _;
         #[cfg(not(target_arch = "wasm32"))]
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
@@ -688,65 +810,57 @@ pub mod private_clouds {
                 }
                 Ok(url)
             }
-
-            #[doc = "Sends the request and returns the low-level response"]
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
             pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
                 Box::pin({
                     let this = self.clone();
                     async move {
                         let url = this.url()?;
-                        let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
                         let bearer_token = this.client.bearer_token().await?;
                         req.insert_header(
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        req.insert_header(azure_core::http::headers::ACCEPT, "application/json");
-                        req.set_body(azure_openapi_core::EMPTY_BODY);
-                        let rsp = this.client.send(&mut req).await?;
-                        Ok(Response(rsp))
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
             }
-
-            #[doc = "Return a Pager over PrivateCloudList pages (experimental)"]
+            #[doc = "Return a Pager over pages (experimental)"]
             pub fn into_pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::PrivateCloudList>> {
                 let client = self.client.clone();
-                let api_version = String::from("2024-09-01");
                 let initial = self.clone();
-
                 Ok(azure_core::http::pager::Pager::from_callback(
                     move |state: azure_core::http::pager::PagerState<String>| {
                         let client = client.clone();
-                        let api_version = api_version.clone();
                         let initial = initial.clone();
                         async move {
-                            // Send the request (initial via send(); continuation via constructed URL)
                             let rsp = match state {
-                                azure_core::http::pager::PagerState::Initial => {
-                                    // Use the extracted send() for the first page
-                                    initial.clone().send().await?.into_raw_response()
-                                }
+                                azure_core::http::pager::PagerState::Initial => initial.clone().send().await?.into_raw_response(),
                                 azure_core::http::pager::PagerState::More(next_url) => {
-                                    // Build URL from continuation
-                                    let mut u = client.endpoint().clone();
-                                    u.set_path("");
-                                    let mut u = u.join(next_url.as_ref())?;
-                                    let has_api_version_already = u
-                                        .query_pairs()
-                                        .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
-                                    if !has_api_version_already {
-                                        u.query_pairs_mut()
-                                            .append_pair(azure_core::http::headers::query_param::API_VERSION, &api_version);
-                                    }
-                                    // Build and send the continuation request
-                                    let mut req = typespec_client_core::http::request::Request::new(u, azure_core::http::Method::Get);
+                                    let mut url = client.endpoint().clone();
+                                    url.set_path("");
+                                    let url = url.join(next_url.as_ref())?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
                                     let bearer_token = client.bearer_token().await?;
                                     req.insert_header(
                                         azure_core::http::headers::AUTHORIZATION,
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
-                                    req.insert_header(azure_core::http::headers::ACCEPT, "application/json");
+                                    let has_api_version_already = req
+                                        .url_mut()
+                                        .query_pairs()
+                                        .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                                    if !has_api_version_already {
+                                        req.url_mut()
+                                            .query_pairs_mut()
+                                            .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                                    }
                                     req.set_body(azure_openapi_core::EMPTY_BODY);
                                     client.send(&mut req).await?
                                 }
@@ -757,18 +871,13 @@ pub mod private_clouds {
                                     error_code: None,
                                 }));
                             }
-
                             let (status, headers, body) = rsp.deconstruct();
                             let bytes = body.collect().await?;
                             let page: models::PrivateCloudList = serde_json::from_slice(&bytes)?;
-
-                            // Convert back into a typed Response expected by Pager
-                            let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes.clone());
+                            let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
                             let response: azure_core::http::response::Response<models::PrivateCloudList, azure_core::http::JsonFormat> =
                                 raw.into();
-
-                            // Yield next or finish depending on continuation
-                            Ok(match page.continuation() {
+                            Ok(match azure_openapi_core::Continuable::continuation(&page) {
                                 Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
                                 None => azure_core::http::pager::PagerResult::Done { response },
                             })
@@ -850,6 +959,81 @@ pub mod private_clouds {
                 }
                 Ok(url)
             }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
+            }
+            #[doc = "Return a Pager over pages (experimental)"]
+            pub fn into_pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::PrivateCloudList>> {
+                let client = self.client.clone();
+                let initial = self.clone();
+                Ok(azure_core::http::pager::Pager::from_callback(
+                    move |state: azure_core::http::pager::PagerState<String>| {
+                        let client = client.clone();
+                        let initial = initial.clone();
+                        async move {
+                            let rsp = match state {
+                                azure_core::http::pager::PagerState::Initial => initial.clone().send().await?.into_raw_response(),
+                                azure_core::http::pager::PagerState::More(next_url) => {
+                                    let mut url = client.endpoint().clone();
+                                    url.set_path("");
+                                    let url = url.join(next_url.as_ref())?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    let has_api_version_already = req
+                                        .url_mut()
+                                        .query_pairs()
+                                        .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                                    if !has_api_version_already {
+                                        req.url_mut()
+                                            .query_pairs_mut()
+                                            .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                                    }
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    client.send(&mut req).await?
+                                }
+                            };
+                            if !rsp.status().is_success() {
+                                return Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
+                                    status: rsp.status(),
+                                    error_code: None,
+                                }));
+                            }
+                            let (status, headers, body) = rsp.deconstruct();
+                            let bytes = body.collect().await?;
+                            let page: models::PrivateCloudList = serde_json::from_slice(&bytes)?;
+                            let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
+                            let response: azure_core::http::response::Response<models::PrivateCloudList, azure_core::http::JsonFormat> =
+                                raw.into();
+                            Ok(match azure_openapi_core::Continuable::continuation(&page) {
+                                Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
+                                None => azure_core::http::pager::PagerResult::Done { response },
+                            })
+                        }
+                    },
+                ))
+            }
         }
     }
     pub mod get {
@@ -924,6 +1108,27 @@ pub mod private_clouds {
                         .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
+            }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
             }
         }
     }
@@ -1009,6 +1214,28 @@ pub mod private_clouds {
                         .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
+            }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Put);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        req.insert_header("content-type", "application/json");
+                        let req_body = azure_core::json::to_json(&this.private_cloud)?;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
             }
         }
     }
@@ -1099,6 +1326,28 @@ pub mod private_clouds {
                 }
                 Ok(url)
             }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Patch);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        req.insert_header("content-type", "application/json");
+                        let req_body = azure_core::json::to_json(&this.private_cloud_update)?;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
+            }
         }
     }
     pub mod delete {
@@ -1181,6 +1430,27 @@ pub mod private_clouds {
                 }
                 Ok(url)
             }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Delete);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
+            }
         }
     }
     pub mod list_admin_credentials {
@@ -1255,6 +1525,28 @@ pub mod private_clouds {
                         .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
+            }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Post);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.insert_header(azure_core::http::headers::CONTENT_LENGTH, "0");
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
             }
         }
     }
@@ -1338,6 +1630,28 @@ pub mod private_clouds {
                 }
                 Ok(url)
             }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Post);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.insert_header(azure_core::http::headers::CONTENT_LENGTH, "0");
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
+            }
         }
     }
     pub mod rotate_vcenter_password {
@@ -1419,6 +1733,28 @@ pub mod private_clouds {
                         .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
+            }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Post);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.insert_header(azure_core::http::headers::CONTENT_LENGTH, "0");
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
             }
         }
     }
@@ -1509,6 +1845,81 @@ pub mod skus {
                         .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
+            }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
+            }
+            #[doc = "Return a Pager over pages (experimental)"]
+            pub fn into_pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::PagedResourceSku>> {
+                let client = self.client.clone();
+                let initial = self.clone();
+                Ok(azure_core::http::pager::Pager::from_callback(
+                    move |state: azure_core::http::pager::PagerState<String>| {
+                        let client = client.clone();
+                        let initial = initial.clone();
+                        async move {
+                            let rsp = match state {
+                                azure_core::http::pager::PagerState::Initial => initial.clone().send().await?.into_raw_response(),
+                                azure_core::http::pager::PagerState::More(next_url) => {
+                                    let mut url = client.endpoint().clone();
+                                    url.set_path("");
+                                    let url = url.join(next_url.as_ref())?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    let has_api_version_already = req
+                                        .url_mut()
+                                        .query_pairs()
+                                        .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                                    if !has_api_version_already {
+                                        req.url_mut()
+                                            .query_pairs_mut()
+                                            .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                                    }
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    client.send(&mut req).await?
+                                }
+                            };
+                            if !rsp.status().is_success() {
+                                return Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
+                                    status: rsp.status(),
+                                    error_code: None,
+                                }));
+                            }
+                            let (status, headers, body) = rsp.deconstruct();
+                            let bytes = body.collect().await?;
+                            let page: models::PagedResourceSku = serde_json::from_slice(&bytes)?;
+                            let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
+                            let response: azure_core::http::response::Response<models::PagedResourceSku, azure_core::http::JsonFormat> =
+                                raw.into();
+                            Ok(match azure_openapi_core::Continuable::continuation(&page) {
+                                Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
+                                None => azure_core::http::pager::PagerResult::Done { response },
+                            })
+                        }
+                    },
+                ))
             }
         }
     }
@@ -1683,6 +2094,81 @@ pub mod addons {
                 }
                 Ok(url)
             }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
+            }
+            #[doc = "Return a Pager over pages (experimental)"]
+            pub fn into_pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::AddonList>> {
+                let client = self.client.clone();
+                let initial = self.clone();
+                Ok(azure_core::http::pager::Pager::from_callback(
+                    move |state: azure_core::http::pager::PagerState<String>| {
+                        let client = client.clone();
+                        let initial = initial.clone();
+                        async move {
+                            let rsp = match state {
+                                azure_core::http::pager::PagerState::Initial => initial.clone().send().await?.into_raw_response(),
+                                azure_core::http::pager::PagerState::More(next_url) => {
+                                    let mut url = client.endpoint().clone();
+                                    url.set_path("");
+                                    let url = url.join(next_url.as_ref())?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    let has_api_version_already = req
+                                        .url_mut()
+                                        .query_pairs()
+                                        .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                                    if !has_api_version_already {
+                                        req.url_mut()
+                                            .query_pairs_mut()
+                                            .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                                    }
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    client.send(&mut req).await?
+                                }
+                            };
+                            if !rsp.status().is_success() {
+                                return Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
+                                    status: rsp.status(),
+                                    error_code: None,
+                                }));
+                            }
+                            let (status, headers, body) = rsp.deconstruct();
+                            let bytes = body.collect().await?;
+                            let page: models::AddonList = serde_json::from_slice(&bytes)?;
+                            let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
+                            let response: azure_core::http::response::Response<models::AddonList, azure_core::http::JsonFormat> =
+                                raw.into();
+                            Ok(match azure_openapi_core::Continuable::continuation(&page) {
+                                Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
+                                None => azure_core::http::pager::PagerResult::Done { response },
+                            })
+                        }
+                    },
+                ))
+            }
         }
     }
     pub mod get {
@@ -1758,6 +2244,27 @@ pub mod addons {
                         .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
+            }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
             }
         }
     }
@@ -1845,6 +2352,28 @@ pub mod addons {
                 }
                 Ok(url)
             }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Put);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        req.insert_header("content-type", "application/json");
+                        let req_body = azure_core::json::to_json(&this.addon)?;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
+            }
         }
     }
     pub mod delete {
@@ -1927,6 +2456,27 @@ pub mod addons {
                         .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
+            }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Delete);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
             }
         }
     }
@@ -2101,6 +2651,83 @@ pub mod authorizations {
                 }
                 Ok(url)
             }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
+            }
+            #[doc = "Return a Pager over pages (experimental)"]
+            pub fn into_pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::ExpressRouteAuthorizationList>> {
+                let client = self.client.clone();
+                let initial = self.clone();
+                Ok(azure_core::http::pager::Pager::from_callback(
+                    move |state: azure_core::http::pager::PagerState<String>| {
+                        let client = client.clone();
+                        let initial = initial.clone();
+                        async move {
+                            let rsp = match state {
+                                azure_core::http::pager::PagerState::Initial => initial.clone().send().await?.into_raw_response(),
+                                azure_core::http::pager::PagerState::More(next_url) => {
+                                    let mut url = client.endpoint().clone();
+                                    url.set_path("");
+                                    let url = url.join(next_url.as_ref())?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    let has_api_version_already = req
+                                        .url_mut()
+                                        .query_pairs()
+                                        .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                                    if !has_api_version_already {
+                                        req.url_mut()
+                                            .query_pairs_mut()
+                                            .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                                    }
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    client.send(&mut req).await?
+                                }
+                            };
+                            if !rsp.status().is_success() {
+                                return Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
+                                    status: rsp.status(),
+                                    error_code: None,
+                                }));
+                            }
+                            let (status, headers, body) = rsp.deconstruct();
+                            let bytes = body.collect().await?;
+                            let page: models::ExpressRouteAuthorizationList = serde_json::from_slice(&bytes)?;
+                            let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
+                            let response: azure_core::http::response::Response<
+                                models::ExpressRouteAuthorizationList,
+                                azure_core::http::JsonFormat,
+                            > = raw.into();
+                            Ok(match azure_openapi_core::Continuable::continuation(&page) {
+                                Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
+                                None => azure_core::http::pager::PagerResult::Done { response },
+                            })
+                        }
+                    },
+                ))
+            }
         }
     }
     pub mod get {
@@ -2176,6 +2803,27 @@ pub mod authorizations {
                         .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
+            }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
             }
         }
     }
@@ -2263,6 +2911,28 @@ pub mod authorizations {
                 }
                 Ok(url)
             }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Put);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        req.insert_header("content-type", "application/json");
+                        let req_body = azure_core::json::to_json(&this.authorization)?;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
+            }
         }
     }
     pub mod delete {
@@ -2345,6 +3015,27 @@ pub mod authorizations {
                         .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
+            }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Delete);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
             }
         }
     }
@@ -2519,6 +3210,81 @@ pub mod cloud_links {
                 }
                 Ok(url)
             }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
+            }
+            #[doc = "Return a Pager over pages (experimental)"]
+            pub fn into_pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::CloudLinkList>> {
+                let client = self.client.clone();
+                let initial = self.clone();
+                Ok(azure_core::http::pager::Pager::from_callback(
+                    move |state: azure_core::http::pager::PagerState<String>| {
+                        let client = client.clone();
+                        let initial = initial.clone();
+                        async move {
+                            let rsp = match state {
+                                azure_core::http::pager::PagerState::Initial => initial.clone().send().await?.into_raw_response(),
+                                azure_core::http::pager::PagerState::More(next_url) => {
+                                    let mut url = client.endpoint().clone();
+                                    url.set_path("");
+                                    let url = url.join(next_url.as_ref())?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    let has_api_version_already = req
+                                        .url_mut()
+                                        .query_pairs()
+                                        .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                                    if !has_api_version_already {
+                                        req.url_mut()
+                                            .query_pairs_mut()
+                                            .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                                    }
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    client.send(&mut req).await?
+                                }
+                            };
+                            if !rsp.status().is_success() {
+                                return Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
+                                    status: rsp.status(),
+                                    error_code: None,
+                                }));
+                            }
+                            let (status, headers, body) = rsp.deconstruct();
+                            let bytes = body.collect().await?;
+                            let page: models::CloudLinkList = serde_json::from_slice(&bytes)?;
+                            let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
+                            let response: azure_core::http::response::Response<models::CloudLinkList, azure_core::http::JsonFormat> =
+                                raw.into();
+                            Ok(match azure_openapi_core::Continuable::continuation(&page) {
+                                Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
+                                None => azure_core::http::pager::PagerResult::Done { response },
+                            })
+                        }
+                    },
+                ))
+            }
         }
     }
     pub mod get {
@@ -2594,6 +3360,27 @@ pub mod cloud_links {
                         .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
+            }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
             }
         }
     }
@@ -2681,6 +3468,28 @@ pub mod cloud_links {
                 }
                 Ok(url)
             }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Put);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        req.insert_header("content-type", "application/json");
+                        let req_body = azure_core::json::to_json(&this.cloud_link)?;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
+            }
         }
     }
     pub mod delete {
@@ -2763,6 +3572,27 @@ pub mod cloud_links {
                         .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
+            }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Delete);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
             }
         }
     }
@@ -2984,6 +3814,81 @@ pub mod clusters {
                 }
                 Ok(url)
             }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
+            }
+            #[doc = "Return a Pager over pages (experimental)"]
+            pub fn into_pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::ClusterList>> {
+                let client = self.client.clone();
+                let initial = self.clone();
+                Ok(azure_core::http::pager::Pager::from_callback(
+                    move |state: azure_core::http::pager::PagerState<String>| {
+                        let client = client.clone();
+                        let initial = initial.clone();
+                        async move {
+                            let rsp = match state {
+                                azure_core::http::pager::PagerState::Initial => initial.clone().send().await?.into_raw_response(),
+                                azure_core::http::pager::PagerState::More(next_url) => {
+                                    let mut url = client.endpoint().clone();
+                                    url.set_path("");
+                                    let url = url.join(next_url.as_ref())?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    let has_api_version_already = req
+                                        .url_mut()
+                                        .query_pairs()
+                                        .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                                    if !has_api_version_already {
+                                        req.url_mut()
+                                            .query_pairs_mut()
+                                            .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                                    }
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    client.send(&mut req).await?
+                                }
+                            };
+                            if !rsp.status().is_success() {
+                                return Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
+                                    status: rsp.status(),
+                                    error_code: None,
+                                }));
+                            }
+                            let (status, headers, body) = rsp.deconstruct();
+                            let bytes = body.collect().await?;
+                            let page: models::ClusterList = serde_json::from_slice(&bytes)?;
+                            let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
+                            let response: azure_core::http::response::Response<models::ClusterList, azure_core::http::JsonFormat> =
+                                raw.into();
+                            Ok(match azure_openapi_core::Continuable::continuation(&page) {
+                                Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
+                                None => azure_core::http::pager::PagerResult::Done { response },
+                            })
+                        }
+                    },
+                ))
+            }
         }
     }
     pub mod get {
@@ -3059,6 +3964,27 @@ pub mod clusters {
                         .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
+            }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
             }
         }
     }
@@ -3145,6 +4071,28 @@ pub mod clusters {
                         .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
+            }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Put);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        req.insert_header("content-type", "application/json");
+                        let req_body = azure_core::json::to_json(&this.cluster)?;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
             }
         }
     }
@@ -3236,6 +4184,28 @@ pub mod clusters {
                 }
                 Ok(url)
             }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Patch);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        req.insert_header("content-type", "application/json");
+                        let req_body = azure_core::json::to_json(&this.cluster_update)?;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
+            }
         }
     }
     pub mod delete {
@@ -3319,6 +4289,27 @@ pub mod clusters {
                 }
                 Ok(url)
             }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Delete);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
+            }
         }
     }
     pub mod list_zones {
@@ -3394,6 +4385,28 @@ pub mod clusters {
                         .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
+            }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Post);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.insert_header(azure_core::http::headers::CONTENT_LENGTH, "0");
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
             }
         }
     }
@@ -3581,6 +4594,81 @@ pub mod datastores {
                 }
                 Ok(url)
             }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
+            }
+            #[doc = "Return a Pager over pages (experimental)"]
+            pub fn into_pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::DatastoreList>> {
+                let client = self.client.clone();
+                let initial = self.clone();
+                Ok(azure_core::http::pager::Pager::from_callback(
+                    move |state: azure_core::http::pager::PagerState<String>| {
+                        let client = client.clone();
+                        let initial = initial.clone();
+                        async move {
+                            let rsp = match state {
+                                azure_core::http::pager::PagerState::Initial => initial.clone().send().await?.into_raw_response(),
+                                azure_core::http::pager::PagerState::More(next_url) => {
+                                    let mut url = client.endpoint().clone();
+                                    url.set_path("");
+                                    let url = url.join(next_url.as_ref())?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    let has_api_version_already = req
+                                        .url_mut()
+                                        .query_pairs()
+                                        .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                                    if !has_api_version_already {
+                                        req.url_mut()
+                                            .query_pairs_mut()
+                                            .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                                    }
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    client.send(&mut req).await?
+                                }
+                            };
+                            if !rsp.status().is_success() {
+                                return Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
+                                    status: rsp.status(),
+                                    error_code: None,
+                                }));
+                            }
+                            let (status, headers, body) = rsp.deconstruct();
+                            let bytes = body.collect().await?;
+                            let page: models::DatastoreList = serde_json::from_slice(&bytes)?;
+                            let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
+                            let response: azure_core::http::response::Response<models::DatastoreList, azure_core::http::JsonFormat> =
+                                raw.into();
+                            Ok(match azure_openapi_core::Continuable::continuation(&page) {
+                                Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
+                                None => azure_core::http::pager::PagerResult::Done { response },
+                            })
+                        }
+                    },
+                ))
+            }
         }
     }
     pub mod get {
@@ -3657,6 +4745,27 @@ pub mod datastores {
                         .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
+            }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
             }
         }
     }
@@ -3745,6 +4854,28 @@ pub mod datastores {
                 }
                 Ok(url)
             }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Put);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        req.insert_header("content-type", "application/json");
+                        let req_body = azure_core::json::to_json(&this.datastore)?;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
+            }
         }
     }
     pub mod delete {
@@ -3828,6 +4959,27 @@ pub mod datastores {
                         .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
+            }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Delete);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
             }
         }
     }
@@ -3962,6 +5114,81 @@ pub mod hosts {
                 }
                 Ok(url)
             }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
+            }
+            #[doc = "Return a Pager over pages (experimental)"]
+            pub fn into_pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::HostListResult>> {
+                let client = self.client.clone();
+                let initial = self.clone();
+                Ok(azure_core::http::pager::Pager::from_callback(
+                    move |state: azure_core::http::pager::PagerState<String>| {
+                        let client = client.clone();
+                        let initial = initial.clone();
+                        async move {
+                            let rsp = match state {
+                                azure_core::http::pager::PagerState::Initial => initial.clone().send().await?.into_raw_response(),
+                                azure_core::http::pager::PagerState::More(next_url) => {
+                                    let mut url = client.endpoint().clone();
+                                    url.set_path("");
+                                    let url = url.join(next_url.as_ref())?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    let has_api_version_already = req
+                                        .url_mut()
+                                        .query_pairs()
+                                        .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                                    if !has_api_version_already {
+                                        req.url_mut()
+                                            .query_pairs_mut()
+                                            .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                                    }
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    client.send(&mut req).await?
+                                }
+                            };
+                            if !rsp.status().is_success() {
+                                return Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
+                                    status: rsp.status(),
+                                    error_code: None,
+                                }));
+                            }
+                            let (status, headers, body) = rsp.deconstruct();
+                            let bytes = body.collect().await?;
+                            let page: models::HostListResult = serde_json::from_slice(&bytes)?;
+                            let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
+                            let response: azure_core::http::response::Response<models::HostListResult, azure_core::http::JsonFormat> =
+                                raw.into();
+                            Ok(match azure_openapi_core::Continuable::continuation(&page) {
+                                Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
+                                None => azure_core::http::pager::PagerResult::Done { response },
+                            })
+                        }
+                    },
+                ))
+            }
         }
     }
     pub mod get {
@@ -4038,6 +5265,27 @@ pub mod hosts {
                         .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
+            }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
             }
         }
     }
@@ -4253,6 +5501,83 @@ pub mod placement_policies {
                 }
                 Ok(url)
             }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
+            }
+            #[doc = "Return a Pager over pages (experimental)"]
+            pub fn into_pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::PlacementPoliciesList>> {
+                let client = self.client.clone();
+                let initial = self.clone();
+                Ok(azure_core::http::pager::Pager::from_callback(
+                    move |state: azure_core::http::pager::PagerState<String>| {
+                        let client = client.clone();
+                        let initial = initial.clone();
+                        async move {
+                            let rsp = match state {
+                                azure_core::http::pager::PagerState::Initial => initial.clone().send().await?.into_raw_response(),
+                                azure_core::http::pager::PagerState::More(next_url) => {
+                                    let mut url = client.endpoint().clone();
+                                    url.set_path("");
+                                    let url = url.join(next_url.as_ref())?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    let has_api_version_already = req
+                                        .url_mut()
+                                        .query_pairs()
+                                        .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                                    if !has_api_version_already {
+                                        req.url_mut()
+                                            .query_pairs_mut()
+                                            .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                                    }
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    client.send(&mut req).await?
+                                }
+                            };
+                            if !rsp.status().is_success() {
+                                return Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
+                                    status: rsp.status(),
+                                    error_code: None,
+                                }));
+                            }
+                            let (status, headers, body) = rsp.deconstruct();
+                            let bytes = body.collect().await?;
+                            let page: models::PlacementPoliciesList = serde_json::from_slice(&bytes)?;
+                            let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
+                            let response: azure_core::http::response::Response<
+                                models::PlacementPoliciesList,
+                                azure_core::http::JsonFormat,
+                            > = raw.into();
+                            Ok(match azure_openapi_core::Continuable::continuation(&page) {
+                                Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
+                                None => azure_core::http::pager::PagerResult::Done { response },
+                            })
+                        }
+                    },
+                ))
+            }
         }
     }
     pub mod get {
@@ -4333,6 +5658,27 @@ pub mod placement_policies {
                         .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
+            }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
             }
         }
     }
@@ -4424,6 +5770,28 @@ pub mod placement_policies {
                         .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
+            }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Put);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        req.insert_header("content-type", "application/json");
+                        let req_body = azure_core::json::to_json(&this.placement_policy)?;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
             }
         }
     }
@@ -4520,6 +5888,28 @@ pub mod placement_policies {
                 }
                 Ok(url)
             }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Patch);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        req.insert_header("content-type", "application/json");
+                        let req_body = azure_core::json::to_json(&this.placement_policy_update)?;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
+            }
         }
     }
     pub mod delete {
@@ -4607,6 +5997,27 @@ pub mod placement_policies {
                         .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
+            }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Delete);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
             }
         }
     }
@@ -4769,6 +6180,81 @@ pub mod virtual_machines {
                 }
                 Ok(url)
             }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
+            }
+            #[doc = "Return a Pager over pages (experimental)"]
+            pub fn into_pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::VirtualMachinesList>> {
+                let client = self.client.clone();
+                let initial = self.clone();
+                Ok(azure_core::http::pager::Pager::from_callback(
+                    move |state: azure_core::http::pager::PagerState<String>| {
+                        let client = client.clone();
+                        let initial = initial.clone();
+                        async move {
+                            let rsp = match state {
+                                azure_core::http::pager::PagerState::Initial => initial.clone().send().await?.into_raw_response(),
+                                azure_core::http::pager::PagerState::More(next_url) => {
+                                    let mut url = client.endpoint().clone();
+                                    url.set_path("");
+                                    let url = url.join(next_url.as_ref())?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    let has_api_version_already = req
+                                        .url_mut()
+                                        .query_pairs()
+                                        .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                                    if !has_api_version_already {
+                                        req.url_mut()
+                                            .query_pairs_mut()
+                                            .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                                    }
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    client.send(&mut req).await?
+                                }
+                            };
+                            if !rsp.status().is_success() {
+                                return Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
+                                    status: rsp.status(),
+                                    error_code: None,
+                                }));
+                            }
+                            let (status, headers, body) = rsp.deconstruct();
+                            let bytes = body.collect().await?;
+                            let page: models::VirtualMachinesList = serde_json::from_slice(&bytes)?;
+                            let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
+                            let response: azure_core::http::response::Response<models::VirtualMachinesList, azure_core::http::JsonFormat> =
+                                raw.into();
+                            Ok(match azure_openapi_core::Continuable::continuation(&page) {
+                                Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
+                                None => azure_core::http::pager::PagerResult::Done { response },
+                            })
+                        }
+                    },
+                ))
+            }
         }
     }
     pub mod get {
@@ -4849,6 +6335,27 @@ pub mod virtual_machines {
                         .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
+            }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
             }
         }
     }
@@ -4931,6 +6438,28 @@ pub mod virtual_machines {
                         .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
+            }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Post);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        req.insert_header("content-type", "application/json");
+                        let req_body = azure_core::json::to_json(&this.restrict_movement)?;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
             }
         }
     }
@@ -5105,6 +6634,83 @@ pub mod global_reach_connections {
                 }
                 Ok(url)
             }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
+            }
+            #[doc = "Return a Pager over pages (experimental)"]
+            pub fn into_pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::GlobalReachConnectionList>> {
+                let client = self.client.clone();
+                let initial = self.clone();
+                Ok(azure_core::http::pager::Pager::from_callback(
+                    move |state: azure_core::http::pager::PagerState<String>| {
+                        let client = client.clone();
+                        let initial = initial.clone();
+                        async move {
+                            let rsp = match state {
+                                azure_core::http::pager::PagerState::Initial => initial.clone().send().await?.into_raw_response(),
+                                azure_core::http::pager::PagerState::More(next_url) => {
+                                    let mut url = client.endpoint().clone();
+                                    url.set_path("");
+                                    let url = url.join(next_url.as_ref())?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    let has_api_version_already = req
+                                        .url_mut()
+                                        .query_pairs()
+                                        .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                                    if !has_api_version_already {
+                                        req.url_mut()
+                                            .query_pairs_mut()
+                                            .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                                    }
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    client.send(&mut req).await?
+                                }
+                            };
+                            if !rsp.status().is_success() {
+                                return Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
+                                    status: rsp.status(),
+                                    error_code: None,
+                                }));
+                            }
+                            let (status, headers, body) = rsp.deconstruct();
+                            let bytes = body.collect().await?;
+                            let page: models::GlobalReachConnectionList = serde_json::from_slice(&bytes)?;
+                            let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
+                            let response: azure_core::http::response::Response<
+                                models::GlobalReachConnectionList,
+                                azure_core::http::JsonFormat,
+                            > = raw.into();
+                            Ok(match azure_openapi_core::Continuable::continuation(&page) {
+                                Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
+                                None => azure_core::http::pager::PagerResult::Done { response },
+                            })
+                        }
+                    },
+                ))
+            }
         }
     }
     pub mod get {
@@ -5180,6 +6786,27 @@ pub mod global_reach_connections {
                         .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
+            }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
             }
         }
     }
@@ -5267,6 +6894,28 @@ pub mod global_reach_connections {
                 }
                 Ok(url)
             }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Put);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        req.insert_header("content-type", "application/json");
+                        let req_body = azure_core::json::to_json(&this.global_reach_connection)?;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
+            }
         }
     }
     pub mod delete {
@@ -5349,6 +6998,27 @@ pub mod global_reach_connections {
                         .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
+            }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Delete);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
             }
         }
     }
@@ -5523,6 +7193,83 @@ pub mod hcx_enterprise_sites {
                 }
                 Ok(url)
             }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
+            }
+            #[doc = "Return a Pager over pages (experimental)"]
+            pub fn into_pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::HcxEnterpriseSiteList>> {
+                let client = self.client.clone();
+                let initial = self.clone();
+                Ok(azure_core::http::pager::Pager::from_callback(
+                    move |state: azure_core::http::pager::PagerState<String>| {
+                        let client = client.clone();
+                        let initial = initial.clone();
+                        async move {
+                            let rsp = match state {
+                                azure_core::http::pager::PagerState::Initial => initial.clone().send().await?.into_raw_response(),
+                                azure_core::http::pager::PagerState::More(next_url) => {
+                                    let mut url = client.endpoint().clone();
+                                    url.set_path("");
+                                    let url = url.join(next_url.as_ref())?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    let has_api_version_already = req
+                                        .url_mut()
+                                        .query_pairs()
+                                        .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                                    if !has_api_version_already {
+                                        req.url_mut()
+                                            .query_pairs_mut()
+                                            .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                                    }
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    client.send(&mut req).await?
+                                }
+                            };
+                            if !rsp.status().is_success() {
+                                return Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
+                                    status: rsp.status(),
+                                    error_code: None,
+                                }));
+                            }
+                            let (status, headers, body) = rsp.deconstruct();
+                            let bytes = body.collect().await?;
+                            let page: models::HcxEnterpriseSiteList = serde_json::from_slice(&bytes)?;
+                            let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
+                            let response: azure_core::http::response::Response<
+                                models::HcxEnterpriseSiteList,
+                                azure_core::http::JsonFormat,
+                            > = raw.into();
+                            Ok(match azure_openapi_core::Continuable::continuation(&page) {
+                                Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
+                                None => azure_core::http::pager::PagerResult::Done { response },
+                            })
+                        }
+                    },
+                ))
+            }
         }
     }
     pub mod get {
@@ -5598,6 +7345,27 @@ pub mod hcx_enterprise_sites {
                         .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
+            }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
             }
         }
     }
@@ -5676,6 +7444,28 @@ pub mod hcx_enterprise_sites {
                 }
                 Ok(url)
             }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Put);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        req.insert_header("content-type", "application/json");
+                        let req_body = azure_core::json::to_json(&this.hcx_enterprise_site)?;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
+            }
         }
     }
     pub mod delete {
@@ -5745,6 +7535,27 @@ pub mod hcx_enterprise_sites {
                         .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
+            }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Delete);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
             }
         }
     }
@@ -5910,6 +7721,81 @@ pub mod iscsi_paths {
                 }
                 Ok(url)
             }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
+            }
+            #[doc = "Return a Pager over pages (experimental)"]
+            pub fn into_pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::IscsiPathListResult>> {
+                let client = self.client.clone();
+                let initial = self.clone();
+                Ok(azure_core::http::pager::Pager::from_callback(
+                    move |state: azure_core::http::pager::PagerState<String>| {
+                        let client = client.clone();
+                        let initial = initial.clone();
+                        async move {
+                            let rsp = match state {
+                                azure_core::http::pager::PagerState::Initial => initial.clone().send().await?.into_raw_response(),
+                                azure_core::http::pager::PagerState::More(next_url) => {
+                                    let mut url = client.endpoint().clone();
+                                    url.set_path("");
+                                    let url = url.join(next_url.as_ref())?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    let has_api_version_already = req
+                                        .url_mut()
+                                        .query_pairs()
+                                        .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                                    if !has_api_version_already {
+                                        req.url_mut()
+                                            .query_pairs_mut()
+                                            .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                                    }
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    client.send(&mut req).await?
+                                }
+                            };
+                            if !rsp.status().is_success() {
+                                return Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
+                                    status: rsp.status(),
+                                    error_code: None,
+                                }));
+                            }
+                            let (status, headers, body) = rsp.deconstruct();
+                            let bytes = body.collect().await?;
+                            let page: models::IscsiPathListResult = serde_json::from_slice(&bytes)?;
+                            let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
+                            let response: azure_core::http::response::Response<models::IscsiPathListResult, azure_core::http::JsonFormat> =
+                                raw.into();
+                            Ok(match azure_openapi_core::Continuable::continuation(&page) {
+                                Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
+                                None => azure_core::http::pager::PagerResult::Done { response },
+                            })
+                        }
+                    },
+                ))
+            }
         }
     }
     pub mod get {
@@ -5984,6 +7870,27 @@ pub mod iscsi_paths {
                         .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
+            }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
             }
         }
     }
@@ -6070,6 +7977,28 @@ pub mod iscsi_paths {
                 }
                 Ok(url)
             }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Put);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        req.insert_header("content-type", "application/json");
+                        let req_body = azure_core::json::to_json(&this.resource)?;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
+            }
         }
     }
     pub mod delete {
@@ -6151,6 +8080,27 @@ pub mod iscsi_paths {
                         .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
+            }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Delete);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
             }
         }
     }
@@ -6278,6 +8228,83 @@ pub mod provisioned_networks {
                 }
                 Ok(url)
             }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
+            }
+            #[doc = "Return a Pager over pages (experimental)"]
+            pub fn into_pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::ProvisionedNetworkListResult>> {
+                let client = self.client.clone();
+                let initial = self.clone();
+                Ok(azure_core::http::pager::Pager::from_callback(
+                    move |state: azure_core::http::pager::PagerState<String>| {
+                        let client = client.clone();
+                        let initial = initial.clone();
+                        async move {
+                            let rsp = match state {
+                                azure_core::http::pager::PagerState::Initial => initial.clone().send().await?.into_raw_response(),
+                                azure_core::http::pager::PagerState::More(next_url) => {
+                                    let mut url = client.endpoint().clone();
+                                    url.set_path("");
+                                    let url = url.join(next_url.as_ref())?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    let has_api_version_already = req
+                                        .url_mut()
+                                        .query_pairs()
+                                        .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                                    if !has_api_version_already {
+                                        req.url_mut()
+                                            .query_pairs_mut()
+                                            .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                                    }
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    client.send(&mut req).await?
+                                }
+                            };
+                            if !rsp.status().is_success() {
+                                return Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
+                                    status: rsp.status(),
+                                    error_code: None,
+                                }));
+                            }
+                            let (status, headers, body) = rsp.deconstruct();
+                            let bytes = body.collect().await?;
+                            let page: models::ProvisionedNetworkListResult = serde_json::from_slice(&bytes)?;
+                            let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
+                            let response: azure_core::http::response::Response<
+                                models::ProvisionedNetworkListResult,
+                                azure_core::http::JsonFormat,
+                            > = raw.into();
+                            Ok(match azure_openapi_core::Continuable::continuation(&page) {
+                                Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
+                                None => azure_core::http::pager::PagerResult::Done { response },
+                            })
+                        }
+                    },
+                ))
+            }
         }
     }
     pub mod get {
@@ -6353,6 +8380,27 @@ pub mod provisioned_networks {
                         .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
+            }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
             }
         }
     }
@@ -6527,6 +8575,83 @@ pub mod pure_storage_policies {
                 }
                 Ok(url)
             }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
+            }
+            #[doc = "Return a Pager over pages (experimental)"]
+            pub fn into_pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::PureStoragePolicyListResult>> {
+                let client = self.client.clone();
+                let initial = self.clone();
+                Ok(azure_core::http::pager::Pager::from_callback(
+                    move |state: azure_core::http::pager::PagerState<String>| {
+                        let client = client.clone();
+                        let initial = initial.clone();
+                        async move {
+                            let rsp = match state {
+                                azure_core::http::pager::PagerState::Initial => initial.clone().send().await?.into_raw_response(),
+                                azure_core::http::pager::PagerState::More(next_url) => {
+                                    let mut url = client.endpoint().clone();
+                                    url.set_path("");
+                                    let url = url.join(next_url.as_ref())?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    let has_api_version_already = req
+                                        .url_mut()
+                                        .query_pairs()
+                                        .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                                    if !has_api_version_already {
+                                        req.url_mut()
+                                            .query_pairs_mut()
+                                            .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                                    }
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    client.send(&mut req).await?
+                                }
+                            };
+                            if !rsp.status().is_success() {
+                                return Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
+                                    status: rsp.status(),
+                                    error_code: None,
+                                }));
+                            }
+                            let (status, headers, body) = rsp.deconstruct();
+                            let bytes = body.collect().await?;
+                            let page: models::PureStoragePolicyListResult = serde_json::from_slice(&bytes)?;
+                            let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
+                            let response: azure_core::http::response::Response<
+                                models::PureStoragePolicyListResult,
+                                azure_core::http::JsonFormat,
+                            > = raw.into();
+                            Ok(match azure_openapi_core::Continuable::continuation(&page) {
+                                Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
+                                None => azure_core::http::pager::PagerResult::Done { response },
+                            })
+                        }
+                    },
+                ))
+            }
         }
     }
     pub mod get {
@@ -6602,6 +8727,27 @@ pub mod pure_storage_policies {
                         .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
+            }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
             }
         }
     }
@@ -6694,6 +8840,28 @@ pub mod pure_storage_policies {
                 }
                 Ok(url)
             }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Put);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        req.insert_header("content-type", "application/json");
+                        let req_body = azure_core::json::to_json(&this.resource)?;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
+            }
         }
     }
     pub mod delete {
@@ -6776,6 +8944,27 @@ pub mod pure_storage_policies {
                         .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
+            }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Delete);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
             }
         }
     }
@@ -6973,6 +9162,81 @@ pub mod script_executions {
                 }
                 Ok(url)
             }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
+            }
+            #[doc = "Return a Pager over pages (experimental)"]
+            pub fn into_pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::ScriptExecutionsList>> {
+                let client = self.client.clone();
+                let initial = self.clone();
+                Ok(azure_core::http::pager::Pager::from_callback(
+                    move |state: azure_core::http::pager::PagerState<String>| {
+                        let client = client.clone();
+                        let initial = initial.clone();
+                        async move {
+                            let rsp = match state {
+                                azure_core::http::pager::PagerState::Initial => initial.clone().send().await?.into_raw_response(),
+                                azure_core::http::pager::PagerState::More(next_url) => {
+                                    let mut url = client.endpoint().clone();
+                                    url.set_path("");
+                                    let url = url.join(next_url.as_ref())?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    let has_api_version_already = req
+                                        .url_mut()
+                                        .query_pairs()
+                                        .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                                    if !has_api_version_already {
+                                        req.url_mut()
+                                            .query_pairs_mut()
+                                            .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                                    }
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    client.send(&mut req).await?
+                                }
+                            };
+                            if !rsp.status().is_success() {
+                                return Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
+                                    status: rsp.status(),
+                                    error_code: None,
+                                }));
+                            }
+                            let (status, headers, body) = rsp.deconstruct();
+                            let bytes = body.collect().await?;
+                            let page: models::ScriptExecutionsList = serde_json::from_slice(&bytes)?;
+                            let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
+                            let response: azure_core::http::response::Response<models::ScriptExecutionsList, azure_core::http::JsonFormat> =
+                                raw.into();
+                            Ok(match azure_openapi_core::Continuable::continuation(&page) {
+                                Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
+                                None => azure_core::http::pager::PagerResult::Done { response },
+                            })
+                        }
+                    },
+                ))
+            }
         }
     }
     pub mod get {
@@ -7048,6 +9312,27 @@ pub mod script_executions {
                         .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
+            }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
             }
         }
     }
@@ -7135,6 +9420,28 @@ pub mod script_executions {
                 }
                 Ok(url)
             }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Put);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        req.insert_header("content-type", "application/json");
+                        let req_body = azure_core::json::to_json(&this.script_execution)?;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
+            }
         }
     }
     pub mod delete {
@@ -7218,6 +9525,27 @@ pub mod script_executions {
                 }
                 Ok(url)
             }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Delete);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
+            }
         }
     }
     pub mod get_execution_logs {
@@ -7299,6 +9627,28 @@ pub mod script_executions {
                         .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
+            }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Post);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        req.insert_header("content-type", "application/json");
+                        let req_body = azure_core::json::to_json(&this.script_output_stream_type)?;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
             }
         }
     }
@@ -7426,6 +9776,81 @@ pub mod script_packages {
                 }
                 Ok(url)
             }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
+            }
+            #[doc = "Return a Pager over pages (experimental)"]
+            pub fn into_pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::ScriptPackagesList>> {
+                let client = self.client.clone();
+                let initial = self.clone();
+                Ok(azure_core::http::pager::Pager::from_callback(
+                    move |state: azure_core::http::pager::PagerState<String>| {
+                        let client = client.clone();
+                        let initial = initial.clone();
+                        async move {
+                            let rsp = match state {
+                                azure_core::http::pager::PagerState::Initial => initial.clone().send().await?.into_raw_response(),
+                                azure_core::http::pager::PagerState::More(next_url) => {
+                                    let mut url = client.endpoint().clone();
+                                    url.set_path("");
+                                    let url = url.join(next_url.as_ref())?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    let has_api_version_already = req
+                                        .url_mut()
+                                        .query_pairs()
+                                        .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                                    if !has_api_version_already {
+                                        req.url_mut()
+                                            .query_pairs_mut()
+                                            .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                                    }
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    client.send(&mut req).await?
+                                }
+                            };
+                            if !rsp.status().is_success() {
+                                return Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
+                                    status: rsp.status(),
+                                    error_code: None,
+                                }));
+                            }
+                            let (status, headers, body) = rsp.deconstruct();
+                            let bytes = body.collect().await?;
+                            let page: models::ScriptPackagesList = serde_json::from_slice(&bytes)?;
+                            let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
+                            let response: azure_core::http::response::Response<models::ScriptPackagesList, azure_core::http::JsonFormat> =
+                                raw.into();
+                            Ok(match azure_openapi_core::Continuable::continuation(&page) {
+                                Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
+                                None => azure_core::http::pager::PagerResult::Done { response },
+                            })
+                        }
+                    },
+                ))
+            }
         }
     }
     pub mod get {
@@ -7501,6 +9926,27 @@ pub mod script_packages {
                         .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
+            }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
             }
         }
     }
@@ -7635,6 +10081,81 @@ pub mod script_cmdlets {
                 }
                 Ok(url)
             }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
+            }
+            #[doc = "Return a Pager over pages (experimental)"]
+            pub fn into_pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::ScriptCmdletsList>> {
+                let client = self.client.clone();
+                let initial = self.clone();
+                Ok(azure_core::http::pager::Pager::from_callback(
+                    move |state: azure_core::http::pager::PagerState<String>| {
+                        let client = client.clone();
+                        let initial = initial.clone();
+                        async move {
+                            let rsp = match state {
+                                azure_core::http::pager::PagerState::Initial => initial.clone().send().await?.into_raw_response(),
+                                azure_core::http::pager::PagerState::More(next_url) => {
+                                    let mut url = client.endpoint().clone();
+                                    url.set_path("");
+                                    let url = url.join(next_url.as_ref())?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    let has_api_version_already = req
+                                        .url_mut()
+                                        .query_pairs()
+                                        .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                                    if !has_api_version_already {
+                                        req.url_mut()
+                                            .query_pairs_mut()
+                                            .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                                    }
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    client.send(&mut req).await?
+                                }
+                            };
+                            if !rsp.status().is_success() {
+                                return Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
+                                    status: rsp.status(),
+                                    error_code: None,
+                                }));
+                            }
+                            let (status, headers, body) = rsp.deconstruct();
+                            let bytes = body.collect().await?;
+                            let page: models::ScriptCmdletsList = serde_json::from_slice(&bytes)?;
+                            let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
+                            let response: azure_core::http::response::Response<models::ScriptCmdletsList, azure_core::http::JsonFormat> =
+                                raw.into();
+                            Ok(match azure_openapi_core::Continuable::continuation(&page) {
+                                Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
+                                None => azure_core::http::pager::PagerResult::Done { response },
+                            })
+                        }
+                    },
+                ))
+            }
         }
     }
     pub mod get {
@@ -7715,6 +10236,27 @@ pub mod script_cmdlets {
                         .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
+            }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
             }
         }
     }
@@ -8687,6 +11229,81 @@ pub mod workload_networks {
                 }
                 Ok(url)
             }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
+            }
+            #[doc = "Return a Pager over pages (experimental)"]
+            pub fn into_pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::WorkloadNetworkList>> {
+                let client = self.client.clone();
+                let initial = self.clone();
+                Ok(azure_core::http::pager::Pager::from_callback(
+                    move |state: azure_core::http::pager::PagerState<String>| {
+                        let client = client.clone();
+                        let initial = initial.clone();
+                        async move {
+                            let rsp = match state {
+                                azure_core::http::pager::PagerState::Initial => initial.clone().send().await?.into_raw_response(),
+                                azure_core::http::pager::PagerState::More(next_url) => {
+                                    let mut url = client.endpoint().clone();
+                                    url.set_path("");
+                                    let url = url.join(next_url.as_ref())?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    let has_api_version_already = req
+                                        .url_mut()
+                                        .query_pairs()
+                                        .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                                    if !has_api_version_already {
+                                        req.url_mut()
+                                            .query_pairs_mut()
+                                            .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                                    }
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    client.send(&mut req).await?
+                                }
+                            };
+                            if !rsp.status().is_success() {
+                                return Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
+                                    status: rsp.status(),
+                                    error_code: None,
+                                }));
+                            }
+                            let (status, headers, body) = rsp.deconstruct();
+                            let bytes = body.collect().await?;
+                            let page: models::WorkloadNetworkList = serde_json::from_slice(&bytes)?;
+                            let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
+                            let response: azure_core::http::response::Response<models::WorkloadNetworkList, azure_core::http::JsonFormat> =
+                                raw.into();
+                            Ok(match azure_openapi_core::Continuable::continuation(&page) {
+                                Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
+                                None => azure_core::http::pager::PagerResult::Done { response },
+                            })
+                        }
+                    },
+                ))
+            }
         }
     }
     pub mod get {
@@ -8762,6 +11379,27 @@ pub mod workload_networks {
                 }
                 Ok(url)
             }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
+            }
         }
     }
     pub mod list_dhcp {
@@ -8833,6 +11471,83 @@ pub mod workload_networks {
                         .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
+            }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
+            }
+            #[doc = "Return a Pager over pages (experimental)"]
+            pub fn into_pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::WorkloadNetworkDhcpList>> {
+                let client = self.client.clone();
+                let initial = self.clone();
+                Ok(azure_core::http::pager::Pager::from_callback(
+                    move |state: azure_core::http::pager::PagerState<String>| {
+                        let client = client.clone();
+                        let initial = initial.clone();
+                        async move {
+                            let rsp = match state {
+                                azure_core::http::pager::PagerState::Initial => initial.clone().send().await?.into_raw_response(),
+                                azure_core::http::pager::PagerState::More(next_url) => {
+                                    let mut url = client.endpoint().clone();
+                                    url.set_path("");
+                                    let url = url.join(next_url.as_ref())?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    let has_api_version_already = req
+                                        .url_mut()
+                                        .query_pairs()
+                                        .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                                    if !has_api_version_already {
+                                        req.url_mut()
+                                            .query_pairs_mut()
+                                            .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                                    }
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    client.send(&mut req).await?
+                                }
+                            };
+                            if !rsp.status().is_success() {
+                                return Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
+                                    status: rsp.status(),
+                                    error_code: None,
+                                }));
+                            }
+                            let (status, headers, body) = rsp.deconstruct();
+                            let bytes = body.collect().await?;
+                            let page: models::WorkloadNetworkDhcpList = serde_json::from_slice(&bytes)?;
+                            let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
+                            let response: azure_core::http::response::Response<
+                                models::WorkloadNetworkDhcpList,
+                                azure_core::http::JsonFormat,
+                            > = raw.into();
+                            Ok(match azure_openapi_core::Continuable::continuation(&page) {
+                                Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
+                                None => azure_core::http::pager::PagerResult::Done { response },
+                            })
+                        }
+                    },
+                ))
             }
         }
     }
@@ -8906,6 +11621,27 @@ pub mod workload_networks {
                         .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
+            }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
             }
         }
     }
@@ -8989,6 +11725,28 @@ pub mod workload_networks {
                         .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
+            }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Put);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        req.insert_header("content-type", "application/json");
+                        let req_body = azure_core::json::to_json(&this.workload_network_dhcp)?;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
             }
         }
     }
@@ -9077,6 +11835,28 @@ pub mod workload_networks {
                 }
                 Ok(url)
             }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Patch);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        req.insert_header("content-type", "application/json");
+                        let req_body = azure_core::json::to_json(&this.workload_network_dhcp)?;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
+            }
         }
     }
     pub mod delete_dhcp {
@@ -9157,6 +11937,27 @@ pub mod workload_networks {
                 }
                 Ok(url)
             }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Delete);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
+            }
         }
     }
     pub mod list_dns_services {
@@ -9231,6 +12032,83 @@ pub mod workload_networks {
                         .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
+            }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
+            }
+            #[doc = "Return a Pager over pages (experimental)"]
+            pub fn into_pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::WorkloadNetworkDnsServicesList>> {
+                let client = self.client.clone();
+                let initial = self.clone();
+                Ok(azure_core::http::pager::Pager::from_callback(
+                    move |state: azure_core::http::pager::PagerState<String>| {
+                        let client = client.clone();
+                        let initial = initial.clone();
+                        async move {
+                            let rsp = match state {
+                                azure_core::http::pager::PagerState::Initial => initial.clone().send().await?.into_raw_response(),
+                                azure_core::http::pager::PagerState::More(next_url) => {
+                                    let mut url = client.endpoint().clone();
+                                    url.set_path("");
+                                    let url = url.join(next_url.as_ref())?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    let has_api_version_already = req
+                                        .url_mut()
+                                        .query_pairs()
+                                        .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                                    if !has_api_version_already {
+                                        req.url_mut()
+                                            .query_pairs_mut()
+                                            .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                                    }
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    client.send(&mut req).await?
+                                }
+                            };
+                            if !rsp.status().is_success() {
+                                return Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
+                                    status: rsp.status(),
+                                    error_code: None,
+                                }));
+                            }
+                            let (status, headers, body) = rsp.deconstruct();
+                            let bytes = body.collect().await?;
+                            let page: models::WorkloadNetworkDnsServicesList = serde_json::from_slice(&bytes)?;
+                            let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
+                            let response: azure_core::http::response::Response<
+                                models::WorkloadNetworkDnsServicesList,
+                                azure_core::http::JsonFormat,
+                            > = raw.into();
+                            Ok(match azure_openapi_core::Continuable::continuation(&page) {
+                                Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
+                                None => azure_core::http::pager::PagerResult::Done { response },
+                            })
+                        }
+                    },
+                ))
             }
         }
     }
@@ -9307,6 +12185,27 @@ pub mod workload_networks {
                         .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
+            }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
             }
         }
     }
@@ -9393,6 +12292,28 @@ pub mod workload_networks {
                         .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
+            }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Put);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        req.insert_header("content-type", "application/json");
+                        let req_body = azure_core::json::to_json(&this.workload_network_dns_service)?;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
             }
         }
     }
@@ -9484,6 +12405,28 @@ pub mod workload_networks {
                 }
                 Ok(url)
             }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Patch);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        req.insert_header("content-type", "application/json");
+                        let req_body = azure_core::json::to_json(&this.workload_network_dns_service)?;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
+            }
         }
     }
     pub mod delete_dns_service {
@@ -9567,6 +12510,27 @@ pub mod workload_networks {
                 }
                 Ok(url)
             }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Delete);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
+            }
         }
     }
     pub mod list_dns_zones {
@@ -9641,6 +12605,83 @@ pub mod workload_networks {
                         .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
+            }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
+            }
+            #[doc = "Return a Pager over pages (experimental)"]
+            pub fn into_pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::WorkloadNetworkDnsZonesList>> {
+                let client = self.client.clone();
+                let initial = self.clone();
+                Ok(azure_core::http::pager::Pager::from_callback(
+                    move |state: azure_core::http::pager::PagerState<String>| {
+                        let client = client.clone();
+                        let initial = initial.clone();
+                        async move {
+                            let rsp = match state {
+                                azure_core::http::pager::PagerState::Initial => initial.clone().send().await?.into_raw_response(),
+                                azure_core::http::pager::PagerState::More(next_url) => {
+                                    let mut url = client.endpoint().clone();
+                                    url.set_path("");
+                                    let url = url.join(next_url.as_ref())?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    let has_api_version_already = req
+                                        .url_mut()
+                                        .query_pairs()
+                                        .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                                    if !has_api_version_already {
+                                        req.url_mut()
+                                            .query_pairs_mut()
+                                            .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                                    }
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    client.send(&mut req).await?
+                                }
+                            };
+                            if !rsp.status().is_success() {
+                                return Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
+                                    status: rsp.status(),
+                                    error_code: None,
+                                }));
+                            }
+                            let (status, headers, body) = rsp.deconstruct();
+                            let bytes = body.collect().await?;
+                            let page: models::WorkloadNetworkDnsZonesList = serde_json::from_slice(&bytes)?;
+                            let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
+                            let response: azure_core::http::response::Response<
+                                models::WorkloadNetworkDnsZonesList,
+                                azure_core::http::JsonFormat,
+                            > = raw.into();
+                            Ok(match azure_openapi_core::Continuable::continuation(&page) {
+                                Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
+                                None => azure_core::http::pager::PagerResult::Done { response },
+                            })
+                        }
+                    },
+                ))
             }
         }
     }
@@ -9717,6 +12758,27 @@ pub mod workload_networks {
                         .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
+            }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
             }
         }
     }
@@ -9803,6 +12865,28 @@ pub mod workload_networks {
                         .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
+            }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Put);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        req.insert_header("content-type", "application/json");
+                        let req_body = azure_core::json::to_json(&this.workload_network_dns_zone)?;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
             }
         }
     }
@@ -9894,6 +12978,28 @@ pub mod workload_networks {
                 }
                 Ok(url)
             }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Patch);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        req.insert_header("content-type", "application/json");
+                        let req_body = azure_core::json::to_json(&this.workload_network_dns_zone)?;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
+            }
         }
     }
     pub mod delete_dns_zone {
@@ -9977,6 +13083,27 @@ pub mod workload_networks {
                 }
                 Ok(url)
             }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Delete);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
+            }
         }
     }
     pub mod list_gateways {
@@ -10051,6 +13178,83 @@ pub mod workload_networks {
                         .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
+            }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
+            }
+            #[doc = "Return a Pager over pages (experimental)"]
+            pub fn into_pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::WorkloadNetworkGatewayList>> {
+                let client = self.client.clone();
+                let initial = self.clone();
+                Ok(azure_core::http::pager::Pager::from_callback(
+                    move |state: azure_core::http::pager::PagerState<String>| {
+                        let client = client.clone();
+                        let initial = initial.clone();
+                        async move {
+                            let rsp = match state {
+                                azure_core::http::pager::PagerState::Initial => initial.clone().send().await?.into_raw_response(),
+                                azure_core::http::pager::PagerState::More(next_url) => {
+                                    let mut url = client.endpoint().clone();
+                                    url.set_path("");
+                                    let url = url.join(next_url.as_ref())?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    let has_api_version_already = req
+                                        .url_mut()
+                                        .query_pairs()
+                                        .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                                    if !has_api_version_already {
+                                        req.url_mut()
+                                            .query_pairs_mut()
+                                            .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                                    }
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    client.send(&mut req).await?
+                                }
+                            };
+                            if !rsp.status().is_success() {
+                                return Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
+                                    status: rsp.status(),
+                                    error_code: None,
+                                }));
+                            }
+                            let (status, headers, body) = rsp.deconstruct();
+                            let bytes = body.collect().await?;
+                            let page: models::WorkloadNetworkGatewayList = serde_json::from_slice(&bytes)?;
+                            let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
+                            let response: azure_core::http::response::Response<
+                                models::WorkloadNetworkGatewayList,
+                                azure_core::http::JsonFormat,
+                            > = raw.into();
+                            Ok(match azure_openapi_core::Continuable::continuation(&page) {
+                                Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
+                                None => azure_core::http::pager::PagerResult::Done { response },
+                            })
+                        }
+                    },
+                ))
             }
         }
     }
@@ -10128,6 +13332,27 @@ pub mod workload_networks {
                 }
                 Ok(url)
             }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
+            }
         }
     }
     pub mod list_port_mirroring {
@@ -10199,6 +13424,83 @@ pub mod workload_networks {
                         .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
+            }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
+            }
+            #[doc = "Return a Pager over pages (experimental)"]
+            pub fn into_pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::WorkloadNetworkPortMirroringList>> {
+                let client = self.client.clone();
+                let initial = self.clone();
+                Ok(azure_core::http::pager::Pager::from_callback(
+                    move |state: azure_core::http::pager::PagerState<String>| {
+                        let client = client.clone();
+                        let initial = initial.clone();
+                        async move {
+                            let rsp = match state {
+                                azure_core::http::pager::PagerState::Initial => initial.clone().send().await?.into_raw_response(),
+                                azure_core::http::pager::PagerState::More(next_url) => {
+                                    let mut url = client.endpoint().clone();
+                                    url.set_path("");
+                                    let url = url.join(next_url.as_ref())?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    let has_api_version_already = req
+                                        .url_mut()
+                                        .query_pairs()
+                                        .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                                    if !has_api_version_already {
+                                        req.url_mut()
+                                            .query_pairs_mut()
+                                            .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                                    }
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    client.send(&mut req).await?
+                                }
+                            };
+                            if !rsp.status().is_success() {
+                                return Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
+                                    status: rsp.status(),
+                                    error_code: None,
+                                }));
+                            }
+                            let (status, headers, body) = rsp.deconstruct();
+                            let bytes = body.collect().await?;
+                            let page: models::WorkloadNetworkPortMirroringList = serde_json::from_slice(&bytes)?;
+                            let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
+                            let response: azure_core::http::response::Response<
+                                models::WorkloadNetworkPortMirroringList,
+                                azure_core::http::JsonFormat,
+                            > = raw.into();
+                            Ok(match azure_openapi_core::Continuable::continuation(&page) {
+                                Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
+                                None => azure_core::http::pager::PagerResult::Done { response },
+                            })
+                        }
+                    },
+                ))
             }
         }
     }
@@ -10272,6 +13574,27 @@ pub mod workload_networks {
                         .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
+            }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
             }
         }
     }
@@ -10355,6 +13678,28 @@ pub mod workload_networks {
                         .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
+            }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Put);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        req.insert_header("content-type", "application/json");
+                        let req_body = azure_core::json::to_json(&this.workload_network_port_mirroring)?;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
             }
         }
     }
@@ -10443,6 +13788,28 @@ pub mod workload_networks {
                 }
                 Ok(url)
             }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Patch);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        req.insert_header("content-type", "application/json");
+                        let req_body = azure_core::json::to_json(&this.workload_network_port_mirroring)?;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
+            }
         }
     }
     pub mod delete_port_mirroring {
@@ -10523,6 +13890,27 @@ pub mod workload_networks {
                 }
                 Ok(url)
             }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Delete);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
+            }
         }
     }
     pub mod list_public_i_ps {
@@ -10597,6 +13985,83 @@ pub mod workload_networks {
                         .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
+            }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
+            }
+            #[doc = "Return a Pager over pages (experimental)"]
+            pub fn into_pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::WorkloadNetworkPublicIPsList>> {
+                let client = self.client.clone();
+                let initial = self.clone();
+                Ok(azure_core::http::pager::Pager::from_callback(
+                    move |state: azure_core::http::pager::PagerState<String>| {
+                        let client = client.clone();
+                        let initial = initial.clone();
+                        async move {
+                            let rsp = match state {
+                                azure_core::http::pager::PagerState::Initial => initial.clone().send().await?.into_raw_response(),
+                                azure_core::http::pager::PagerState::More(next_url) => {
+                                    let mut url = client.endpoint().clone();
+                                    url.set_path("");
+                                    let url = url.join(next_url.as_ref())?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    let has_api_version_already = req
+                                        .url_mut()
+                                        .query_pairs()
+                                        .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                                    if !has_api_version_already {
+                                        req.url_mut()
+                                            .query_pairs_mut()
+                                            .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                                    }
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    client.send(&mut req).await?
+                                }
+                            };
+                            if !rsp.status().is_success() {
+                                return Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
+                                    status: rsp.status(),
+                                    error_code: None,
+                                }));
+                            }
+                            let (status, headers, body) = rsp.deconstruct();
+                            let bytes = body.collect().await?;
+                            let page: models::WorkloadNetworkPublicIPsList = serde_json::from_slice(&bytes)?;
+                            let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
+                            let response: azure_core::http::response::Response<
+                                models::WorkloadNetworkPublicIPsList,
+                                azure_core::http::JsonFormat,
+                            > = raw.into();
+                            Ok(match azure_openapi_core::Continuable::continuation(&page) {
+                                Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
+                                None => azure_core::http::pager::PagerResult::Done { response },
+                            })
+                        }
+                    },
+                ))
             }
         }
     }
@@ -10673,6 +14138,27 @@ pub mod workload_networks {
                         .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
+            }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
             }
         }
     }
@@ -10760,6 +14246,28 @@ pub mod workload_networks {
                 }
                 Ok(url)
             }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Put);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        req.insert_header("content-type", "application/json");
+                        let req_body = azure_core::json::to_json(&this.workload_network_public_ip)?;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
+            }
         }
     }
     pub mod delete_public_ip {
@@ -10843,6 +14351,27 @@ pub mod workload_networks {
                 }
                 Ok(url)
             }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Delete);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
+            }
         }
     }
     pub mod list_segments {
@@ -10917,6 +14446,83 @@ pub mod workload_networks {
                         .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
+            }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
+            }
+            #[doc = "Return a Pager over pages (experimental)"]
+            pub fn into_pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::WorkloadNetworkSegmentsList>> {
+                let client = self.client.clone();
+                let initial = self.clone();
+                Ok(azure_core::http::pager::Pager::from_callback(
+                    move |state: azure_core::http::pager::PagerState<String>| {
+                        let client = client.clone();
+                        let initial = initial.clone();
+                        async move {
+                            let rsp = match state {
+                                azure_core::http::pager::PagerState::Initial => initial.clone().send().await?.into_raw_response(),
+                                azure_core::http::pager::PagerState::More(next_url) => {
+                                    let mut url = client.endpoint().clone();
+                                    url.set_path("");
+                                    let url = url.join(next_url.as_ref())?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    let has_api_version_already = req
+                                        .url_mut()
+                                        .query_pairs()
+                                        .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                                    if !has_api_version_already {
+                                        req.url_mut()
+                                            .query_pairs_mut()
+                                            .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                                    }
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    client.send(&mut req).await?
+                                }
+                            };
+                            if !rsp.status().is_success() {
+                                return Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
+                                    status: rsp.status(),
+                                    error_code: None,
+                                }));
+                            }
+                            let (status, headers, body) = rsp.deconstruct();
+                            let bytes = body.collect().await?;
+                            let page: models::WorkloadNetworkSegmentsList = serde_json::from_slice(&bytes)?;
+                            let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
+                            let response: azure_core::http::response::Response<
+                                models::WorkloadNetworkSegmentsList,
+                                azure_core::http::JsonFormat,
+                            > = raw.into();
+                            Ok(match azure_openapi_core::Continuable::continuation(&page) {
+                                Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
+                                None => azure_core::http::pager::PagerResult::Done { response },
+                            })
+                        }
+                    },
+                ))
             }
         }
     }
@@ -10993,6 +14599,27 @@ pub mod workload_networks {
                         .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
+            }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
             }
         }
     }
@@ -11079,6 +14706,28 @@ pub mod workload_networks {
                         .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
+            }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Put);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        req.insert_header("content-type", "application/json");
+                        let req_body = azure_core::json::to_json(&this.workload_network_segment)?;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
             }
         }
     }
@@ -11170,6 +14819,28 @@ pub mod workload_networks {
                 }
                 Ok(url)
             }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Patch);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        req.insert_header("content-type", "application/json");
+                        let req_body = azure_core::json::to_json(&this.workload_network_segment)?;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
+            }
         }
     }
     pub mod delete_segment {
@@ -11253,6 +14924,27 @@ pub mod workload_networks {
                 }
                 Ok(url)
             }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Delete);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
+            }
         }
     }
     pub mod list_virtual_machines {
@@ -11328,6 +15020,83 @@ pub mod workload_networks {
                 }
                 Ok(url)
             }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
+            }
+            #[doc = "Return a Pager over pages (experimental)"]
+            pub fn into_pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::WorkloadNetworkVirtualMachinesList>> {
+                let client = self.client.clone();
+                let initial = self.clone();
+                Ok(azure_core::http::pager::Pager::from_callback(
+                    move |state: azure_core::http::pager::PagerState<String>| {
+                        let client = client.clone();
+                        let initial = initial.clone();
+                        async move {
+                            let rsp = match state {
+                                azure_core::http::pager::PagerState::Initial => initial.clone().send().await?.into_raw_response(),
+                                azure_core::http::pager::PagerState::More(next_url) => {
+                                    let mut url = client.endpoint().clone();
+                                    url.set_path("");
+                                    let url = url.join(next_url.as_ref())?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    let has_api_version_already = req
+                                        .url_mut()
+                                        .query_pairs()
+                                        .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                                    if !has_api_version_already {
+                                        req.url_mut()
+                                            .query_pairs_mut()
+                                            .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                                    }
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    client.send(&mut req).await?
+                                }
+                            };
+                            if !rsp.status().is_success() {
+                                return Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
+                                    status: rsp.status(),
+                                    error_code: None,
+                                }));
+                            }
+                            let (status, headers, body) = rsp.deconstruct();
+                            let bytes = body.collect().await?;
+                            let page: models::WorkloadNetworkVirtualMachinesList = serde_json::from_slice(&bytes)?;
+                            let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
+                            let response: azure_core::http::response::Response<
+                                models::WorkloadNetworkVirtualMachinesList,
+                                azure_core::http::JsonFormat,
+                            > = raw.into();
+                            Ok(match azure_openapi_core::Continuable::continuation(&page) {
+                                Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
+                                None => azure_core::http::pager::PagerResult::Done { response },
+                            })
+                        }
+                    },
+                ))
+            }
         }
     }
     pub mod get_virtual_machine {
@@ -11400,6 +15169,27 @@ pub mod workload_networks {
                         .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
+            }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
             }
         }
     }
@@ -11476,6 +15266,83 @@ pub mod workload_networks {
                 }
                 Ok(url)
             }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
+            }
+            #[doc = "Return a Pager over pages (experimental)"]
+            pub fn into_pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::WorkloadNetworkVmGroupsList>> {
+                let client = self.client.clone();
+                let initial = self.clone();
+                Ok(azure_core::http::pager::Pager::from_callback(
+                    move |state: azure_core::http::pager::PagerState<String>| {
+                        let client = client.clone();
+                        let initial = initial.clone();
+                        async move {
+                            let rsp = match state {
+                                azure_core::http::pager::PagerState::Initial => initial.clone().send().await?.into_raw_response(),
+                                azure_core::http::pager::PagerState::More(next_url) => {
+                                    let mut url = client.endpoint().clone();
+                                    url.set_path("");
+                                    let url = url.join(next_url.as_ref())?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    let has_api_version_already = req
+                                        .url_mut()
+                                        .query_pairs()
+                                        .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                                    if !has_api_version_already {
+                                        req.url_mut()
+                                            .query_pairs_mut()
+                                            .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                                    }
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    client.send(&mut req).await?
+                                }
+                            };
+                            if !rsp.status().is_success() {
+                                return Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
+                                    status: rsp.status(),
+                                    error_code: None,
+                                }));
+                            }
+                            let (status, headers, body) = rsp.deconstruct();
+                            let bytes = body.collect().await?;
+                            let page: models::WorkloadNetworkVmGroupsList = serde_json::from_slice(&bytes)?;
+                            let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
+                            let response: azure_core::http::response::Response<
+                                models::WorkloadNetworkVmGroupsList,
+                                azure_core::http::JsonFormat,
+                            > = raw.into();
+                            Ok(match azure_openapi_core::Continuable::continuation(&page) {
+                                Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
+                                None => azure_core::http::pager::PagerResult::Done { response },
+                            })
+                        }
+                    },
+                ))
+            }
         }
     }
     pub mod get_vm_group {
@@ -11551,6 +15418,27 @@ pub mod workload_networks {
                         .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
+            }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Get);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
             }
         }
     }
@@ -11637,6 +15525,28 @@ pub mod workload_networks {
                         .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
+            }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Put);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        req.insert_header("content-type", "application/json");
+                        let req_body = azure_core::json::to_json(&this.workload_network_vm_group)?;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
             }
         }
     }
@@ -11728,6 +15638,28 @@ pub mod workload_networks {
                 }
                 Ok(url)
             }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Patch);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        req.insert_header("content-type", "application/json");
+                        let req_body = azure_core::json::to_json(&this.workload_network_vm_group)?;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
+            }
         }
     }
     pub mod delete_vm_group {
@@ -11810,6 +15742,27 @@ pub mod workload_networks {
                         .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
+            }
+            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = ""]
+            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
+            #[doc = "However, this function can provide more flexibility when required."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+                Box::pin({
+                    let this = self.clone();
+                    async move {
+                        let url = this.url()?;
+                        let mut req = azure_core::http::Request::new(url, azure_core::http::Method::Delete);
+                        let bearer_token = this.client.bearer_token().await?;
+                        req.insert_header(
+                            azure_core::http::headers::AUTHORIZATION,
+                            format!("Bearer {}", bearer_token.secret()),
+                        );
+                        let req_body = azure_openapi_core::EMPTY_BODY;
+                        req.set_body(req_body);
+                        Ok(Response(this.client.send(&mut req).await?))
+                    }
+                })
             }
         }
     }

@@ -73,6 +73,15 @@ impl azure_openapi_core::Continuable for AddonList {
         self.next_link.clone().filter(|value| !value.is_empty())
     }
 }
+#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
+# [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
+impl azure_core::http::pager::Page for AddonList {
+    type Item = <Vec<Addon> as IntoIterator>::Item;
+    type IntoIter = <Vec<Addon> as IntoIterator>::IntoIter;
+    async fn into_items(self) -> azure_core::Result<Self::IntoIter> {
+        Ok(self.value.into_iter())
+    }
+}
 impl AddonList {
     pub fn new(value: Vec<Addon>) -> Self {
         Self { value, next_link: None }
@@ -465,6 +474,15 @@ impl azure_openapi_core::Continuable for CloudLinkList {
         self.next_link.clone().filter(|value| !value.is_empty())
     }
 }
+#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
+# [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
+impl azure_core::http::pager::Page for CloudLinkList {
+    type Item = <Vec<CloudLink> as IntoIterator>::Item;
+    type IntoIter = <Vec<CloudLink> as IntoIterator>::IntoIter;
+    async fn into_items(self) -> azure_core::Result<Self::IntoIter> {
+        Ok(self.value.into_iter())
+    }
+}
 impl CloudLinkList {
     pub fn new(value: Vec<CloudLink>) -> Self {
         Self { value, next_link: None }
@@ -603,6 +621,15 @@ impl azure_openapi_core::Continuable for ClusterList {
     type Continuation = String;
     fn continuation(&self) -> Option<Self::Continuation> {
         self.next_link.clone().filter(|value| !value.is_empty())
+    }
+}
+#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
+# [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
+impl azure_core::http::pager::Page for ClusterList {
+    type Item = <Vec<Cluster> as IntoIterator>::Item;
+    type IntoIter = <Vec<Cluster> as IntoIterator>::IntoIter;
+    async fn into_items(self) -> azure_core::Result<Self::IntoIter> {
+        Ok(self.value.into_iter())
     }
 }
 impl ClusterList {
@@ -779,6 +806,15 @@ impl azure_openapi_core::Continuable for DatastoreList {
     type Continuation = String;
     fn continuation(&self) -> Option<Self::Continuation> {
         self.next_link.clone().filter(|value| !value.is_empty())
+    }
+}
+#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
+# [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
+impl azure_core::http::pager::Page for DatastoreList {
+    type Item = <Vec<Datastore> as IntoIterator>::Item;
+    type IntoIter = <Vec<Datastore> as IntoIterator>::IntoIter;
+    async fn into_items(self) -> azure_core::Result<Self::IntoIter> {
+        Ok(self.value.into_iter())
     }
 }
 impl DatastoreList {
@@ -1432,6 +1468,15 @@ impl azure_openapi_core::Continuable for ExpressRouteAuthorizationList {
         self.next_link.clone().filter(|value| !value.is_empty())
     }
 }
+#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
+# [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
+impl azure_core::http::pager::Page for ExpressRouteAuthorizationList {
+    type Item = <Vec<ExpressRouteAuthorization> as IntoIterator>::Item;
+    type IntoIter = <Vec<ExpressRouteAuthorization> as IntoIterator>::IntoIter;
+    async fn into_items(self) -> azure_core::Result<Self::IntoIter> {
+        Ok(self.value.into_iter())
+    }
+}
 impl ExpressRouteAuthorizationList {
     pub fn new(value: Vec<ExpressRouteAuthorization>) -> Self {
         Self { value, next_link: None }
@@ -1537,6 +1582,15 @@ impl azure_openapi_core::Continuable for GlobalReachConnectionList {
     type Continuation = String;
     fn continuation(&self) -> Option<Self::Continuation> {
         self.next_link.clone().filter(|value| !value.is_empty())
+    }
+}
+#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
+# [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
+impl azure_core::http::pager::Page for GlobalReachConnectionList {
+    type Item = <Vec<GlobalReachConnection> as IntoIterator>::Item;
+    type IntoIter = <Vec<GlobalReachConnection> as IntoIterator>::IntoIter;
+    async fn into_items(self) -> azure_core::Result<Self::IntoIter> {
+        Ok(self.value.into_iter())
     }
 }
 impl GlobalReachConnectionList {
@@ -1678,6 +1732,15 @@ impl azure_openapi_core::Continuable for HcxEnterpriseSiteList {
     type Continuation = String;
     fn continuation(&self) -> Option<Self::Continuation> {
         self.next_link.clone().filter(|value| !value.is_empty())
+    }
+}
+#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
+# [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
+impl azure_core::http::pager::Page for HcxEnterpriseSiteList {
+    type Item = <Vec<HcxEnterpriseSite> as IntoIterator>::Item;
+    type IntoIter = <Vec<HcxEnterpriseSite> as IntoIterator>::IntoIter;
+    async fn into_items(self) -> azure_core::Result<Self::IntoIter> {
+        Ok(self.value.into_iter())
     }
 }
 impl HcxEnterpriseSiteList {
@@ -1857,6 +1920,15 @@ impl azure_openapi_core::Continuable for HostListResult {
     type Continuation = String;
     fn continuation(&self) -> Option<Self::Continuation> {
         self.next_link.clone().filter(|value| !value.is_empty())
+    }
+}
+#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
+# [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
+impl azure_core::http::pager::Page for HostListResult {
+    type Item = <Vec<Host> as IntoIterator>::Item;
+    type IntoIter = <Vec<Host> as IntoIterator>::IntoIter;
+    async fn into_items(self) -> azure_core::Result<Self::IntoIter> {
+        Ok(self.value.into_iter())
     }
 }
 impl HostListResult {
@@ -2083,6 +2155,15 @@ impl azure_openapi_core::Continuable for IscsiPathListResult {
     type Continuation = String;
     fn continuation(&self) -> Option<Self::Continuation> {
         self.next_link.clone().filter(|value| !value.is_empty())
+    }
+}
+#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
+# [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
+impl azure_core::http::pager::Page for IscsiPathListResult {
+    type Item = <Vec<IscsiPath> as IntoIterator>::Item;
+    type IntoIter = <Vec<IscsiPath> as IntoIterator>::IntoIter;
+    async fn into_items(self) -> azure_core::Result<Self::IntoIter> {
+        Ok(self.value.into_iter())
     }
 }
 impl IscsiPathListResult {
@@ -2376,6 +2457,15 @@ impl azure_openapi_core::Continuable for OperationListResult {
         self.next_link.clone().filter(|value| !value.is_empty())
     }
 }
+#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
+# [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
+impl azure_core::http::pager::Page for OperationListResult {
+    type Item = <Vec<Operation> as IntoIterator>::Item;
+    type IntoIter = <Vec<Operation> as IntoIterator>::IntoIter;
+    async fn into_items(self) -> azure_core::Result<Self::IntoIter> {
+        Ok(self.value.into_iter())
+    }
+}
 impl OperationListResult {
     pub fn new() -> Self {
         Self::default()
@@ -2454,6 +2544,15 @@ impl azure_openapi_core::Continuable for PagedResourceSku {
         self.next_link.clone().filter(|value| !value.is_empty())
     }
 }
+#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
+# [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
+impl azure_core::http::pager::Page for PagedResourceSku {
+    type Item = <Vec<ResourceSku> as IntoIterator>::Item;
+    type IntoIter = <Vec<ResourceSku> as IntoIterator>::IntoIter;
+    async fn into_items(self) -> azure_core::Result<Self::IntoIter> {
+        Ok(self.value.into_iter())
+    }
+}
 impl PagedResourceSku {
     pub fn new(value: Vec<ResourceSku>) -> Self {
         Self { value, next_link: None }
@@ -2472,6 +2571,15 @@ impl azure_openapi_core::Continuable for PlacementPoliciesList {
     type Continuation = String;
     fn continuation(&self) -> Option<Self::Continuation> {
         self.next_link.clone().filter(|value| !value.is_empty())
+    }
+}
+#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
+# [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
+impl azure_core::http::pager::Page for PlacementPoliciesList {
+    type Item = <Vec<PlacementPolicy> as IntoIterator>::Item;
+    type IntoIter = <Vec<PlacementPolicy> as IntoIterator>::IntoIter;
+    async fn into_items(self) -> azure_core::Result<Self::IntoIter> {
+        Ok(self.value.into_iter())
     }
 }
 impl PlacementPoliciesList {
@@ -2815,18 +2923,18 @@ impl azure_openapi_core::Continuable for PrivateCloudList {
         self.next_link.clone().filter(|value| !value.is_empty())
     }
 }
-impl PrivateCloudList {
-    pub fn new(value: Vec<PrivateCloud>) -> Self {
-        Self { value, next_link: None }
-    }
-}
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
-#[cfg_attr(target_arch = "wasm32", async_trait::async_trait(?Send))]
+# [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
 impl azure_core::http::pager::Page for PrivateCloudList {
-    type Item = PrivateCloud;
+    type Item = <Vec<PrivateCloud> as IntoIterator>::Item;
     type IntoIter = <Vec<PrivateCloud> as IntoIterator>::IntoIter;
     async fn into_items(self) -> azure_core::Result<Self::IntoIter> {
         Ok(self.value.into_iter())
+    }
+}
+impl PrivateCloudList {
+    pub fn new(value: Vec<PrivateCloud>) -> Self {
+        Self { value, next_link: None }
     }
 }
 #[doc = "The properties of a private cloud resource"]
@@ -3126,6 +3234,15 @@ impl azure_openapi_core::Continuable for ProvisionedNetworkListResult {
         self.next_link.clone().filter(|value| !value.is_empty())
     }
 }
+#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
+# [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
+impl azure_core::http::pager::Page for ProvisionedNetworkListResult {
+    type Item = <Vec<ProvisionedNetwork> as IntoIterator>::Item;
+    type IntoIter = <Vec<ProvisionedNetwork> as IntoIterator>::IntoIter;
+    async fn into_items(self) -> azure_core::Result<Self::IntoIter> {
+        Ok(self.value.into_iter())
+    }
+}
 impl ProvisionedNetworkListResult {
     pub fn new(value: Vec<ProvisionedNetwork>) -> Self {
         Self { value, next_link: None }
@@ -3280,6 +3397,15 @@ impl azure_openapi_core::Continuable for PureStoragePolicyListResult {
     type Continuation = String;
     fn continuation(&self) -> Option<Self::Continuation> {
         self.next_link.clone().filter(|value| !value.is_empty())
+    }
+}
+#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
+# [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
+impl azure_core::http::pager::Page for PureStoragePolicyListResult {
+    type Item = <Vec<PureStoragePolicy> as IntoIterator>::Item;
+    type IntoIter = <Vec<PureStoragePolicy> as IntoIterator>::IntoIter;
+    async fn into_items(self) -> azure_core::Result<Self::IntoIter> {
+        Ok(self.value.into_iter())
     }
 }
 impl PureStoragePolicyListResult {
@@ -3835,6 +3961,15 @@ impl azure_openapi_core::Continuable for ScriptCmdletsList {
         self.next_link.clone().filter(|value| !value.is_empty())
     }
 }
+#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
+# [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
+impl azure_core::http::pager::Page for ScriptCmdletsList {
+    type Item = <Vec<ScriptCmdlet> as IntoIterator>::Item;
+    type IntoIter = <Vec<ScriptCmdlet> as IntoIterator>::IntoIter;
+    async fn into_items(self) -> azure_core::Result<Self::IntoIter> {
+        Ok(self.value.into_iter())
+    }
+}
 impl ScriptCmdletsList {
     pub fn new(value: Vec<ScriptCmdlet>) -> Self {
         Self { value, next_link: None }
@@ -4070,6 +4205,15 @@ impl azure_openapi_core::Continuable for ScriptExecutionsList {
         self.next_link.clone().filter(|value| !value.is_empty())
     }
 }
+#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
+# [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
+impl azure_core::http::pager::Page for ScriptExecutionsList {
+    type Item = <Vec<ScriptExecution> as IntoIterator>::Item;
+    type IntoIter = <Vec<ScriptExecution> as IntoIterator>::IntoIter;
+    async fn into_items(self) -> azure_core::Result<Self::IntoIter> {
+        Ok(self.value.into_iter())
+    }
+}
 impl ScriptExecutionsList {
     pub fn new(value: Vec<ScriptExecution>) -> Self {
         Self { value, next_link: None }
@@ -4206,6 +4350,15 @@ impl azure_openapi_core::Continuable for ScriptPackagesList {
     type Continuation = String;
     fn continuation(&self) -> Option<Self::Continuation> {
         self.next_link.clone().filter(|value| !value.is_empty())
+    }
+}
+#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
+# [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
+impl azure_core::http::pager::Page for ScriptPackagesList {
+    type Item = <Vec<ScriptPackage> as IntoIterator>::Item;
+    type IntoIter = <Vec<ScriptPackage> as IntoIterator>::IntoIter;
+    async fn into_items(self) -> azure_core::Result<Self::IntoIter> {
+        Ok(self.value.into_iter())
     }
 }
 impl ScriptPackagesList {
@@ -4795,6 +4948,15 @@ impl azure_openapi_core::Continuable for VirtualMachinesList {
         self.next_link.clone().filter(|value| !value.is_empty())
     }
 }
+#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
+# [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
+impl azure_core::http::pager::Page for VirtualMachinesList {
+    type Item = <Vec<VirtualMachine> as IntoIterator>::Item;
+    type IntoIter = <Vec<VirtualMachine> as IntoIterator>::IntoIter;
+    async fn into_items(self) -> azure_core::Result<Self::IntoIter> {
+        Ok(self.value.into_iter())
+    }
+}
 impl VirtualMachinesList {
     pub fn new(value: Vec<VirtualMachine>) -> Self {
         Self { value, next_link: None }
@@ -4976,6 +5138,15 @@ impl azure_openapi_core::Continuable for WorkloadNetworkDhcpList {
     type Continuation = String;
     fn continuation(&self) -> Option<Self::Continuation> {
         self.next_link.clone().filter(|value| !value.is_empty())
+    }
+}
+#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
+# [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
+impl azure_core::http::pager::Page for WorkloadNetworkDhcpList {
+    type Item = <Vec<WorkloadNetworkDhcp> as IntoIterator>::Item;
+    type IntoIter = <Vec<WorkloadNetworkDhcp> as IntoIterator>::IntoIter;
+    async fn into_items(self) -> azure_core::Result<Self::IntoIter> {
+        Ok(self.value.into_iter())
     }
 }
 impl WorkloadNetworkDhcpList {
@@ -5183,6 +5354,15 @@ impl azure_openapi_core::Continuable for WorkloadNetworkDnsServicesList {
         self.next_link.clone().filter(|value| !value.is_empty())
     }
 }
+#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
+# [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
+impl azure_core::http::pager::Page for WorkloadNetworkDnsServicesList {
+    type Item = <Vec<WorkloadNetworkDnsService> as IntoIterator>::Item;
+    type IntoIter = <Vec<WorkloadNetworkDnsService> as IntoIterator>::IntoIter;
+    async fn into_items(self) -> azure_core::Result<Self::IntoIter> {
+        Ok(self.value.into_iter())
+    }
+}
 impl WorkloadNetworkDnsServicesList {
     pub fn new(value: Vec<WorkloadNetworkDnsService>) -> Self {
         Self { value, next_link: None }
@@ -5301,6 +5481,15 @@ impl azure_openapi_core::Continuable for WorkloadNetworkDnsZonesList {
         self.next_link.clone().filter(|value| !value.is_empty())
     }
 }
+#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
+# [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
+impl azure_core::http::pager::Page for WorkloadNetworkDnsZonesList {
+    type Item = <Vec<WorkloadNetworkDnsZone> as IntoIterator>::Item;
+    type IntoIter = <Vec<WorkloadNetworkDnsZone> as IntoIterator>::IntoIter;
+    async fn into_items(self) -> azure_core::Result<Self::IntoIter> {
+        Ok(self.value.into_iter())
+    }
+}
 impl WorkloadNetworkDnsZonesList {
     pub fn new(value: Vec<WorkloadNetworkDnsZone>) -> Self {
         Self { value, next_link: None }
@@ -5333,6 +5522,15 @@ impl azure_openapi_core::Continuable for WorkloadNetworkGatewayList {
     type Continuation = String;
     fn continuation(&self) -> Option<Self::Continuation> {
         self.next_link.clone().filter(|value| !value.is_empty())
+    }
+}
+#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
+# [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
+impl azure_core::http::pager::Page for WorkloadNetworkGatewayList {
+    type Item = <Vec<WorkloadNetworkGateway> as IntoIterator>::Item;
+    type IntoIter = <Vec<WorkloadNetworkGateway> as IntoIterator>::IntoIter;
+    async fn into_items(self) -> azure_core::Result<Self::IntoIter> {
+        Ok(self.value.into_iter())
     }
 }
 impl WorkloadNetworkGatewayList {
@@ -5373,6 +5571,15 @@ impl azure_openapi_core::Continuable for WorkloadNetworkList {
         self.next_link.clone().filter(|value| !value.is_empty())
     }
 }
+#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
+# [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
+impl azure_core::http::pager::Page for WorkloadNetworkList {
+    type Item = <Vec<WorkloadNetwork> as IntoIterator>::Item;
+    type IntoIter = <Vec<WorkloadNetwork> as IntoIterator>::IntoIter;
+    async fn into_items(self) -> azure_core::Result<Self::IntoIter> {
+        Ok(self.value.into_iter())
+    }
+}
 impl WorkloadNetworkList {
     pub fn new(value: Vec<WorkloadNetwork>) -> Self {
         Self { value, next_link: None }
@@ -5405,6 +5612,15 @@ impl azure_openapi_core::Continuable for WorkloadNetworkPortMirroringList {
     type Continuation = String;
     fn continuation(&self) -> Option<Self::Continuation> {
         self.next_link.clone().filter(|value| !value.is_empty())
+    }
+}
+#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
+# [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
+impl azure_core::http::pager::Page for WorkloadNetworkPortMirroringList {
+    type Item = <Vec<WorkloadNetworkPortMirroring> as IntoIterator>::Item;
+    type IntoIter = <Vec<WorkloadNetworkPortMirroring> as IntoIterator>::IntoIter;
+    async fn into_items(self) -> azure_core::Result<Self::IntoIter> {
+        Ok(self.value.into_iter())
     }
 }
 impl WorkloadNetworkPortMirroringList {
@@ -5639,6 +5855,15 @@ impl azure_openapi_core::Continuable for WorkloadNetworkPublicIPsList {
         self.next_link.clone().filter(|value| !value.is_empty())
     }
 }
+#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
+# [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
+impl azure_core::http::pager::Page for WorkloadNetworkPublicIPsList {
+    type Item = <Vec<WorkloadNetworkPublicIp> as IntoIterator>::Item;
+    type IntoIter = <Vec<WorkloadNetworkPublicIp> as IntoIterator>::IntoIter;
+    async fn into_items(self) -> azure_core::Result<Self::IntoIter> {
+        Ok(self.value.into_iter())
+    }
+}
 impl WorkloadNetworkPublicIPsList {
     pub fn new(value: Vec<WorkloadNetworkPublicIp>) -> Self {
         Self { value, next_link: None }
@@ -5785,6 +6010,15 @@ impl azure_openapi_core::Continuable for WorkloadNetworkSegmentsList {
         self.next_link.clone().filter(|value| !value.is_empty())
     }
 }
+#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
+# [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
+impl azure_core::http::pager::Page for WorkloadNetworkSegmentsList {
+    type Item = <Vec<WorkloadNetworkSegment> as IntoIterator>::Item;
+    type IntoIter = <Vec<WorkloadNetworkSegment> as IntoIterator>::IntoIter;
+    async fn into_items(self) -> azure_core::Result<Self::IntoIter> {
+        Ok(self.value.into_iter())
+    }
+}
 impl WorkloadNetworkSegmentsList {
     pub fn new(value: Vec<WorkloadNetworkSegment>) -> Self {
         Self { value, next_link: None }
@@ -5892,6 +6126,15 @@ impl azure_openapi_core::Continuable for WorkloadNetworkVmGroupsList {
         self.next_link.clone().filter(|value| !value.is_empty())
     }
 }
+#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
+# [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
+impl azure_core::http::pager::Page for WorkloadNetworkVmGroupsList {
+    type Item = <Vec<WorkloadNetworkVmGroup> as IntoIterator>::Item;
+    type IntoIter = <Vec<WorkloadNetworkVmGroup> as IntoIterator>::IntoIter;
+    async fn into_items(self) -> azure_core::Result<Self::IntoIter> {
+        Ok(self.value.into_iter())
+    }
+}
 impl WorkloadNetworkVmGroupsList {
     pub fn new(value: Vec<WorkloadNetworkVmGroup>) -> Self {
         Self { value, next_link: None }
@@ -5942,6 +6185,15 @@ impl azure_openapi_core::Continuable for WorkloadNetworkVirtualMachinesList {
     type Continuation = String;
     fn continuation(&self) -> Option<Self::Continuation> {
         self.next_link.clone().filter(|value| !value.is_empty())
+    }
+}
+#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
+# [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
+impl azure_core::http::pager::Page for WorkloadNetworkVirtualMachinesList {
+    type Item = <Vec<WorkloadNetworkVirtualMachine> as IntoIterator>::Item;
+    type IntoIter = <Vec<WorkloadNetworkVirtualMachine> as IntoIterator>::IntoIter;
+    async fn into_items(self) -> azure_core::Result<Self::IntoIter> {
+        Ok(self.value.into_iter())
     }
 }
 impl WorkloadNetworkVirtualMachinesList {

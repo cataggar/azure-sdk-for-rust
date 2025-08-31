@@ -102,7 +102,7 @@ impl ToTokens for RequestBuilderSendCode {
             }
         };
 
-        let fut = if let Some(pageable) = &self.response_code.pageable {
+        let pager_tokens = if let Some(pageable) = &self.response_code.pageable {
             // TODO: Pageable requires the values to be part of the response schema,
             // however, some schemas do this via the header x-ms-continuation rather than
             // provide a next_link_name.  For now, those cases get documented that we don't
@@ -134,64 +134,88 @@ impl ToTokens for RequestBuilderSendCode {
                 // as a parameter.  In this case, use the basic request builder,
                 // but insert the continuation parameter
                 if let Some(continuable_param) = get_continuable_param(next_link_name, request_builder) {
+                    // Continuation token provided as a query parameter; build subsequent requests by reusing the builder and setting the token.
                     quote! {
-                        pub fn into_stream(self) -> azure_openapi_core::Pageable<#response_type, azure_core::error::Error> {
-                            let make_request = move |continuation: Option<String>| {
-                                let this = self.clone();
+                        #[doc = "Return a Pager over pages (experimental)"]
+                        pub fn into_pager(self) -> azure_core::Result<azure_core::http::pager::Pager<#response_type>> {
+                            let client = self.client.clone();
+                            let initial = self.clone();
+                            Ok(azure_core::http::pager::Pager::from_callback(move |state: azure_core::http::pager::PagerState<String>| {
+                                let client = client.clone();
+                                let initial = initial.clone();
                                 async move {
-                                    let mut url = this.url()?;
-                                    #new_request_code
-                                    #request_builder
-                                    if let Some(value) = continuation.as_ref() {
-                                        req.url_mut().query_pairs_mut().append_pair(#continuable_param, value);
+                                    let rsp = match state {
+                                        azure_core::http::pager::PagerState::Initial => {
+                                            initial.clone().send().await?.into_raw_response()
+                                        }
+                                        azure_core::http::pager::PagerState::More(token) => {
+                                            let url = initial.url()?;
+                                            let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                            let bearer_token = client.bearer_token().await?;
+                                            req.insert_header(azure_core::http::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                            #stream_api_version
+                                            req.url_mut().query_pairs_mut().append_pair(#continuable_param, token.as_ref());
+                                            req.set_body(azure_openapi_core::EMPTY_BODY);
+                                            client.send(&mut req).await?
+                                        }
+                                    };
+                                    if !rsp.status().is_success() {
+                                        return Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse { status: rsp.status(), error_code: None }));
                                     }
-                                    req.set_body(req_body);
-                                    let rsp = this.client.send(&mut req).await?;
-                                    let rsp =
-                                        match rsp.status() {
-                                            #match_status
-                                        };
-                                    rsp?.into_body().await
+                                    let (status, headers, body) = rsp.deconstruct();
+                                    let bytes = body.collect().await?;
+                                    let page: #response_type = serde_json::from_slice(&bytes)?;
+                                    let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
+                                    let response: azure_core::http::response::Response<#response_type, azure_core::http::JsonFormat> = raw.into();
+                                    Ok(match azure_openapi_core::Continuable::continuation(&page) {
+                                        Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
+                                        None => azure_core::http::pager::PagerResult::Done { response },
+                                    })
                                 }
-                            };
-
-                            azure_openapi_core::Pageable::new(make_request)
+                            }))
                         }
                     }
                 } else {
+                    // Continuation link provided as a URL in the response body (next link); build subsequent requests from the absolute/relative URL.
                     quote! {
-                        pub fn into_stream(self) -> azure_openapi_core::Pageable<#response_type, azure_core::error::Error> {
-                            let make_request = move |continuation: Option<String>| {
-                                let this = self.clone();
+                        #[doc = "Return a Pager over pages (experimental)"]
+                        pub fn into_pager(self) -> azure_core::Result<azure_core::http::pager::Pager<#response_type>> {
+                            let client = self.client.clone();
+                            let initial = self.clone();
+                            Ok(azure_core::http::pager::Pager::from_callback(move |state: azure_core::http::pager::PagerState<String>| {
+                                let client = client.clone();
+                                let initial = initial.clone();
                                 async move {
-                                    let mut url = this.url()?;
-
-                                    let rsp = match continuation {
-                                        Some(value) => {
-                                            url.set_path("");
-                                            url = url.join(&value)?;
-                                            #new_request_code
-                                            #stream_api_version
-                                            let req_body = azure_openapi_core::EMPTY_BODY;
-                                            req.set_body(req_body);
-                                            this.client.send(&mut req).await?
+                                    let rsp = match state {
+                                        azure_core::http::pager::PagerState::Initial => {
+                                            initial.clone().send().await?.into_raw_response()
                                         }
-                                        None => {
-                                            #new_request_code
-                                            #request_builder
-                                            req.set_body(req_body);
-                                            this.client.send(&mut req).await?
+                                        azure_core::http::pager::PagerState::More(next_url) => {
+                                            let mut url = client.endpoint().clone();
+                                            url.set_path("");
+                                            let url = url.join(next_url.as_ref())?;
+                                            let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                            let bearer_token = client.bearer_token().await?;
+                                            req.insert_header(azure_core::http::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                            #stream_api_version
+                                            req.set_body(azure_openapi_core::EMPTY_BODY);
+                                            client.send(&mut req).await?
                                         }
                                     };
-                                    let rsp =
-                                        match rsp.status() {
-                                            #match_status
-                                        };
-                                    rsp?.into_body().await
+                                    if !rsp.status().is_success() {
+                                        return Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse { status: rsp.status(), error_code: None }));
+                                    }
+                                    let (status, headers, body) = rsp.deconstruct();
+                                    let bytes = body.collect().await?;
+                                    let page: #response_type = serde_json::from_slice(&bytes)?;
+                                    let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
+                                    let response: azure_core::http::response::Response<#response_type, azure_core::http::JsonFormat> = raw.into();
+                                    Ok(match azure_openapi_core::Continuable::continuation(&page) {
+                                        Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
+                                        None => azure_core::http::pager::PagerResult::Done { response },
+                                    })
                                 }
-                            };
-
-                            azure_openapi_core::Pageable::new(make_request)
+                            }))
                         }
                     }
                 }
@@ -203,20 +227,15 @@ impl ToTokens for RequestBuilderSendCode {
                 // Note, this is only *sometimes* this is specified in the spec.
                 //
                 // Ref: https://github.com/Azure/azure-sdk-for-rust/issues/446
-                let mut fut = quote! {
-                    #[doc = "Only the first response will be fetched as the continuation token is not part of the response schema"]
-                    #[doc = ""]
-                };
-                fut.extend(send_future);
-                fut
+                quote! {}
             }
         } else {
-            send_future
+            quote! {}
         };
-        // TODO This is RequetBuilder::into_stream
-        // Reaplce with azure_core::http::Pager
-        // tokens.extend(fut);
-        tokens.extend(urlfn)
+        // Emit url(), send(), and optionally into_pager()
+        tokens.extend(urlfn);
+        tokens.extend(send_future);
+        tokens.extend(pager_tokens);
     }
 }
 
