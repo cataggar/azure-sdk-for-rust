@@ -2820,6 +2820,25 @@ impl PrivateCloudList {
         Self { value, next_link: None }
     }
 }
+// Implement the azure_core pager Page trait so `PrivateCloudList` can be used with Pager
+#[cfg(not(target_arch = "wasm32"))]
+#[async_trait::async_trait]
+impl azure_core::http::pager::Page for PrivateCloudList {
+    type Item = PrivateCloud;
+    type IntoIter = <Vec<PrivateCloud> as IntoIterator>::IntoIter;
+    async fn into_items(self) -> azure_core::Result<Self::IntoIter> {
+        Ok(self.value.into_iter())
+    }
+}
+#[cfg(target_arch = "wasm32")]
+#[async_trait::async_trait(?Send)]
+impl azure_core::http::pager::Page for PrivateCloudList {
+    type Item = PrivateCloud;
+    type IntoIter = <Vec<PrivateCloud> as IntoIterator>::IntoIter;
+    async fn into_items(self) -> azure_core::Result<Self::IntoIter> {
+        Ok(self.value.into_iter())
+    }
+}
 #[doc = "The properties of a private cloud resource"]
 #[derive(Clone, PartialEq, Serialize, Deserialize, typespec_client_core :: fmt :: SafeDebug)]
 pub struct PrivateCloudProperties {

@@ -618,6 +618,7 @@ pub mod private_clouds {
     }
     pub mod list_in_subscription {
         use super::models;
+        use azure_openapi_core::Continuable as _;
         #[cfg(not(target_arch = "wasm32"))]
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
@@ -686,6 +687,74 @@ pub mod private_clouds {
                         .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                 }
                 Ok(url)
+            }
+
+            #[doc = "Return a Pager over PrivateCloudList pages (experimental)"]
+            pub fn into_pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::PrivateCloudList>> {
+                let first_url = self.url()?;
+                let client = self.client.clone();
+                let api_version = String::from("2024-09-01");
+
+                Ok(azure_core::http::pager::Pager::from_callback(
+                    move |state: azure_core::http::pager::PagerState<String>| {
+                        let client = client.clone();
+                        let api_version = api_version.clone();
+                        let first_url = first_url.clone();
+                        async move {
+                            // Resolve the URL for this fetch
+                            let mut url = match state {
+                                azure_core::http::pager::PagerState::Initial => first_url,
+                                azure_core::http::pager::PagerState::More(next_url) => {
+                                    // Join the next_link (can be absolute or relative) against endpoint
+                                    let mut u = client.endpoint().clone();
+                                    u.set_path("");
+                                    let mut u = u.join(next_url.as_ref())?;
+                                    let has_api_version_already = u
+                                        .query_pairs()
+                                        .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                                    if !has_api_version_already {
+                                        u.query_pairs_mut()
+                                            .append_pair(azure_core::http::headers::query_param::API_VERSION, &api_version);
+                                    }
+                                    u
+                                }
+                            };
+
+                            // Build and send the request
+                            let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                            let bearer_token = client.bearer_token().await?;
+                            req.insert_header(
+                                azure_core::http::headers::AUTHORIZATION,
+                                format!("Bearer {}", bearer_token.secret()),
+                            );
+                            req.insert_header(azure_core::http::headers::ACCEPT, "application/json");
+                            req.set_body(azure_openapi_core::EMPTY_BODY);
+
+                            let rsp = client.send(&mut req).await?;
+                            if !rsp.status().is_success() {
+                                return Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
+                                    status: rsp.status(),
+                                    error_code: None,
+                                }));
+                            }
+
+                            let (status, headers, body) = rsp.deconstruct();
+                            let bytes = body.collect().await?;
+                            let page: models::PrivateCloudList = serde_json::from_slice(&bytes)?;
+
+                            // Convert back into a typed Response expected by Pager
+                            let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes.clone());
+                            let response: azure_core::http::response::Response<models::PrivateCloudList, azure_core::http::JsonFormat> =
+                                raw.into();
+
+                            // Yield next or finish depending on continuation
+                            Ok(match page.continuation() {
+                                Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
+                                None => azure_core::http::pager::PagerResult::Done { response },
+                            })
+                        }
+                    },
+                ))
             }
         }
     }
