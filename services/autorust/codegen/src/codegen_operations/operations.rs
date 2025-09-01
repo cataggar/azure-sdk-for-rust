@@ -52,7 +52,7 @@ impl OperationCode {
         let request_builder_setters_code = RequestBuilderSettersCode::new(parameters);
         let response_code = ResponseCode::new(cg, operation, produces)?;
         let request_builder_send_code = RequestBuilderSendCode::new(new_request_code, request_builder, response_code.clone(), lro)?;
-        let request_builder_intofuture_code = RequestBuilderIntoFutureCode::new(response_code.clone(), lro, lro_options)?;
+        let request_builder_intofuture_code = RequestBuilderIntoFutureCode::new(response_code.clone(), lro)?;
 
         let operation_type_code = if lro {
             Some(OperationTypeCode::new(response_code.clone(), lro))
