@@ -3,6 +3,7 @@ mod function_code;
 mod function_params;
 mod new_request_code;
 mod operation_module;
+mod operation_type;
 mod operations;
 mod request_builder_into_future;
 mod request_builder_send;

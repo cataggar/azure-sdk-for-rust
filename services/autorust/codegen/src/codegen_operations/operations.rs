@@ -1,5 +1,6 @@
 use crate::{content_type, CodeGen, Result};
 
+use super::operation_type::OperationTypeCode;
 use super::{
     function_code::ClientFunctionCode,
     function_params::FunctionParams,
@@ -50,9 +51,14 @@ impl OperationCode {
         let request_builder_struct_code = RequestBuilderStructCode::new(parameters, in_operation_group, lro, lro_options.clone());
         let request_builder_setters_code = RequestBuilderSettersCode::new(parameters);
         let response_code = ResponseCode::new(cg, operation, produces)?;
-        let request_builder_send_code = RequestBuilderSendCode::new(new_request_code, request_builder, response_code.clone())?;
+        let request_builder_send_code = RequestBuilderSendCode::new(new_request_code, request_builder, response_code.clone(), lro)?;
         let request_builder_intofuture_code = RequestBuilderIntoFutureCode::new(response_code.clone(), lro, lro_options)?;
 
+        let operation_type_code = if lro {
+            Some(OperationTypeCode::new(response_code.clone(), lro))
+        } else {
+            None
+        };
         let module_code = OperationModuleCode {
             module_name: operation.function_name()?,
             response_code,
@@ -60,6 +66,7 @@ impl OperationCode {
             request_builder_setters_code,
             request_builder_send_code,
             request_builder_intofuture_code,
+            operation_type_code,
         };
 
         Ok(OperationCode {

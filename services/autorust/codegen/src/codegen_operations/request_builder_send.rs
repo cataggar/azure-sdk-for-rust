@@ -1,3 +1,4 @@
+// LRO poller generation is currently disabled; LRO awaiting is handled in IntoFuture.
 use heck::ToSnakeCase;
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
@@ -13,10 +14,11 @@ pub struct RequestBuilderSendCode {
     request_builder: SetRequestCode,
     response_code: ResponseCode,
     url_args: Vec<Ident>,
+    lro: bool,
 }
 
 impl RequestBuilderSendCode {
-    pub fn new(new_request_code: NewRequestCode, request_builder: SetRequestCode, response_code: ResponseCode) -> Result<Self> {
+    pub fn new(new_request_code: NewRequestCode, request_builder: SetRequestCode, response_code: ResponseCode, lro: bool) -> Result<Self> {
         let params = parse_path_params(&new_request_code.path);
         let url_args: Result<Vec<_>> = params.iter().map(|s| s.to_snake_case_ident()).collect();
         let url_args = url_args?;
@@ -25,6 +27,7 @@ impl RequestBuilderSendCode {
             request_builder,
             response_code,
             url_args,
+            lro,
         })
     }
 }
@@ -250,6 +253,66 @@ impl ToTokens for RequestBuilderSendCode {
         tokens.extend(urlfn);
         tokens.extend(send_future);
         tokens.extend(pager_tokens);
+
+        // Emit a generic LRO poller that returns an Operation wrapper implementing StatusMonitor.
+        if self.lro {
+            // Only emit when we can determine a response body type (to wrap inside Operation)
+            if self.response_code.response_type().is_some() {
+                let poller_tokens = quote! {
+                    #[doc = "Return a Poller over an LRO"]
+                    pub fn poller(self) -> azure_core::Result<azure_core::http::poller::Poller<Operation>> {
+                        let client = self.client.clone();
+                        let initial = self.clone();
+                        Ok(azure_core::http::poller::Poller::from_callback(
+                            move |state: azure_core::http::poller::PollerState<azure_core::http::Url>| {
+                                let client = client.clone();
+                                let initial = initial.clone();
+                                async move {
+                                    use azure_core::http::poller::{PollerResult, PollerState, StatusMonitor as _};
+                                    use azure_core::json;
+                                    let (rsp, next_link) = match state {
+                                        PollerState::Initial => {
+                                            let rsp = initial.clone().send().await?.into_raw_response();
+                                            let next = initial.clone().url()?;
+                                            (rsp, next)
+                                        }
+                                        PollerState::More(next_url) => {
+                                            let mut req = typespec_client_core::http::request::Request::new(
+                                                next_url.clone(),
+                                                azure_core::http::Method::Get,
+                                            );
+                                            let bearer_token = client.bearer_token().await?;
+                                            req.insert_header(
+                                                azure_core::http::headers::AUTHORIZATION,
+                                                format!("Bearer {}", bearer_token.secret()),
+                                            );
+                                            req.set_body(azure_openapi_core::EMPTY_BODY);
+                                            let rsp = client.send(&mut req).await?;
+                                            (rsp, next_url.clone())
+                                        }
+                                    };
+                                    if !rsp.status().is_success() {
+                                        return Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse { status: rsp.status(), error_code: None }));
+                                    }
+                                    let (status, headers, body) = rsp.deconstruct();
+                                    let retry_after = azure_core::http::poller::get_retry_after(&headers, &azure_core::http::poller::PollerOptions::default());
+                                    let bytes = body.collect().await?;
+                                    // Parse into Operation to determine status
+                                    let op: Operation = json::from_json(&bytes)?;
+                                    let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
+                                    Ok(match op.status() {
+                                        azure_core::http::poller::PollerStatus::InProgress => PollerResult::InProgress { response, retry_after, next: next_link },
+                                        _ => PollerResult::Done { response },
+                                    })
+                                }
+                            },
+                            None,
+                        ))
+                    }
+                };
+                tokens.extend(poller_tokens);
+            }
+        }
     }
 }
 

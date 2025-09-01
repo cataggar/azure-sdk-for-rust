@@ -1189,6 +1189,42 @@ pub mod private_clouds {
                 self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
+        #[derive(Clone, Debug, serde :: Serialize, serde :: Deserialize)]
+        #[serde(transparent)]
+        pub struct Operation(pub models::PrivateCloud);
+        impl azure_core::http::poller::StatusMonitor for Operation {
+            type Output = models::PrivateCloud;
+            fn status(&self) -> azure_core::http::poller::PollerStatus {
+                fn map_status(s: &str) -> azure_core::http::poller::PollerStatus {
+                    match s.to_ascii_lowercase().as_str() {
+                        "succeeded" => azure_core::http::poller::PollerStatus::Succeeded,
+                        "failed" => azure_core::http::poller::PollerStatus::Failed,
+                        "canceled" | "cancelled" => azure_core::http::poller::PollerStatus::Canceled,
+                        _ => azure_core::http::poller::PollerStatus::InProgress,
+                    }
+                }
+                fn find_status(value: &serde_json::Value) -> Option<azure_core::http::poller::PollerStatus> {
+                    if let Some(ps) = value
+                        .get("properties")
+                        .and_then(|p| p.get("provisioningState"))
+                        .and_then(|v| v.as_str())
+                    {
+                        return Some(map_status(ps));
+                    }
+                    if let Some(ps) = value.get("provisioningState").and_then(|v| v.as_str()) {
+                        return Some(map_status(ps));
+                    }
+                    if let Some(ps) = value.get("status").and_then(|v| v.as_str()) {
+                        return Some(map_status(ps));
+                    }
+                    None
+                }
+                match serde_json::to_value(&self.0).ok().and_then(|v| find_status(&v)) {
+                    Some(s) => s,
+                    None => azure_core::http::poller::PollerStatus::InProgress,
+                }
+            }
+        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -1252,6 +1288,61 @@ pub mod private_clouds {
                     }
                 })
             }
+            #[doc = "Return a Poller over an LRO"]
+            pub fn poller(self) -> azure_core::Result<azure_core::http::poller::Poller<Operation>> {
+                let client = self.client.clone();
+                let initial = self.clone();
+                Ok(azure_core::http::poller::Poller::from_callback(
+                    move |state: azure_core::http::poller::PollerState<azure_core::http::Url>| {
+                        let client = client.clone();
+                        let initial = initial.clone();
+                        async move {
+                            use azure_core::http::poller::{PollerResult, PollerState, StatusMonitor as _};
+                            use azure_core::json;
+                            let (rsp, next_link) = match state {
+                                PollerState::Initial => {
+                                    let rsp = initial.clone().send().await?.into_raw_response();
+                                    let next = initial.clone().url()?;
+                                    (rsp, next)
+                                }
+                                PollerState::More(next_url) => {
+                                    let mut req =
+                                        typespec_client_core::http::request::Request::new(next_url.clone(), azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    let rsp = client.send(&mut req).await?;
+                                    (rsp, next_url.clone())
+                                }
+                            };
+                            if !rsp.status().is_success() {
+                                return Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
+                                    status: rsp.status(),
+                                    error_code: None,
+                                }));
+                            }
+                            let (status, headers, body) = rsp.deconstruct();
+                            let retry_after =
+                                azure_core::http::poller::get_retry_after(&headers, &azure_core::http::poller::PollerOptions::default());
+                            let bytes = body.collect().await?;
+                            let op: Operation = json::from_json(&bytes)?;
+                            let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
+                            Ok(match op.status() {
+                                azure_core::http::poller::PollerStatus::InProgress => PollerResult::InProgress {
+                                    response,
+                                    retry_after,
+                                    next: next_link,
+                                },
+                                _ => PollerResult::Done { response },
+                            })
+                        }
+                    },
+                    None,
+                ))
+            }
         }
     }
     pub mod update {
@@ -1298,6 +1389,42 @@ pub mod private_clouds {
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
                 self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
+            }
+        }
+        #[derive(Clone, Debug, serde :: Serialize, serde :: Deserialize)]
+        #[serde(transparent)]
+        pub struct Operation(pub models::PrivateCloud);
+        impl azure_core::http::poller::StatusMonitor for Operation {
+            type Output = models::PrivateCloud;
+            fn status(&self) -> azure_core::http::poller::PollerStatus {
+                fn map_status(s: &str) -> azure_core::http::poller::PollerStatus {
+                    match s.to_ascii_lowercase().as_str() {
+                        "succeeded" => azure_core::http::poller::PollerStatus::Succeeded,
+                        "failed" => azure_core::http::poller::PollerStatus::Failed,
+                        "canceled" | "cancelled" => azure_core::http::poller::PollerStatus::Canceled,
+                        _ => azure_core::http::poller::PollerStatus::InProgress,
+                    }
+                }
+                fn find_status(value: &serde_json::Value) -> Option<azure_core::http::poller::PollerStatus> {
+                    if let Some(ps) = value
+                        .get("properties")
+                        .and_then(|p| p.get("provisioningState"))
+                        .and_then(|v| v.as_str())
+                    {
+                        return Some(map_status(ps));
+                    }
+                    if let Some(ps) = value.get("provisioningState").and_then(|v| v.as_str()) {
+                        return Some(map_status(ps));
+                    }
+                    if let Some(ps) = value.get("status").and_then(|v| v.as_str()) {
+                        return Some(map_status(ps));
+                    }
+                    None
+                }
+                match serde_json::to_value(&self.0).ok().and_then(|v| find_status(&v)) {
+                    Some(s) => s,
+                    None => azure_core::http::poller::PollerStatus::InProgress,
+                }
             }
         }
         #[derive(Clone)]
@@ -1362,6 +1489,61 @@ pub mod private_clouds {
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
+            }
+            #[doc = "Return a Poller over an LRO"]
+            pub fn poller(self) -> azure_core::Result<azure_core::http::poller::Poller<Operation>> {
+                let client = self.client.clone();
+                let initial = self.clone();
+                Ok(azure_core::http::poller::Poller::from_callback(
+                    move |state: azure_core::http::poller::PollerState<azure_core::http::Url>| {
+                        let client = client.clone();
+                        let initial = initial.clone();
+                        async move {
+                            use azure_core::http::poller::{PollerResult, PollerState, StatusMonitor as _};
+                            use azure_core::json;
+                            let (rsp, next_link) = match state {
+                                PollerState::Initial => {
+                                    let rsp = initial.clone().send().await?.into_raw_response();
+                                    let next = initial.clone().url()?;
+                                    (rsp, next)
+                                }
+                                PollerState::More(next_url) => {
+                                    let mut req =
+                                        typespec_client_core::http::request::Request::new(next_url.clone(), azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    let rsp = client.send(&mut req).await?;
+                                    (rsp, next_url.clone())
+                                }
+                            };
+                            if !rsp.status().is_success() {
+                                return Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
+                                    status: rsp.status(),
+                                    error_code: None,
+                                }));
+                            }
+                            let (status, headers, body) = rsp.deconstruct();
+                            let retry_after =
+                                azure_core::http::poller::get_retry_after(&headers, &azure_core::http::poller::PollerOptions::default());
+                            let bytes = body.collect().await?;
+                            let op: Operation = json::from_json(&bytes)?;
+                            let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
+                            Ok(match op.status() {
+                                azure_core::http::poller::PollerStatus::InProgress => PollerResult::InProgress {
+                                    response,
+                                    retry_after,
+                                    next: next_link,
+                                },
+                                _ => PollerResult::Done { response },
+                            })
+                        }
+                    },
+                    None,
+                ))
             }
         }
     }
@@ -2335,6 +2517,42 @@ pub mod addons {
                 self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
+        #[derive(Clone, Debug, serde :: Serialize, serde :: Deserialize)]
+        #[serde(transparent)]
+        pub struct Operation(pub models::Addon);
+        impl azure_core::http::poller::StatusMonitor for Operation {
+            type Output = models::Addon;
+            fn status(&self) -> azure_core::http::poller::PollerStatus {
+                fn map_status(s: &str) -> azure_core::http::poller::PollerStatus {
+                    match s.to_ascii_lowercase().as_str() {
+                        "succeeded" => azure_core::http::poller::PollerStatus::Succeeded,
+                        "failed" => azure_core::http::poller::PollerStatus::Failed,
+                        "canceled" | "cancelled" => azure_core::http::poller::PollerStatus::Canceled,
+                        _ => azure_core::http::poller::PollerStatus::InProgress,
+                    }
+                }
+                fn find_status(value: &serde_json::Value) -> Option<azure_core::http::poller::PollerStatus> {
+                    if let Some(ps) = value
+                        .get("properties")
+                        .and_then(|p| p.get("provisioningState"))
+                        .and_then(|v| v.as_str())
+                    {
+                        return Some(map_status(ps));
+                    }
+                    if let Some(ps) = value.get("provisioningState").and_then(|v| v.as_str()) {
+                        return Some(map_status(ps));
+                    }
+                    if let Some(ps) = value.get("status").and_then(|v| v.as_str()) {
+                        return Some(map_status(ps));
+                    }
+                    None
+                }
+                match serde_json::to_value(&self.0).ok().and_then(|v| find_status(&v)) {
+                    Some(s) => s,
+                    None => azure_core::http::poller::PollerStatus::InProgress,
+                }
+            }
+        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -2398,6 +2616,61 @@ pub mod addons {
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
+            }
+            #[doc = "Return a Poller over an LRO"]
+            pub fn poller(self) -> azure_core::Result<azure_core::http::poller::Poller<Operation>> {
+                let client = self.client.clone();
+                let initial = self.clone();
+                Ok(azure_core::http::poller::Poller::from_callback(
+                    move |state: azure_core::http::poller::PollerState<azure_core::http::Url>| {
+                        let client = client.clone();
+                        let initial = initial.clone();
+                        async move {
+                            use azure_core::http::poller::{PollerResult, PollerState, StatusMonitor as _};
+                            use azure_core::json;
+                            let (rsp, next_link) = match state {
+                                PollerState::Initial => {
+                                    let rsp = initial.clone().send().await?.into_raw_response();
+                                    let next = initial.clone().url()?;
+                                    (rsp, next)
+                                }
+                                PollerState::More(next_url) => {
+                                    let mut req =
+                                        typespec_client_core::http::request::Request::new(next_url.clone(), azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    let rsp = client.send(&mut req).await?;
+                                    (rsp, next_url.clone())
+                                }
+                            };
+                            if !rsp.status().is_success() {
+                                return Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
+                                    status: rsp.status(),
+                                    error_code: None,
+                                }));
+                            }
+                            let (status, headers, body) = rsp.deconstruct();
+                            let retry_after =
+                                azure_core::http::poller::get_retry_after(&headers, &azure_core::http::poller::PollerOptions::default());
+                            let bytes = body.collect().await?;
+                            let op: Operation = json::from_json(&bytes)?;
+                            let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
+                            Ok(match op.status() {
+                                azure_core::http::poller::PollerStatus::InProgress => PollerResult::InProgress {
+                                    response,
+                                    retry_after,
+                                    next: next_link,
+                                },
+                                _ => PollerResult::Done { response },
+                            })
+                        }
+                    },
+                    None,
+                ))
             }
         }
     }
@@ -2899,6 +3172,42 @@ pub mod authorizations {
                 self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
+        #[derive(Clone, Debug, serde :: Serialize, serde :: Deserialize)]
+        #[serde(transparent)]
+        pub struct Operation(pub models::ExpressRouteAuthorization);
+        impl azure_core::http::poller::StatusMonitor for Operation {
+            type Output = models::ExpressRouteAuthorization;
+            fn status(&self) -> azure_core::http::poller::PollerStatus {
+                fn map_status(s: &str) -> azure_core::http::poller::PollerStatus {
+                    match s.to_ascii_lowercase().as_str() {
+                        "succeeded" => azure_core::http::poller::PollerStatus::Succeeded,
+                        "failed" => azure_core::http::poller::PollerStatus::Failed,
+                        "canceled" | "cancelled" => azure_core::http::poller::PollerStatus::Canceled,
+                        _ => azure_core::http::poller::PollerStatus::InProgress,
+                    }
+                }
+                fn find_status(value: &serde_json::Value) -> Option<azure_core::http::poller::PollerStatus> {
+                    if let Some(ps) = value
+                        .get("properties")
+                        .and_then(|p| p.get("provisioningState"))
+                        .and_then(|v| v.as_str())
+                    {
+                        return Some(map_status(ps));
+                    }
+                    if let Some(ps) = value.get("provisioningState").and_then(|v| v.as_str()) {
+                        return Some(map_status(ps));
+                    }
+                    if let Some(ps) = value.get("status").and_then(|v| v.as_str()) {
+                        return Some(map_status(ps));
+                    }
+                    None
+                }
+                match serde_json::to_value(&self.0).ok().and_then(|v| find_status(&v)) {
+                    Some(s) => s,
+                    None => azure_core::http::poller::PollerStatus::InProgress,
+                }
+            }
+        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -2962,6 +3271,61 @@ pub mod authorizations {
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
+            }
+            #[doc = "Return a Poller over an LRO"]
+            pub fn poller(self) -> azure_core::Result<azure_core::http::poller::Poller<Operation>> {
+                let client = self.client.clone();
+                let initial = self.clone();
+                Ok(azure_core::http::poller::Poller::from_callback(
+                    move |state: azure_core::http::poller::PollerState<azure_core::http::Url>| {
+                        let client = client.clone();
+                        let initial = initial.clone();
+                        async move {
+                            use azure_core::http::poller::{PollerResult, PollerState, StatusMonitor as _};
+                            use azure_core::json;
+                            let (rsp, next_link) = match state {
+                                PollerState::Initial => {
+                                    let rsp = initial.clone().send().await?.into_raw_response();
+                                    let next = initial.clone().url()?;
+                                    (rsp, next)
+                                }
+                                PollerState::More(next_url) => {
+                                    let mut req =
+                                        typespec_client_core::http::request::Request::new(next_url.clone(), azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    let rsp = client.send(&mut req).await?;
+                                    (rsp, next_url.clone())
+                                }
+                            };
+                            if !rsp.status().is_success() {
+                                return Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
+                                    status: rsp.status(),
+                                    error_code: None,
+                                }));
+                            }
+                            let (status, headers, body) = rsp.deconstruct();
+                            let retry_after =
+                                azure_core::http::poller::get_retry_after(&headers, &azure_core::http::poller::PollerOptions::default());
+                            let bytes = body.collect().await?;
+                            let op: Operation = json::from_json(&bytes)?;
+                            let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
+                            Ok(match op.status() {
+                                azure_core::http::poller::PollerStatus::InProgress => PollerResult::InProgress {
+                                    response,
+                                    retry_after,
+                                    next: next_link,
+                                },
+                                _ => PollerResult::Done { response },
+                            })
+                        }
+                    },
+                    None,
+                ))
             }
         }
     }
@@ -3461,6 +3825,42 @@ pub mod cloud_links {
                 self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
+        #[derive(Clone, Debug, serde :: Serialize, serde :: Deserialize)]
+        #[serde(transparent)]
+        pub struct Operation(pub models::CloudLink);
+        impl azure_core::http::poller::StatusMonitor for Operation {
+            type Output = models::CloudLink;
+            fn status(&self) -> azure_core::http::poller::PollerStatus {
+                fn map_status(s: &str) -> azure_core::http::poller::PollerStatus {
+                    match s.to_ascii_lowercase().as_str() {
+                        "succeeded" => azure_core::http::poller::PollerStatus::Succeeded,
+                        "failed" => azure_core::http::poller::PollerStatus::Failed,
+                        "canceled" | "cancelled" => azure_core::http::poller::PollerStatus::Canceled,
+                        _ => azure_core::http::poller::PollerStatus::InProgress,
+                    }
+                }
+                fn find_status(value: &serde_json::Value) -> Option<azure_core::http::poller::PollerStatus> {
+                    if let Some(ps) = value
+                        .get("properties")
+                        .and_then(|p| p.get("provisioningState"))
+                        .and_then(|v| v.as_str())
+                    {
+                        return Some(map_status(ps));
+                    }
+                    if let Some(ps) = value.get("provisioningState").and_then(|v| v.as_str()) {
+                        return Some(map_status(ps));
+                    }
+                    if let Some(ps) = value.get("status").and_then(|v| v.as_str()) {
+                        return Some(map_status(ps));
+                    }
+                    None
+                }
+                match serde_json::to_value(&self.0).ok().and_then(|v| find_status(&v)) {
+                    Some(s) => s,
+                    None => azure_core::http::poller::PollerStatus::InProgress,
+                }
+            }
+        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -3524,6 +3924,61 @@ pub mod cloud_links {
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
+            }
+            #[doc = "Return a Poller over an LRO"]
+            pub fn poller(self) -> azure_core::Result<azure_core::http::poller::Poller<Operation>> {
+                let client = self.client.clone();
+                let initial = self.clone();
+                Ok(azure_core::http::poller::Poller::from_callback(
+                    move |state: azure_core::http::poller::PollerState<azure_core::http::Url>| {
+                        let client = client.clone();
+                        let initial = initial.clone();
+                        async move {
+                            use azure_core::http::poller::{PollerResult, PollerState, StatusMonitor as _};
+                            use azure_core::json;
+                            let (rsp, next_link) = match state {
+                                PollerState::Initial => {
+                                    let rsp = initial.clone().send().await?.into_raw_response();
+                                    let next = initial.clone().url()?;
+                                    (rsp, next)
+                                }
+                                PollerState::More(next_url) => {
+                                    let mut req =
+                                        typespec_client_core::http::request::Request::new(next_url.clone(), azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    let rsp = client.send(&mut req).await?;
+                                    (rsp, next_url.clone())
+                                }
+                            };
+                            if !rsp.status().is_success() {
+                                return Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
+                                    status: rsp.status(),
+                                    error_code: None,
+                                }));
+                            }
+                            let (status, headers, body) = rsp.deconstruct();
+                            let retry_after =
+                                azure_core::http::poller::get_retry_after(&headers, &azure_core::http::poller::PollerOptions::default());
+                            let bytes = body.collect().await?;
+                            let op: Operation = json::from_json(&bytes)?;
+                            let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
+                            Ok(match op.status() {
+                                azure_core::http::poller::PollerStatus::InProgress => PollerResult::InProgress {
+                                    response,
+                                    retry_after,
+                                    next: next_link,
+                                },
+                                _ => PollerResult::Done { response },
+                            })
+                        }
+                    },
+                    None,
+                ))
             }
         }
     }
@@ -4070,6 +4525,42 @@ pub mod clusters {
                 self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
+        #[derive(Clone, Debug, serde :: Serialize, serde :: Deserialize)]
+        #[serde(transparent)]
+        pub struct Operation(pub models::Cluster);
+        impl azure_core::http::poller::StatusMonitor for Operation {
+            type Output = models::Cluster;
+            fn status(&self) -> azure_core::http::poller::PollerStatus {
+                fn map_status(s: &str) -> azure_core::http::poller::PollerStatus {
+                    match s.to_ascii_lowercase().as_str() {
+                        "succeeded" => azure_core::http::poller::PollerStatus::Succeeded,
+                        "failed" => azure_core::http::poller::PollerStatus::Failed,
+                        "canceled" | "cancelled" => azure_core::http::poller::PollerStatus::Canceled,
+                        _ => azure_core::http::poller::PollerStatus::InProgress,
+                    }
+                }
+                fn find_status(value: &serde_json::Value) -> Option<azure_core::http::poller::PollerStatus> {
+                    if let Some(ps) = value
+                        .get("properties")
+                        .and_then(|p| p.get("provisioningState"))
+                        .and_then(|v| v.as_str())
+                    {
+                        return Some(map_status(ps));
+                    }
+                    if let Some(ps) = value.get("provisioningState").and_then(|v| v.as_str()) {
+                        return Some(map_status(ps));
+                    }
+                    if let Some(ps) = value.get("status").and_then(|v| v.as_str()) {
+                        return Some(map_status(ps));
+                    }
+                    None
+                }
+                match serde_json::to_value(&self.0).ok().and_then(|v| find_status(&v)) {
+                    Some(s) => s,
+                    None => azure_core::http::poller::PollerStatus::InProgress,
+                }
+            }
+        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -4134,6 +4625,61 @@ pub mod clusters {
                     }
                 })
             }
+            #[doc = "Return a Poller over an LRO"]
+            pub fn poller(self) -> azure_core::Result<azure_core::http::poller::Poller<Operation>> {
+                let client = self.client.clone();
+                let initial = self.clone();
+                Ok(azure_core::http::poller::Poller::from_callback(
+                    move |state: azure_core::http::poller::PollerState<azure_core::http::Url>| {
+                        let client = client.clone();
+                        let initial = initial.clone();
+                        async move {
+                            use azure_core::http::poller::{PollerResult, PollerState, StatusMonitor as _};
+                            use azure_core::json;
+                            let (rsp, next_link) = match state {
+                                PollerState::Initial => {
+                                    let rsp = initial.clone().send().await?.into_raw_response();
+                                    let next = initial.clone().url()?;
+                                    (rsp, next)
+                                }
+                                PollerState::More(next_url) => {
+                                    let mut req =
+                                        typespec_client_core::http::request::Request::new(next_url.clone(), azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    let rsp = client.send(&mut req).await?;
+                                    (rsp, next_url.clone())
+                                }
+                            };
+                            if !rsp.status().is_success() {
+                                return Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
+                                    status: rsp.status(),
+                                    error_code: None,
+                                }));
+                            }
+                            let (status, headers, body) = rsp.deconstruct();
+                            let retry_after =
+                                azure_core::http::poller::get_retry_after(&headers, &azure_core::http::poller::PollerOptions::default());
+                            let bytes = body.collect().await?;
+                            let op: Operation = json::from_json(&bytes)?;
+                            let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
+                            Ok(match op.status() {
+                                azure_core::http::poller::PollerStatus::InProgress => PollerResult::InProgress {
+                                    response,
+                                    retry_after,
+                                    next: next_link,
+                                },
+                                _ => PollerResult::Done { response },
+                            })
+                        }
+                    },
+                    None,
+                ))
+            }
         }
     }
     pub mod update {
@@ -4180,6 +4726,42 @@ pub mod clusters {
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
                 self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
+            }
+        }
+        #[derive(Clone, Debug, serde :: Serialize, serde :: Deserialize)]
+        #[serde(transparent)]
+        pub struct Operation(pub models::Cluster);
+        impl azure_core::http::poller::StatusMonitor for Operation {
+            type Output = models::Cluster;
+            fn status(&self) -> azure_core::http::poller::PollerStatus {
+                fn map_status(s: &str) -> azure_core::http::poller::PollerStatus {
+                    match s.to_ascii_lowercase().as_str() {
+                        "succeeded" => azure_core::http::poller::PollerStatus::Succeeded,
+                        "failed" => azure_core::http::poller::PollerStatus::Failed,
+                        "canceled" | "cancelled" => azure_core::http::poller::PollerStatus::Canceled,
+                        _ => azure_core::http::poller::PollerStatus::InProgress,
+                    }
+                }
+                fn find_status(value: &serde_json::Value) -> Option<azure_core::http::poller::PollerStatus> {
+                    if let Some(ps) = value
+                        .get("properties")
+                        .and_then(|p| p.get("provisioningState"))
+                        .and_then(|v| v.as_str())
+                    {
+                        return Some(map_status(ps));
+                    }
+                    if let Some(ps) = value.get("provisioningState").and_then(|v| v.as_str()) {
+                        return Some(map_status(ps));
+                    }
+                    if let Some(ps) = value.get("status").and_then(|v| v.as_str()) {
+                        return Some(map_status(ps));
+                    }
+                    None
+                }
+                match serde_json::to_value(&self.0).ok().and_then(|v| find_status(&v)) {
+                    Some(s) => s,
+                    None => azure_core::http::poller::PollerStatus::InProgress,
+                }
             }
         }
         #[derive(Clone)]
@@ -4245,6 +4827,61 @@ pub mod clusters {
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
+            }
+            #[doc = "Return a Poller over an LRO"]
+            pub fn poller(self) -> azure_core::Result<azure_core::http::poller::Poller<Operation>> {
+                let client = self.client.clone();
+                let initial = self.clone();
+                Ok(azure_core::http::poller::Poller::from_callback(
+                    move |state: azure_core::http::poller::PollerState<azure_core::http::Url>| {
+                        let client = client.clone();
+                        let initial = initial.clone();
+                        async move {
+                            use azure_core::http::poller::{PollerResult, PollerState, StatusMonitor as _};
+                            use azure_core::json;
+                            let (rsp, next_link) = match state {
+                                PollerState::Initial => {
+                                    let rsp = initial.clone().send().await?.into_raw_response();
+                                    let next = initial.clone().url()?;
+                                    (rsp, next)
+                                }
+                                PollerState::More(next_url) => {
+                                    let mut req =
+                                        typespec_client_core::http::request::Request::new(next_url.clone(), azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    let rsp = client.send(&mut req).await?;
+                                    (rsp, next_url.clone())
+                                }
+                            };
+                            if !rsp.status().is_success() {
+                                return Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
+                                    status: rsp.status(),
+                                    error_code: None,
+                                }));
+                            }
+                            let (status, headers, body) = rsp.deconstruct();
+                            let retry_after =
+                                azure_core::http::poller::get_retry_after(&headers, &azure_core::http::poller::PollerOptions::default());
+                            let bytes = body.collect().await?;
+                            let op: Operation = json::from_json(&bytes)?;
+                            let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
+                            Ok(match op.status() {
+                                azure_core::http::poller::PollerStatus::InProgress => PollerResult::InProgress {
+                                    response,
+                                    retry_after,
+                                    next: next_link,
+                                },
+                                _ => PollerResult::Done { response },
+                            })
+                        }
+                    },
+                    None,
+                ))
             }
         }
     }
@@ -4856,6 +5493,42 @@ pub mod datastores {
                 self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
+        #[derive(Clone, Debug, serde :: Serialize, serde :: Deserialize)]
+        #[serde(transparent)]
+        pub struct Operation(pub models::Datastore);
+        impl azure_core::http::poller::StatusMonitor for Operation {
+            type Output = models::Datastore;
+            fn status(&self) -> azure_core::http::poller::PollerStatus {
+                fn map_status(s: &str) -> azure_core::http::poller::PollerStatus {
+                    match s.to_ascii_lowercase().as_str() {
+                        "succeeded" => azure_core::http::poller::PollerStatus::Succeeded,
+                        "failed" => azure_core::http::poller::PollerStatus::Failed,
+                        "canceled" | "cancelled" => azure_core::http::poller::PollerStatus::Canceled,
+                        _ => azure_core::http::poller::PollerStatus::InProgress,
+                    }
+                }
+                fn find_status(value: &serde_json::Value) -> Option<azure_core::http::poller::PollerStatus> {
+                    if let Some(ps) = value
+                        .get("properties")
+                        .and_then(|p| p.get("provisioningState"))
+                        .and_then(|v| v.as_str())
+                    {
+                        return Some(map_status(ps));
+                    }
+                    if let Some(ps) = value.get("provisioningState").and_then(|v| v.as_str()) {
+                        return Some(map_status(ps));
+                    }
+                    if let Some(ps) = value.get("status").and_then(|v| v.as_str()) {
+                        return Some(map_status(ps));
+                    }
+                    None
+                }
+                match serde_json::to_value(&self.0).ok().and_then(|v| find_status(&v)) {
+                    Some(s) => s,
+                    None => azure_core::http::poller::PollerStatus::InProgress,
+                }
+            }
+        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -4920,6 +5593,61 @@ pub mod datastores {
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
+            }
+            #[doc = "Return a Poller over an LRO"]
+            pub fn poller(self) -> azure_core::Result<azure_core::http::poller::Poller<Operation>> {
+                let client = self.client.clone();
+                let initial = self.clone();
+                Ok(azure_core::http::poller::Poller::from_callback(
+                    move |state: azure_core::http::poller::PollerState<azure_core::http::Url>| {
+                        let client = client.clone();
+                        let initial = initial.clone();
+                        async move {
+                            use azure_core::http::poller::{PollerResult, PollerState, StatusMonitor as _};
+                            use azure_core::json;
+                            let (rsp, next_link) = match state {
+                                PollerState::Initial => {
+                                    let rsp = initial.clone().send().await?.into_raw_response();
+                                    let next = initial.clone().url()?;
+                                    (rsp, next)
+                                }
+                                PollerState::More(next_url) => {
+                                    let mut req =
+                                        typespec_client_core::http::request::Request::new(next_url.clone(), azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    let rsp = client.send(&mut req).await?;
+                                    (rsp, next_url.clone())
+                                }
+                            };
+                            if !rsp.status().is_success() {
+                                return Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
+                                    status: rsp.status(),
+                                    error_code: None,
+                                }));
+                            }
+                            let (status, headers, body) = rsp.deconstruct();
+                            let retry_after =
+                                azure_core::http::poller::get_retry_after(&headers, &azure_core::http::poller::PollerOptions::default());
+                            let bytes = body.collect().await?;
+                            let op: Operation = json::from_json(&bytes)?;
+                            let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
+                            Ok(match op.status() {
+                                azure_core::http::poller::PollerStatus::InProgress => PollerResult::InProgress {
+                                    response,
+                                    retry_after,
+                                    next: next_link,
+                                },
+                                _ => PollerResult::Done { response },
+                            })
+                        }
+                    },
+                    None,
+                ))
             }
         }
     }
@@ -5779,6 +6507,42 @@ pub mod placement_policies {
                 self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
+        #[derive(Clone, Debug, serde :: Serialize, serde :: Deserialize)]
+        #[serde(transparent)]
+        pub struct Operation(pub models::PlacementPolicy);
+        impl azure_core::http::poller::StatusMonitor for Operation {
+            type Output = models::PlacementPolicy;
+            fn status(&self) -> azure_core::http::poller::PollerStatus {
+                fn map_status(s: &str) -> azure_core::http::poller::PollerStatus {
+                    match s.to_ascii_lowercase().as_str() {
+                        "succeeded" => azure_core::http::poller::PollerStatus::Succeeded,
+                        "failed" => azure_core::http::poller::PollerStatus::Failed,
+                        "canceled" | "cancelled" => azure_core::http::poller::PollerStatus::Canceled,
+                        _ => azure_core::http::poller::PollerStatus::InProgress,
+                    }
+                }
+                fn find_status(value: &serde_json::Value) -> Option<azure_core::http::poller::PollerStatus> {
+                    if let Some(ps) = value
+                        .get("properties")
+                        .and_then(|p| p.get("provisioningState"))
+                        .and_then(|v| v.as_str())
+                    {
+                        return Some(map_status(ps));
+                    }
+                    if let Some(ps) = value.get("provisioningState").and_then(|v| v.as_str()) {
+                        return Some(map_status(ps));
+                    }
+                    if let Some(ps) = value.get("status").and_then(|v| v.as_str()) {
+                        return Some(map_status(ps));
+                    }
+                    None
+                }
+                match serde_json::to_value(&self.0).ok().and_then(|v| find_status(&v)) {
+                    Some(s) => s,
+                    None => azure_core::http::poller::PollerStatus::InProgress,
+                }
+            }
+        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -5848,6 +6612,61 @@ pub mod placement_policies {
                     }
                 })
             }
+            #[doc = "Return a Poller over an LRO"]
+            pub fn poller(self) -> azure_core::Result<azure_core::http::poller::Poller<Operation>> {
+                let client = self.client.clone();
+                let initial = self.clone();
+                Ok(azure_core::http::poller::Poller::from_callback(
+                    move |state: azure_core::http::poller::PollerState<azure_core::http::Url>| {
+                        let client = client.clone();
+                        let initial = initial.clone();
+                        async move {
+                            use azure_core::http::poller::{PollerResult, PollerState, StatusMonitor as _};
+                            use azure_core::json;
+                            let (rsp, next_link) = match state {
+                                PollerState::Initial => {
+                                    let rsp = initial.clone().send().await?.into_raw_response();
+                                    let next = initial.clone().url()?;
+                                    (rsp, next)
+                                }
+                                PollerState::More(next_url) => {
+                                    let mut req =
+                                        typespec_client_core::http::request::Request::new(next_url.clone(), azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    let rsp = client.send(&mut req).await?;
+                                    (rsp, next_url.clone())
+                                }
+                            };
+                            if !rsp.status().is_success() {
+                                return Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
+                                    status: rsp.status(),
+                                    error_code: None,
+                                }));
+                            }
+                            let (status, headers, body) = rsp.deconstruct();
+                            let retry_after =
+                                azure_core::http::poller::get_retry_after(&headers, &azure_core::http::poller::PollerOptions::default());
+                            let bytes = body.collect().await?;
+                            let op: Operation = json::from_json(&bytes)?;
+                            let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
+                            Ok(match op.status() {
+                                azure_core::http::poller::PollerStatus::InProgress => PollerResult::InProgress {
+                                    response,
+                                    retry_after,
+                                    next: next_link,
+                                },
+                                _ => PollerResult::Done { response },
+                            })
+                        }
+                    },
+                    None,
+                ))
+            }
         }
     }
     pub mod update {
@@ -5894,6 +6713,42 @@ pub mod placement_policies {
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
                 self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
+            }
+        }
+        #[derive(Clone, Debug, serde :: Serialize, serde :: Deserialize)]
+        #[serde(transparent)]
+        pub struct Operation(pub models::PlacementPolicy);
+        impl azure_core::http::poller::StatusMonitor for Operation {
+            type Output = models::PlacementPolicy;
+            fn status(&self) -> azure_core::http::poller::PollerStatus {
+                fn map_status(s: &str) -> azure_core::http::poller::PollerStatus {
+                    match s.to_ascii_lowercase().as_str() {
+                        "succeeded" => azure_core::http::poller::PollerStatus::Succeeded,
+                        "failed" => azure_core::http::poller::PollerStatus::Failed,
+                        "canceled" | "cancelled" => azure_core::http::poller::PollerStatus::Canceled,
+                        _ => azure_core::http::poller::PollerStatus::InProgress,
+                    }
+                }
+                fn find_status(value: &serde_json::Value) -> Option<azure_core::http::poller::PollerStatus> {
+                    if let Some(ps) = value
+                        .get("properties")
+                        .and_then(|p| p.get("provisioningState"))
+                        .and_then(|v| v.as_str())
+                    {
+                        return Some(map_status(ps));
+                    }
+                    if let Some(ps) = value.get("provisioningState").and_then(|v| v.as_str()) {
+                        return Some(map_status(ps));
+                    }
+                    if let Some(ps) = value.get("status").and_then(|v| v.as_str()) {
+                        return Some(map_status(ps));
+                    }
+                    None
+                }
+                match serde_json::to_value(&self.0).ok().and_then(|v| find_status(&v)) {
+                    Some(s) => s,
+                    None => azure_core::http::poller::PollerStatus::InProgress,
+                }
             }
         }
         #[derive(Clone)]
@@ -5964,6 +6819,61 @@ pub mod placement_policies {
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
+            }
+            #[doc = "Return a Poller over an LRO"]
+            pub fn poller(self) -> azure_core::Result<azure_core::http::poller::Poller<Operation>> {
+                let client = self.client.clone();
+                let initial = self.clone();
+                Ok(azure_core::http::poller::Poller::from_callback(
+                    move |state: azure_core::http::poller::PollerState<azure_core::http::Url>| {
+                        let client = client.clone();
+                        let initial = initial.clone();
+                        async move {
+                            use azure_core::http::poller::{PollerResult, PollerState, StatusMonitor as _};
+                            use azure_core::json;
+                            let (rsp, next_link) = match state {
+                                PollerState::Initial => {
+                                    let rsp = initial.clone().send().await?.into_raw_response();
+                                    let next = initial.clone().url()?;
+                                    (rsp, next)
+                                }
+                                PollerState::More(next_url) => {
+                                    let mut req =
+                                        typespec_client_core::http::request::Request::new(next_url.clone(), azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    let rsp = client.send(&mut req).await?;
+                                    (rsp, next_url.clone())
+                                }
+                            };
+                            if !rsp.status().is_success() {
+                                return Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
+                                    status: rsp.status(),
+                                    error_code: None,
+                                }));
+                            }
+                            let (status, headers, body) = rsp.deconstruct();
+                            let retry_after =
+                                azure_core::http::poller::get_retry_after(&headers, &azure_core::http::poller::PollerOptions::default());
+                            let bytes = body.collect().await?;
+                            let op: Operation = json::from_json(&bytes)?;
+                            let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
+                            Ok(match op.status() {
+                                azure_core::http::poller::PollerStatus::InProgress => PollerResult::InProgress {
+                                    response,
+                                    retry_after,
+                                    next: next_link,
+                                },
+                                _ => PollerResult::Done { response },
+                            })
+                        }
+                    },
+                    None,
+                ))
             }
         }
     }
@@ -6917,6 +7827,42 @@ pub mod global_reach_connections {
                 self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
+        #[derive(Clone, Debug, serde :: Serialize, serde :: Deserialize)]
+        #[serde(transparent)]
+        pub struct Operation(pub models::GlobalReachConnection);
+        impl azure_core::http::poller::StatusMonitor for Operation {
+            type Output = models::GlobalReachConnection;
+            fn status(&self) -> azure_core::http::poller::PollerStatus {
+                fn map_status(s: &str) -> azure_core::http::poller::PollerStatus {
+                    match s.to_ascii_lowercase().as_str() {
+                        "succeeded" => azure_core::http::poller::PollerStatus::Succeeded,
+                        "failed" => azure_core::http::poller::PollerStatus::Failed,
+                        "canceled" | "cancelled" => azure_core::http::poller::PollerStatus::Canceled,
+                        _ => azure_core::http::poller::PollerStatus::InProgress,
+                    }
+                }
+                fn find_status(value: &serde_json::Value) -> Option<azure_core::http::poller::PollerStatus> {
+                    if let Some(ps) = value
+                        .get("properties")
+                        .and_then(|p| p.get("provisioningState"))
+                        .and_then(|v| v.as_str())
+                    {
+                        return Some(map_status(ps));
+                    }
+                    if let Some(ps) = value.get("provisioningState").and_then(|v| v.as_str()) {
+                        return Some(map_status(ps));
+                    }
+                    if let Some(ps) = value.get("status").and_then(|v| v.as_str()) {
+                        return Some(map_status(ps));
+                    }
+                    None
+                }
+                match serde_json::to_value(&self.0).ok().and_then(|v| find_status(&v)) {
+                    Some(s) => s,
+                    None => azure_core::http::poller::PollerStatus::InProgress,
+                }
+            }
+        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -6980,6 +7926,61 @@ pub mod global_reach_connections {
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
+            }
+            #[doc = "Return a Poller over an LRO"]
+            pub fn poller(self) -> azure_core::Result<azure_core::http::poller::Poller<Operation>> {
+                let client = self.client.clone();
+                let initial = self.clone();
+                Ok(azure_core::http::poller::Poller::from_callback(
+                    move |state: azure_core::http::poller::PollerState<azure_core::http::Url>| {
+                        let client = client.clone();
+                        let initial = initial.clone();
+                        async move {
+                            use azure_core::http::poller::{PollerResult, PollerState, StatusMonitor as _};
+                            use azure_core::json;
+                            let (rsp, next_link) = match state {
+                                PollerState::Initial => {
+                                    let rsp = initial.clone().send().await?.into_raw_response();
+                                    let next = initial.clone().url()?;
+                                    (rsp, next)
+                                }
+                                PollerState::More(next_url) => {
+                                    let mut req =
+                                        typespec_client_core::http::request::Request::new(next_url.clone(), azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    let rsp = client.send(&mut req).await?;
+                                    (rsp, next_url.clone())
+                                }
+                            };
+                            if !rsp.status().is_success() {
+                                return Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
+                                    status: rsp.status(),
+                                    error_code: None,
+                                }));
+                            }
+                            let (status, headers, body) = rsp.deconstruct();
+                            let retry_after =
+                                azure_core::http::poller::get_retry_after(&headers, &azure_core::http::poller::PollerOptions::default());
+                            let bytes = body.collect().await?;
+                            let op: Operation = json::from_json(&bytes)?;
+                            let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
+                            Ok(match op.status() {
+                                azure_core::http::poller::PollerStatus::InProgress => PollerResult::InProgress {
+                                    response,
+                                    retry_after,
+                                    next: next_link,
+                                },
+                                _ => PollerResult::Done { response },
+                            })
+                        }
+                    },
+                    None,
+                ))
             }
         }
     }
@@ -8011,6 +9012,42 @@ pub mod iscsi_paths {
                 self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
+        #[derive(Clone, Debug, serde :: Serialize, serde :: Deserialize)]
+        #[serde(transparent)]
+        pub struct Operation(pub models::IscsiPath);
+        impl azure_core::http::poller::StatusMonitor for Operation {
+            type Output = models::IscsiPath;
+            fn status(&self) -> azure_core::http::poller::PollerStatus {
+                fn map_status(s: &str) -> azure_core::http::poller::PollerStatus {
+                    match s.to_ascii_lowercase().as_str() {
+                        "succeeded" => azure_core::http::poller::PollerStatus::Succeeded,
+                        "failed" => azure_core::http::poller::PollerStatus::Failed,
+                        "canceled" | "cancelled" => azure_core::http::poller::PollerStatus::Canceled,
+                        _ => azure_core::http::poller::PollerStatus::InProgress,
+                    }
+                }
+                fn find_status(value: &serde_json::Value) -> Option<azure_core::http::poller::PollerStatus> {
+                    if let Some(ps) = value
+                        .get("properties")
+                        .and_then(|p| p.get("provisioningState"))
+                        .and_then(|v| v.as_str())
+                    {
+                        return Some(map_status(ps));
+                    }
+                    if let Some(ps) = value.get("provisioningState").and_then(|v| v.as_str()) {
+                        return Some(map_status(ps));
+                    }
+                    if let Some(ps) = value.get("status").and_then(|v| v.as_str()) {
+                        return Some(map_status(ps));
+                    }
+                    None
+                }
+                match serde_json::to_value(&self.0).ok().and_then(|v| find_status(&v)) {
+                    Some(s) => s,
+                    None => azure_core::http::poller::PollerStatus::InProgress,
+                }
+            }
+        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -8073,6 +9110,61 @@ pub mod iscsi_paths {
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
+            }
+            #[doc = "Return a Poller over an LRO"]
+            pub fn poller(self) -> azure_core::Result<azure_core::http::poller::Poller<Operation>> {
+                let client = self.client.clone();
+                let initial = self.clone();
+                Ok(azure_core::http::poller::Poller::from_callback(
+                    move |state: azure_core::http::poller::PollerState<azure_core::http::Url>| {
+                        let client = client.clone();
+                        let initial = initial.clone();
+                        async move {
+                            use azure_core::http::poller::{PollerResult, PollerState, StatusMonitor as _};
+                            use azure_core::json;
+                            let (rsp, next_link) = match state {
+                                PollerState::Initial => {
+                                    let rsp = initial.clone().send().await?.into_raw_response();
+                                    let next = initial.clone().url()?;
+                                    (rsp, next)
+                                }
+                                PollerState::More(next_url) => {
+                                    let mut req =
+                                        typespec_client_core::http::request::Request::new(next_url.clone(), azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    let rsp = client.send(&mut req).await?;
+                                    (rsp, next_url.clone())
+                                }
+                            };
+                            if !rsp.status().is_success() {
+                                return Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
+                                    status: rsp.status(),
+                                    error_code: None,
+                                }));
+                            }
+                            let (status, headers, body) = rsp.deconstruct();
+                            let retry_after =
+                                azure_core::http::poller::get_retry_after(&headers, &azure_core::http::poller::PollerOptions::default());
+                            let bytes = body.collect().await?;
+                            let op: Operation = json::from_json(&bytes)?;
+                            let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
+                            Ok(match op.status() {
+                                azure_core::http::poller::PollerStatus::InProgress => PollerResult::InProgress {
+                                    response,
+                                    retry_after,
+                                    next: next_link,
+                                },
+                                _ => PollerResult::Done { response },
+                            })
+                        }
+                    },
+                    None,
+                ))
             }
         }
     }
@@ -8883,6 +9975,42 @@ pub mod pure_storage_policies {
                 self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
+        #[derive(Clone, Debug, serde :: Serialize, serde :: Deserialize)]
+        #[serde(transparent)]
+        pub struct Operation(pub models::PureStoragePolicy);
+        impl azure_core::http::poller::StatusMonitor for Operation {
+            type Output = models::PureStoragePolicy;
+            fn status(&self) -> azure_core::http::poller::PollerStatus {
+                fn map_status(s: &str) -> azure_core::http::poller::PollerStatus {
+                    match s.to_ascii_lowercase().as_str() {
+                        "succeeded" => azure_core::http::poller::PollerStatus::Succeeded,
+                        "failed" => azure_core::http::poller::PollerStatus::Failed,
+                        "canceled" | "cancelled" => azure_core::http::poller::PollerStatus::Canceled,
+                        _ => azure_core::http::poller::PollerStatus::InProgress,
+                    }
+                }
+                fn find_status(value: &serde_json::Value) -> Option<azure_core::http::poller::PollerStatus> {
+                    if let Some(ps) = value
+                        .get("properties")
+                        .and_then(|p| p.get("provisioningState"))
+                        .and_then(|v| v.as_str())
+                    {
+                        return Some(map_status(ps));
+                    }
+                    if let Some(ps) = value.get("provisioningState").and_then(|v| v.as_str()) {
+                        return Some(map_status(ps));
+                    }
+                    if let Some(ps) = value.get("status").and_then(|v| v.as_str()) {
+                        return Some(map_status(ps));
+                    }
+                    None
+                }
+                match serde_json::to_value(&self.0).ok().and_then(|v| find_status(&v)) {
+                    Some(s) => s,
+                    None => azure_core::http::poller::PollerStatus::InProgress,
+                }
+            }
+        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -8946,6 +10074,61 @@ pub mod pure_storage_policies {
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
+            }
+            #[doc = "Return a Poller over an LRO"]
+            pub fn poller(self) -> azure_core::Result<azure_core::http::poller::Poller<Operation>> {
+                let client = self.client.clone();
+                let initial = self.clone();
+                Ok(azure_core::http::poller::Poller::from_callback(
+                    move |state: azure_core::http::poller::PollerState<azure_core::http::Url>| {
+                        let client = client.clone();
+                        let initial = initial.clone();
+                        async move {
+                            use azure_core::http::poller::{PollerResult, PollerState, StatusMonitor as _};
+                            use azure_core::json;
+                            let (rsp, next_link) = match state {
+                                PollerState::Initial => {
+                                    let rsp = initial.clone().send().await?.into_raw_response();
+                                    let next = initial.clone().url()?;
+                                    (rsp, next)
+                                }
+                                PollerState::More(next_url) => {
+                                    let mut req =
+                                        typespec_client_core::http::request::Request::new(next_url.clone(), azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    let rsp = client.send(&mut req).await?;
+                                    (rsp, next_url.clone())
+                                }
+                            };
+                            if !rsp.status().is_success() {
+                                return Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
+                                    status: rsp.status(),
+                                    error_code: None,
+                                }));
+                            }
+                            let (status, headers, body) = rsp.deconstruct();
+                            let retry_after =
+                                azure_core::http::poller::get_retry_after(&headers, &azure_core::http::poller::PollerOptions::default());
+                            let bytes = body.collect().await?;
+                            let op: Operation = json::from_json(&bytes)?;
+                            let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
+                            Ok(match op.status() {
+                                azure_core::http::poller::PollerStatus::InProgress => PollerResult::InProgress {
+                                    response,
+                                    retry_after,
+                                    next: next_link,
+                                },
+                                _ => PollerResult::Done { response },
+                            })
+                        }
+                    },
+                    None,
+                ))
             }
         }
     }
@@ -9468,6 +10651,42 @@ pub mod script_executions {
                 self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
+        #[derive(Clone, Debug, serde :: Serialize, serde :: Deserialize)]
+        #[serde(transparent)]
+        pub struct Operation(pub models::ScriptExecution);
+        impl azure_core::http::poller::StatusMonitor for Operation {
+            type Output = models::ScriptExecution;
+            fn status(&self) -> azure_core::http::poller::PollerStatus {
+                fn map_status(s: &str) -> azure_core::http::poller::PollerStatus {
+                    match s.to_ascii_lowercase().as_str() {
+                        "succeeded" => azure_core::http::poller::PollerStatus::Succeeded,
+                        "failed" => azure_core::http::poller::PollerStatus::Failed,
+                        "canceled" | "cancelled" => azure_core::http::poller::PollerStatus::Canceled,
+                        _ => azure_core::http::poller::PollerStatus::InProgress,
+                    }
+                }
+                fn find_status(value: &serde_json::Value) -> Option<azure_core::http::poller::PollerStatus> {
+                    if let Some(ps) = value
+                        .get("properties")
+                        .and_then(|p| p.get("provisioningState"))
+                        .and_then(|v| v.as_str())
+                    {
+                        return Some(map_status(ps));
+                    }
+                    if let Some(ps) = value.get("provisioningState").and_then(|v| v.as_str()) {
+                        return Some(map_status(ps));
+                    }
+                    if let Some(ps) = value.get("status").and_then(|v| v.as_str()) {
+                        return Some(map_status(ps));
+                    }
+                    None
+                }
+                match serde_json::to_value(&self.0).ok().and_then(|v| find_status(&v)) {
+                    Some(s) => s,
+                    None => azure_core::http::poller::PollerStatus::InProgress,
+                }
+            }
+        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -9531,6 +10750,61 @@ pub mod script_executions {
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
+            }
+            #[doc = "Return a Poller over an LRO"]
+            pub fn poller(self) -> azure_core::Result<azure_core::http::poller::Poller<Operation>> {
+                let client = self.client.clone();
+                let initial = self.clone();
+                Ok(azure_core::http::poller::Poller::from_callback(
+                    move |state: azure_core::http::poller::PollerState<azure_core::http::Url>| {
+                        let client = client.clone();
+                        let initial = initial.clone();
+                        async move {
+                            use azure_core::http::poller::{PollerResult, PollerState, StatusMonitor as _};
+                            use azure_core::json;
+                            let (rsp, next_link) = match state {
+                                PollerState::Initial => {
+                                    let rsp = initial.clone().send().await?.into_raw_response();
+                                    let next = initial.clone().url()?;
+                                    (rsp, next)
+                                }
+                                PollerState::More(next_url) => {
+                                    let mut req =
+                                        typespec_client_core::http::request::Request::new(next_url.clone(), azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    let rsp = client.send(&mut req).await?;
+                                    (rsp, next_url.clone())
+                                }
+                            };
+                            if !rsp.status().is_success() {
+                                return Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
+                                    status: rsp.status(),
+                                    error_code: None,
+                                }));
+                            }
+                            let (status, headers, body) = rsp.deconstruct();
+                            let retry_after =
+                                azure_core::http::poller::get_retry_after(&headers, &azure_core::http::poller::PollerOptions::default());
+                            let bytes = body.collect().await?;
+                            let op: Operation = json::from_json(&bytes)?;
+                            let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
+                            Ok(match op.status() {
+                                azure_core::http::poller::PollerStatus::InProgress => PollerResult::InProgress {
+                                    response,
+                                    retry_after,
+                                    next: next_link,
+                                },
+                                _ => PollerResult::Done { response },
+                            })
+                        }
+                    },
+                    None,
+                ))
             }
         }
     }
@@ -11797,6 +13071,42 @@ pub mod workload_networks {
                 self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
+        #[derive(Clone, Debug, serde :: Serialize, serde :: Deserialize)]
+        #[serde(transparent)]
+        pub struct Operation(pub models::WorkloadNetworkDhcp);
+        impl azure_core::http::poller::StatusMonitor for Operation {
+            type Output = models::WorkloadNetworkDhcp;
+            fn status(&self) -> azure_core::http::poller::PollerStatus {
+                fn map_status(s: &str) -> azure_core::http::poller::PollerStatus {
+                    match s.to_ascii_lowercase().as_str() {
+                        "succeeded" => azure_core::http::poller::PollerStatus::Succeeded,
+                        "failed" => azure_core::http::poller::PollerStatus::Failed,
+                        "canceled" | "cancelled" => azure_core::http::poller::PollerStatus::Canceled,
+                        _ => azure_core::http::poller::PollerStatus::InProgress,
+                    }
+                }
+                fn find_status(value: &serde_json::Value) -> Option<azure_core::http::poller::PollerStatus> {
+                    if let Some(ps) = value
+                        .get("properties")
+                        .and_then(|p| p.get("provisioningState"))
+                        .and_then(|v| v.as_str())
+                    {
+                        return Some(map_status(ps));
+                    }
+                    if let Some(ps) = value.get("provisioningState").and_then(|v| v.as_str()) {
+                        return Some(map_status(ps));
+                    }
+                    if let Some(ps) = value.get("status").and_then(|v| v.as_str()) {
+                        return Some(map_status(ps));
+                    }
+                    None
+                }
+                match serde_json::to_value(&self.0).ok().and_then(|v| find_status(&v)) {
+                    Some(s) => s,
+                    None => azure_core::http::poller::PollerStatus::InProgress,
+                }
+            }
+        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -11858,6 +13168,61 @@ pub mod workload_networks {
                     }
                 })
             }
+            #[doc = "Return a Poller over an LRO"]
+            pub fn poller(self) -> azure_core::Result<azure_core::http::poller::Poller<Operation>> {
+                let client = self.client.clone();
+                let initial = self.clone();
+                Ok(azure_core::http::poller::Poller::from_callback(
+                    move |state: azure_core::http::poller::PollerState<azure_core::http::Url>| {
+                        let client = client.clone();
+                        let initial = initial.clone();
+                        async move {
+                            use azure_core::http::poller::{PollerResult, PollerState, StatusMonitor as _};
+                            use azure_core::json;
+                            let (rsp, next_link) = match state {
+                                PollerState::Initial => {
+                                    let rsp = initial.clone().send().await?.into_raw_response();
+                                    let next = initial.clone().url()?;
+                                    (rsp, next)
+                                }
+                                PollerState::More(next_url) => {
+                                    let mut req =
+                                        typespec_client_core::http::request::Request::new(next_url.clone(), azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    let rsp = client.send(&mut req).await?;
+                                    (rsp, next_url.clone())
+                                }
+                            };
+                            if !rsp.status().is_success() {
+                                return Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
+                                    status: rsp.status(),
+                                    error_code: None,
+                                }));
+                            }
+                            let (status, headers, body) = rsp.deconstruct();
+                            let retry_after =
+                                azure_core::http::poller::get_retry_after(&headers, &azure_core::http::poller::PollerOptions::default());
+                            let bytes = body.collect().await?;
+                            let op: Operation = json::from_json(&bytes)?;
+                            let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
+                            Ok(match op.status() {
+                                azure_core::http::poller::PollerStatus::InProgress => PollerResult::InProgress {
+                                    response,
+                                    retry_after,
+                                    next: next_link,
+                                },
+                                _ => PollerResult::Done { response },
+                            })
+                        }
+                    },
+                    None,
+                ))
+            }
         }
     }
     pub mod update_dhcp {
@@ -11904,6 +13269,42 @@ pub mod workload_networks {
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
                 self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
+            }
+        }
+        #[derive(Clone, Debug, serde :: Serialize, serde :: Deserialize)]
+        #[serde(transparent)]
+        pub struct Operation(pub models::WorkloadNetworkDhcp);
+        impl azure_core::http::poller::StatusMonitor for Operation {
+            type Output = models::WorkloadNetworkDhcp;
+            fn status(&self) -> azure_core::http::poller::PollerStatus {
+                fn map_status(s: &str) -> azure_core::http::poller::PollerStatus {
+                    match s.to_ascii_lowercase().as_str() {
+                        "succeeded" => azure_core::http::poller::PollerStatus::Succeeded,
+                        "failed" => azure_core::http::poller::PollerStatus::Failed,
+                        "canceled" | "cancelled" => azure_core::http::poller::PollerStatus::Canceled,
+                        _ => azure_core::http::poller::PollerStatus::InProgress,
+                    }
+                }
+                fn find_status(value: &serde_json::Value) -> Option<azure_core::http::poller::PollerStatus> {
+                    if let Some(ps) = value
+                        .get("properties")
+                        .and_then(|p| p.get("provisioningState"))
+                        .and_then(|v| v.as_str())
+                    {
+                        return Some(map_status(ps));
+                    }
+                    if let Some(ps) = value.get("provisioningState").and_then(|v| v.as_str()) {
+                        return Some(map_status(ps));
+                    }
+                    if let Some(ps) = value.get("status").and_then(|v| v.as_str()) {
+                        return Some(map_status(ps));
+                    }
+                    None
+                }
+                match serde_json::to_value(&self.0).ok().and_then(|v| find_status(&v)) {
+                    Some(s) => s,
+                    None => azure_core::http::poller::PollerStatus::InProgress,
+                }
             }
         }
         #[derive(Clone)]
@@ -11966,6 +13367,61 @@ pub mod workload_networks {
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
+            }
+            #[doc = "Return a Poller over an LRO"]
+            pub fn poller(self) -> azure_core::Result<azure_core::http::poller::Poller<Operation>> {
+                let client = self.client.clone();
+                let initial = self.clone();
+                Ok(azure_core::http::poller::Poller::from_callback(
+                    move |state: azure_core::http::poller::PollerState<azure_core::http::Url>| {
+                        let client = client.clone();
+                        let initial = initial.clone();
+                        async move {
+                            use azure_core::http::poller::{PollerResult, PollerState, StatusMonitor as _};
+                            use azure_core::json;
+                            let (rsp, next_link) = match state {
+                                PollerState::Initial => {
+                                    let rsp = initial.clone().send().await?.into_raw_response();
+                                    let next = initial.clone().url()?;
+                                    (rsp, next)
+                                }
+                                PollerState::More(next_url) => {
+                                    let mut req =
+                                        typespec_client_core::http::request::Request::new(next_url.clone(), azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    let rsp = client.send(&mut req).await?;
+                                    (rsp, next_url.clone())
+                                }
+                            };
+                            if !rsp.status().is_success() {
+                                return Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
+                                    status: rsp.status(),
+                                    error_code: None,
+                                }));
+                            }
+                            let (status, headers, body) = rsp.deconstruct();
+                            let retry_after =
+                                azure_core::http::poller::get_retry_after(&headers, &azure_core::http::poller::PollerOptions::default());
+                            let bytes = body.collect().await?;
+                            let op: Operation = json::from_json(&bytes)?;
+                            let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
+                            Ok(match op.status() {
+                                azure_core::http::poller::PollerStatus::InProgress => PollerResult::InProgress {
+                                    response,
+                                    retry_after,
+                                    next: next_link,
+                                },
+                                _ => PollerResult::Done { response },
+                            })
+                        }
+                    },
+                    None,
+                ))
             }
         }
     }
@@ -12366,6 +13822,42 @@ pub mod workload_networks {
                 self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
+        #[derive(Clone, Debug, serde :: Serialize, serde :: Deserialize)]
+        #[serde(transparent)]
+        pub struct Operation(pub models::WorkloadNetworkDnsService);
+        impl azure_core::http::poller::StatusMonitor for Operation {
+            type Output = models::WorkloadNetworkDnsService;
+            fn status(&self) -> azure_core::http::poller::PollerStatus {
+                fn map_status(s: &str) -> azure_core::http::poller::PollerStatus {
+                    match s.to_ascii_lowercase().as_str() {
+                        "succeeded" => azure_core::http::poller::PollerStatus::Succeeded,
+                        "failed" => azure_core::http::poller::PollerStatus::Failed,
+                        "canceled" | "cancelled" => azure_core::http::poller::PollerStatus::Canceled,
+                        _ => azure_core::http::poller::PollerStatus::InProgress,
+                    }
+                }
+                fn find_status(value: &serde_json::Value) -> Option<azure_core::http::poller::PollerStatus> {
+                    if let Some(ps) = value
+                        .get("properties")
+                        .and_then(|p| p.get("provisioningState"))
+                        .and_then(|v| v.as_str())
+                    {
+                        return Some(map_status(ps));
+                    }
+                    if let Some(ps) = value.get("provisioningState").and_then(|v| v.as_str()) {
+                        return Some(map_status(ps));
+                    }
+                    if let Some(ps) = value.get("status").and_then(|v| v.as_str()) {
+                        return Some(map_status(ps));
+                    }
+                    None
+                }
+                match serde_json::to_value(&self.0).ok().and_then(|v| find_status(&v)) {
+                    Some(s) => s,
+                    None => azure_core::http::poller::PollerStatus::InProgress,
+                }
+            }
+        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -12430,6 +13922,61 @@ pub mod workload_networks {
                     }
                 })
             }
+            #[doc = "Return a Poller over an LRO"]
+            pub fn poller(self) -> azure_core::Result<azure_core::http::poller::Poller<Operation>> {
+                let client = self.client.clone();
+                let initial = self.clone();
+                Ok(azure_core::http::poller::Poller::from_callback(
+                    move |state: azure_core::http::poller::PollerState<azure_core::http::Url>| {
+                        let client = client.clone();
+                        let initial = initial.clone();
+                        async move {
+                            use azure_core::http::poller::{PollerResult, PollerState, StatusMonitor as _};
+                            use azure_core::json;
+                            let (rsp, next_link) = match state {
+                                PollerState::Initial => {
+                                    let rsp = initial.clone().send().await?.into_raw_response();
+                                    let next = initial.clone().url()?;
+                                    (rsp, next)
+                                }
+                                PollerState::More(next_url) => {
+                                    let mut req =
+                                        typespec_client_core::http::request::Request::new(next_url.clone(), azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    let rsp = client.send(&mut req).await?;
+                                    (rsp, next_url.clone())
+                                }
+                            };
+                            if !rsp.status().is_success() {
+                                return Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
+                                    status: rsp.status(),
+                                    error_code: None,
+                                }));
+                            }
+                            let (status, headers, body) = rsp.deconstruct();
+                            let retry_after =
+                                azure_core::http::poller::get_retry_after(&headers, &azure_core::http::poller::PollerOptions::default());
+                            let bytes = body.collect().await?;
+                            let op: Operation = json::from_json(&bytes)?;
+                            let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
+                            Ok(match op.status() {
+                                azure_core::http::poller::PollerStatus::InProgress => PollerResult::InProgress {
+                                    response,
+                                    retry_after,
+                                    next: next_link,
+                                },
+                                _ => PollerResult::Done { response },
+                            })
+                        }
+                    },
+                    None,
+                ))
+            }
         }
     }
     pub mod update_dns_service {
@@ -12476,6 +14023,42 @@ pub mod workload_networks {
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
                 self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
+            }
+        }
+        #[derive(Clone, Debug, serde :: Serialize, serde :: Deserialize)]
+        #[serde(transparent)]
+        pub struct Operation(pub models::WorkloadNetworkDnsService);
+        impl azure_core::http::poller::StatusMonitor for Operation {
+            type Output = models::WorkloadNetworkDnsService;
+            fn status(&self) -> azure_core::http::poller::PollerStatus {
+                fn map_status(s: &str) -> azure_core::http::poller::PollerStatus {
+                    match s.to_ascii_lowercase().as_str() {
+                        "succeeded" => azure_core::http::poller::PollerStatus::Succeeded,
+                        "failed" => azure_core::http::poller::PollerStatus::Failed,
+                        "canceled" | "cancelled" => azure_core::http::poller::PollerStatus::Canceled,
+                        _ => azure_core::http::poller::PollerStatus::InProgress,
+                    }
+                }
+                fn find_status(value: &serde_json::Value) -> Option<azure_core::http::poller::PollerStatus> {
+                    if let Some(ps) = value
+                        .get("properties")
+                        .and_then(|p| p.get("provisioningState"))
+                        .and_then(|v| v.as_str())
+                    {
+                        return Some(map_status(ps));
+                    }
+                    if let Some(ps) = value.get("provisioningState").and_then(|v| v.as_str()) {
+                        return Some(map_status(ps));
+                    }
+                    if let Some(ps) = value.get("status").and_then(|v| v.as_str()) {
+                        return Some(map_status(ps));
+                    }
+                    None
+                }
+                match serde_json::to_value(&self.0).ok().and_then(|v| find_status(&v)) {
+                    Some(s) => s,
+                    None => azure_core::http::poller::PollerStatus::InProgress,
+                }
             }
         }
         #[derive(Clone)]
@@ -12541,6 +14124,61 @@ pub mod workload_networks {
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
+            }
+            #[doc = "Return a Poller over an LRO"]
+            pub fn poller(self) -> azure_core::Result<azure_core::http::poller::Poller<Operation>> {
+                let client = self.client.clone();
+                let initial = self.clone();
+                Ok(azure_core::http::poller::Poller::from_callback(
+                    move |state: azure_core::http::poller::PollerState<azure_core::http::Url>| {
+                        let client = client.clone();
+                        let initial = initial.clone();
+                        async move {
+                            use azure_core::http::poller::{PollerResult, PollerState, StatusMonitor as _};
+                            use azure_core::json;
+                            let (rsp, next_link) = match state {
+                                PollerState::Initial => {
+                                    let rsp = initial.clone().send().await?.into_raw_response();
+                                    let next = initial.clone().url()?;
+                                    (rsp, next)
+                                }
+                                PollerState::More(next_url) => {
+                                    let mut req =
+                                        typespec_client_core::http::request::Request::new(next_url.clone(), azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    let rsp = client.send(&mut req).await?;
+                                    (rsp, next_url.clone())
+                                }
+                            };
+                            if !rsp.status().is_success() {
+                                return Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
+                                    status: rsp.status(),
+                                    error_code: None,
+                                }));
+                            }
+                            let (status, headers, body) = rsp.deconstruct();
+                            let retry_after =
+                                azure_core::http::poller::get_retry_after(&headers, &azure_core::http::poller::PollerOptions::default());
+                            let bytes = body.collect().await?;
+                            let op: Operation = json::from_json(&bytes)?;
+                            let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
+                            Ok(match op.status() {
+                                azure_core::http::poller::PollerStatus::InProgress => PollerResult::InProgress {
+                                    response,
+                                    retry_after,
+                                    next: next_link,
+                                },
+                                _ => PollerResult::Done { response },
+                            })
+                        }
+                    },
+                    None,
+                ))
             }
         }
     }
@@ -12944,6 +14582,42 @@ pub mod workload_networks {
                 self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
+        #[derive(Clone, Debug, serde :: Serialize, serde :: Deserialize)]
+        #[serde(transparent)]
+        pub struct Operation(pub models::WorkloadNetworkDnsZone);
+        impl azure_core::http::poller::StatusMonitor for Operation {
+            type Output = models::WorkloadNetworkDnsZone;
+            fn status(&self) -> azure_core::http::poller::PollerStatus {
+                fn map_status(s: &str) -> azure_core::http::poller::PollerStatus {
+                    match s.to_ascii_lowercase().as_str() {
+                        "succeeded" => azure_core::http::poller::PollerStatus::Succeeded,
+                        "failed" => azure_core::http::poller::PollerStatus::Failed,
+                        "canceled" | "cancelled" => azure_core::http::poller::PollerStatus::Canceled,
+                        _ => azure_core::http::poller::PollerStatus::InProgress,
+                    }
+                }
+                fn find_status(value: &serde_json::Value) -> Option<azure_core::http::poller::PollerStatus> {
+                    if let Some(ps) = value
+                        .get("properties")
+                        .and_then(|p| p.get("provisioningState"))
+                        .and_then(|v| v.as_str())
+                    {
+                        return Some(map_status(ps));
+                    }
+                    if let Some(ps) = value.get("provisioningState").and_then(|v| v.as_str()) {
+                        return Some(map_status(ps));
+                    }
+                    if let Some(ps) = value.get("status").and_then(|v| v.as_str()) {
+                        return Some(map_status(ps));
+                    }
+                    None
+                }
+                match serde_json::to_value(&self.0).ok().and_then(|v| find_status(&v)) {
+                    Some(s) => s,
+                    None => azure_core::http::poller::PollerStatus::InProgress,
+                }
+            }
+        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -13008,6 +14682,61 @@ pub mod workload_networks {
                     }
                 })
             }
+            #[doc = "Return a Poller over an LRO"]
+            pub fn poller(self) -> azure_core::Result<azure_core::http::poller::Poller<Operation>> {
+                let client = self.client.clone();
+                let initial = self.clone();
+                Ok(azure_core::http::poller::Poller::from_callback(
+                    move |state: azure_core::http::poller::PollerState<azure_core::http::Url>| {
+                        let client = client.clone();
+                        let initial = initial.clone();
+                        async move {
+                            use azure_core::http::poller::{PollerResult, PollerState, StatusMonitor as _};
+                            use azure_core::json;
+                            let (rsp, next_link) = match state {
+                                PollerState::Initial => {
+                                    let rsp = initial.clone().send().await?.into_raw_response();
+                                    let next = initial.clone().url()?;
+                                    (rsp, next)
+                                }
+                                PollerState::More(next_url) => {
+                                    let mut req =
+                                        typespec_client_core::http::request::Request::new(next_url.clone(), azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    let rsp = client.send(&mut req).await?;
+                                    (rsp, next_url.clone())
+                                }
+                            };
+                            if !rsp.status().is_success() {
+                                return Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
+                                    status: rsp.status(),
+                                    error_code: None,
+                                }));
+                            }
+                            let (status, headers, body) = rsp.deconstruct();
+                            let retry_after =
+                                azure_core::http::poller::get_retry_after(&headers, &azure_core::http::poller::PollerOptions::default());
+                            let bytes = body.collect().await?;
+                            let op: Operation = json::from_json(&bytes)?;
+                            let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
+                            Ok(match op.status() {
+                                azure_core::http::poller::PollerStatus::InProgress => PollerResult::InProgress {
+                                    response,
+                                    retry_after,
+                                    next: next_link,
+                                },
+                                _ => PollerResult::Done { response },
+                            })
+                        }
+                    },
+                    None,
+                ))
+            }
         }
     }
     pub mod update_dns_zone {
@@ -13054,6 +14783,42 @@ pub mod workload_networks {
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
                 self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
+            }
+        }
+        #[derive(Clone, Debug, serde :: Serialize, serde :: Deserialize)]
+        #[serde(transparent)]
+        pub struct Operation(pub models::WorkloadNetworkDnsZone);
+        impl azure_core::http::poller::StatusMonitor for Operation {
+            type Output = models::WorkloadNetworkDnsZone;
+            fn status(&self) -> azure_core::http::poller::PollerStatus {
+                fn map_status(s: &str) -> azure_core::http::poller::PollerStatus {
+                    match s.to_ascii_lowercase().as_str() {
+                        "succeeded" => azure_core::http::poller::PollerStatus::Succeeded,
+                        "failed" => azure_core::http::poller::PollerStatus::Failed,
+                        "canceled" | "cancelled" => azure_core::http::poller::PollerStatus::Canceled,
+                        _ => azure_core::http::poller::PollerStatus::InProgress,
+                    }
+                }
+                fn find_status(value: &serde_json::Value) -> Option<azure_core::http::poller::PollerStatus> {
+                    if let Some(ps) = value
+                        .get("properties")
+                        .and_then(|p| p.get("provisioningState"))
+                        .and_then(|v| v.as_str())
+                    {
+                        return Some(map_status(ps));
+                    }
+                    if let Some(ps) = value.get("provisioningState").and_then(|v| v.as_str()) {
+                        return Some(map_status(ps));
+                    }
+                    if let Some(ps) = value.get("status").and_then(|v| v.as_str()) {
+                        return Some(map_status(ps));
+                    }
+                    None
+                }
+                match serde_json::to_value(&self.0).ok().and_then(|v| find_status(&v)) {
+                    Some(s) => s,
+                    None => azure_core::http::poller::PollerStatus::InProgress,
+                }
             }
         }
         #[derive(Clone)]
@@ -13119,6 +14884,61 @@ pub mod workload_networks {
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
+            }
+            #[doc = "Return a Poller over an LRO"]
+            pub fn poller(self) -> azure_core::Result<azure_core::http::poller::Poller<Operation>> {
+                let client = self.client.clone();
+                let initial = self.clone();
+                Ok(azure_core::http::poller::Poller::from_callback(
+                    move |state: azure_core::http::poller::PollerState<azure_core::http::Url>| {
+                        let client = client.clone();
+                        let initial = initial.clone();
+                        async move {
+                            use azure_core::http::poller::{PollerResult, PollerState, StatusMonitor as _};
+                            use azure_core::json;
+                            let (rsp, next_link) = match state {
+                                PollerState::Initial => {
+                                    let rsp = initial.clone().send().await?.into_raw_response();
+                                    let next = initial.clone().url()?;
+                                    (rsp, next)
+                                }
+                                PollerState::More(next_url) => {
+                                    let mut req =
+                                        typespec_client_core::http::request::Request::new(next_url.clone(), azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    let rsp = client.send(&mut req).await?;
+                                    (rsp, next_url.clone())
+                                }
+                            };
+                            if !rsp.status().is_success() {
+                                return Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
+                                    status: rsp.status(),
+                                    error_code: None,
+                                }));
+                            }
+                            let (status, headers, body) = rsp.deconstruct();
+                            let retry_after =
+                                azure_core::http::poller::get_retry_after(&headers, &azure_core::http::poller::PollerOptions::default());
+                            let bytes = body.collect().await?;
+                            let op: Operation = json::from_json(&bytes)?;
+                            let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
+                            Ok(match op.status() {
+                                azure_core::http::poller::PollerStatus::InProgress => PollerResult::InProgress {
+                                    response,
+                                    retry_after,
+                                    next: next_link,
+                                },
+                                _ => PollerResult::Done { response },
+                            })
+                        }
+                    },
+                    None,
+                ))
             }
         }
     }
@@ -13770,6 +15590,42 @@ pub mod workload_networks {
                 self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
+        #[derive(Clone, Debug, serde :: Serialize, serde :: Deserialize)]
+        #[serde(transparent)]
+        pub struct Operation(pub models::WorkloadNetworkPortMirroring);
+        impl azure_core::http::poller::StatusMonitor for Operation {
+            type Output = models::WorkloadNetworkPortMirroring;
+            fn status(&self) -> azure_core::http::poller::PollerStatus {
+                fn map_status(s: &str) -> azure_core::http::poller::PollerStatus {
+                    match s.to_ascii_lowercase().as_str() {
+                        "succeeded" => azure_core::http::poller::PollerStatus::Succeeded,
+                        "failed" => azure_core::http::poller::PollerStatus::Failed,
+                        "canceled" | "cancelled" => azure_core::http::poller::PollerStatus::Canceled,
+                        _ => azure_core::http::poller::PollerStatus::InProgress,
+                    }
+                }
+                fn find_status(value: &serde_json::Value) -> Option<azure_core::http::poller::PollerStatus> {
+                    if let Some(ps) = value
+                        .get("properties")
+                        .and_then(|p| p.get("provisioningState"))
+                        .and_then(|v| v.as_str())
+                    {
+                        return Some(map_status(ps));
+                    }
+                    if let Some(ps) = value.get("provisioningState").and_then(|v| v.as_str()) {
+                        return Some(map_status(ps));
+                    }
+                    if let Some(ps) = value.get("status").and_then(|v| v.as_str()) {
+                        return Some(map_status(ps));
+                    }
+                    None
+                }
+                match serde_json::to_value(&self.0).ok().and_then(|v| find_status(&v)) {
+                    Some(s) => s,
+                    None => azure_core::http::poller::PollerStatus::InProgress,
+                }
+            }
+        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -13831,6 +15687,61 @@ pub mod workload_networks {
                     }
                 })
             }
+            #[doc = "Return a Poller over an LRO"]
+            pub fn poller(self) -> azure_core::Result<azure_core::http::poller::Poller<Operation>> {
+                let client = self.client.clone();
+                let initial = self.clone();
+                Ok(azure_core::http::poller::Poller::from_callback(
+                    move |state: azure_core::http::poller::PollerState<azure_core::http::Url>| {
+                        let client = client.clone();
+                        let initial = initial.clone();
+                        async move {
+                            use azure_core::http::poller::{PollerResult, PollerState, StatusMonitor as _};
+                            use azure_core::json;
+                            let (rsp, next_link) = match state {
+                                PollerState::Initial => {
+                                    let rsp = initial.clone().send().await?.into_raw_response();
+                                    let next = initial.clone().url()?;
+                                    (rsp, next)
+                                }
+                                PollerState::More(next_url) => {
+                                    let mut req =
+                                        typespec_client_core::http::request::Request::new(next_url.clone(), azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    let rsp = client.send(&mut req).await?;
+                                    (rsp, next_url.clone())
+                                }
+                            };
+                            if !rsp.status().is_success() {
+                                return Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
+                                    status: rsp.status(),
+                                    error_code: None,
+                                }));
+                            }
+                            let (status, headers, body) = rsp.deconstruct();
+                            let retry_after =
+                                azure_core::http::poller::get_retry_after(&headers, &azure_core::http::poller::PollerOptions::default());
+                            let bytes = body.collect().await?;
+                            let op: Operation = json::from_json(&bytes)?;
+                            let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
+                            Ok(match op.status() {
+                                azure_core::http::poller::PollerStatus::InProgress => PollerResult::InProgress {
+                                    response,
+                                    retry_after,
+                                    next: next_link,
+                                },
+                                _ => PollerResult::Done { response },
+                            })
+                        }
+                    },
+                    None,
+                ))
+            }
         }
     }
     pub mod update_port_mirroring {
@@ -13877,6 +15788,42 @@ pub mod workload_networks {
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
                 self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
+            }
+        }
+        #[derive(Clone, Debug, serde :: Serialize, serde :: Deserialize)]
+        #[serde(transparent)]
+        pub struct Operation(pub models::WorkloadNetworkPortMirroring);
+        impl azure_core::http::poller::StatusMonitor for Operation {
+            type Output = models::WorkloadNetworkPortMirroring;
+            fn status(&self) -> azure_core::http::poller::PollerStatus {
+                fn map_status(s: &str) -> azure_core::http::poller::PollerStatus {
+                    match s.to_ascii_lowercase().as_str() {
+                        "succeeded" => azure_core::http::poller::PollerStatus::Succeeded,
+                        "failed" => azure_core::http::poller::PollerStatus::Failed,
+                        "canceled" | "cancelled" => azure_core::http::poller::PollerStatus::Canceled,
+                        _ => azure_core::http::poller::PollerStatus::InProgress,
+                    }
+                }
+                fn find_status(value: &serde_json::Value) -> Option<azure_core::http::poller::PollerStatus> {
+                    if let Some(ps) = value
+                        .get("properties")
+                        .and_then(|p| p.get("provisioningState"))
+                        .and_then(|v| v.as_str())
+                    {
+                        return Some(map_status(ps));
+                    }
+                    if let Some(ps) = value.get("provisioningState").and_then(|v| v.as_str()) {
+                        return Some(map_status(ps));
+                    }
+                    if let Some(ps) = value.get("status").and_then(|v| v.as_str()) {
+                        return Some(map_status(ps));
+                    }
+                    None
+                }
+                match serde_json::to_value(&self.0).ok().and_then(|v| find_status(&v)) {
+                    Some(s) => s,
+                    None => azure_core::http::poller::PollerStatus::InProgress,
+                }
             }
         }
         #[derive(Clone)]
@@ -13939,6 +15886,61 @@ pub mod workload_networks {
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
+            }
+            #[doc = "Return a Poller over an LRO"]
+            pub fn poller(self) -> azure_core::Result<azure_core::http::poller::Poller<Operation>> {
+                let client = self.client.clone();
+                let initial = self.clone();
+                Ok(azure_core::http::poller::Poller::from_callback(
+                    move |state: azure_core::http::poller::PollerState<azure_core::http::Url>| {
+                        let client = client.clone();
+                        let initial = initial.clone();
+                        async move {
+                            use azure_core::http::poller::{PollerResult, PollerState, StatusMonitor as _};
+                            use azure_core::json;
+                            let (rsp, next_link) = match state {
+                                PollerState::Initial => {
+                                    let rsp = initial.clone().send().await?.into_raw_response();
+                                    let next = initial.clone().url()?;
+                                    (rsp, next)
+                                }
+                                PollerState::More(next_url) => {
+                                    let mut req =
+                                        typespec_client_core::http::request::Request::new(next_url.clone(), azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    let rsp = client.send(&mut req).await?;
+                                    (rsp, next_url.clone())
+                                }
+                            };
+                            if !rsp.status().is_success() {
+                                return Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
+                                    status: rsp.status(),
+                                    error_code: None,
+                                }));
+                            }
+                            let (status, headers, body) = rsp.deconstruct();
+                            let retry_after =
+                                azure_core::http::poller::get_retry_after(&headers, &azure_core::http::poller::PollerOptions::default());
+                            let bytes = body.collect().await?;
+                            let op: Operation = json::from_json(&bytes)?;
+                            let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
+                            Ok(match op.status() {
+                                azure_core::http::poller::PollerStatus::InProgress => PollerResult::InProgress {
+                                    response,
+                                    retry_after,
+                                    next: next_link,
+                                },
+                                _ => PollerResult::Done { response },
+                            })
+                        }
+                    },
+                    None,
+                ))
             }
         }
     }
@@ -14339,6 +16341,42 @@ pub mod workload_networks {
                 self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
+        #[derive(Clone, Debug, serde :: Serialize, serde :: Deserialize)]
+        #[serde(transparent)]
+        pub struct Operation(pub models::WorkloadNetworkPublicIp);
+        impl azure_core::http::poller::StatusMonitor for Operation {
+            type Output = models::WorkloadNetworkPublicIp;
+            fn status(&self) -> azure_core::http::poller::PollerStatus {
+                fn map_status(s: &str) -> azure_core::http::poller::PollerStatus {
+                    match s.to_ascii_lowercase().as_str() {
+                        "succeeded" => azure_core::http::poller::PollerStatus::Succeeded,
+                        "failed" => azure_core::http::poller::PollerStatus::Failed,
+                        "canceled" | "cancelled" => azure_core::http::poller::PollerStatus::Canceled,
+                        _ => azure_core::http::poller::PollerStatus::InProgress,
+                    }
+                }
+                fn find_status(value: &serde_json::Value) -> Option<azure_core::http::poller::PollerStatus> {
+                    if let Some(ps) = value
+                        .get("properties")
+                        .and_then(|p| p.get("provisioningState"))
+                        .and_then(|v| v.as_str())
+                    {
+                        return Some(map_status(ps));
+                    }
+                    if let Some(ps) = value.get("provisioningState").and_then(|v| v.as_str()) {
+                        return Some(map_status(ps));
+                    }
+                    if let Some(ps) = value.get("status").and_then(|v| v.as_str()) {
+                        return Some(map_status(ps));
+                    }
+                    None
+                }
+                match serde_json::to_value(&self.0).ok().and_then(|v| find_status(&v)) {
+                    Some(s) => s,
+                    None => azure_core::http::poller::PollerStatus::InProgress,
+                }
+            }
+        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -14402,6 +16440,61 @@ pub mod workload_networks {
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
+            }
+            #[doc = "Return a Poller over an LRO"]
+            pub fn poller(self) -> azure_core::Result<azure_core::http::poller::Poller<Operation>> {
+                let client = self.client.clone();
+                let initial = self.clone();
+                Ok(azure_core::http::poller::Poller::from_callback(
+                    move |state: azure_core::http::poller::PollerState<azure_core::http::Url>| {
+                        let client = client.clone();
+                        let initial = initial.clone();
+                        async move {
+                            use azure_core::http::poller::{PollerResult, PollerState, StatusMonitor as _};
+                            use azure_core::json;
+                            let (rsp, next_link) = match state {
+                                PollerState::Initial => {
+                                    let rsp = initial.clone().send().await?.into_raw_response();
+                                    let next = initial.clone().url()?;
+                                    (rsp, next)
+                                }
+                                PollerState::More(next_url) => {
+                                    let mut req =
+                                        typespec_client_core::http::request::Request::new(next_url.clone(), azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    let rsp = client.send(&mut req).await?;
+                                    (rsp, next_url.clone())
+                                }
+                            };
+                            if !rsp.status().is_success() {
+                                return Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
+                                    status: rsp.status(),
+                                    error_code: None,
+                                }));
+                            }
+                            let (status, headers, body) = rsp.deconstruct();
+                            let retry_after =
+                                azure_core::http::poller::get_retry_after(&headers, &azure_core::http::poller::PollerOptions::default());
+                            let bytes = body.collect().await?;
+                            let op: Operation = json::from_json(&bytes)?;
+                            let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
+                            Ok(match op.status() {
+                                azure_core::http::poller::PollerStatus::InProgress => PollerResult::InProgress {
+                                    response,
+                                    retry_after,
+                                    next: next_link,
+                                },
+                                _ => PollerResult::Done { response },
+                            })
+                        }
+                    },
+                    None,
+                ))
             }
         }
     }
@@ -14805,6 +16898,42 @@ pub mod workload_networks {
                 self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
+        #[derive(Clone, Debug, serde :: Serialize, serde :: Deserialize)]
+        #[serde(transparent)]
+        pub struct Operation(pub models::WorkloadNetworkSegment);
+        impl azure_core::http::poller::StatusMonitor for Operation {
+            type Output = models::WorkloadNetworkSegment;
+            fn status(&self) -> azure_core::http::poller::PollerStatus {
+                fn map_status(s: &str) -> azure_core::http::poller::PollerStatus {
+                    match s.to_ascii_lowercase().as_str() {
+                        "succeeded" => azure_core::http::poller::PollerStatus::Succeeded,
+                        "failed" => azure_core::http::poller::PollerStatus::Failed,
+                        "canceled" | "cancelled" => azure_core::http::poller::PollerStatus::Canceled,
+                        _ => azure_core::http::poller::PollerStatus::InProgress,
+                    }
+                }
+                fn find_status(value: &serde_json::Value) -> Option<azure_core::http::poller::PollerStatus> {
+                    if let Some(ps) = value
+                        .get("properties")
+                        .and_then(|p| p.get("provisioningState"))
+                        .and_then(|v| v.as_str())
+                    {
+                        return Some(map_status(ps));
+                    }
+                    if let Some(ps) = value.get("provisioningState").and_then(|v| v.as_str()) {
+                        return Some(map_status(ps));
+                    }
+                    if let Some(ps) = value.get("status").and_then(|v| v.as_str()) {
+                        return Some(map_status(ps));
+                    }
+                    None
+                }
+                match serde_json::to_value(&self.0).ok().and_then(|v| find_status(&v)) {
+                    Some(s) => s,
+                    None => azure_core::http::poller::PollerStatus::InProgress,
+                }
+            }
+        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -14869,6 +16998,61 @@ pub mod workload_networks {
                     }
                 })
             }
+            #[doc = "Return a Poller over an LRO"]
+            pub fn poller(self) -> azure_core::Result<azure_core::http::poller::Poller<Operation>> {
+                let client = self.client.clone();
+                let initial = self.clone();
+                Ok(azure_core::http::poller::Poller::from_callback(
+                    move |state: azure_core::http::poller::PollerState<azure_core::http::Url>| {
+                        let client = client.clone();
+                        let initial = initial.clone();
+                        async move {
+                            use azure_core::http::poller::{PollerResult, PollerState, StatusMonitor as _};
+                            use azure_core::json;
+                            let (rsp, next_link) = match state {
+                                PollerState::Initial => {
+                                    let rsp = initial.clone().send().await?.into_raw_response();
+                                    let next = initial.clone().url()?;
+                                    (rsp, next)
+                                }
+                                PollerState::More(next_url) => {
+                                    let mut req =
+                                        typespec_client_core::http::request::Request::new(next_url.clone(), azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    let rsp = client.send(&mut req).await?;
+                                    (rsp, next_url.clone())
+                                }
+                            };
+                            if !rsp.status().is_success() {
+                                return Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
+                                    status: rsp.status(),
+                                    error_code: None,
+                                }));
+                            }
+                            let (status, headers, body) = rsp.deconstruct();
+                            let retry_after =
+                                azure_core::http::poller::get_retry_after(&headers, &azure_core::http::poller::PollerOptions::default());
+                            let bytes = body.collect().await?;
+                            let op: Operation = json::from_json(&bytes)?;
+                            let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
+                            Ok(match op.status() {
+                                azure_core::http::poller::PollerStatus::InProgress => PollerResult::InProgress {
+                                    response,
+                                    retry_after,
+                                    next: next_link,
+                                },
+                                _ => PollerResult::Done { response },
+                            })
+                        }
+                    },
+                    None,
+                ))
+            }
         }
     }
     pub mod update_segments {
@@ -14915,6 +17099,42 @@ pub mod workload_networks {
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
                 self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
+            }
+        }
+        #[derive(Clone, Debug, serde :: Serialize, serde :: Deserialize)]
+        #[serde(transparent)]
+        pub struct Operation(pub models::WorkloadNetworkSegment);
+        impl azure_core::http::poller::StatusMonitor for Operation {
+            type Output = models::WorkloadNetworkSegment;
+            fn status(&self) -> azure_core::http::poller::PollerStatus {
+                fn map_status(s: &str) -> azure_core::http::poller::PollerStatus {
+                    match s.to_ascii_lowercase().as_str() {
+                        "succeeded" => azure_core::http::poller::PollerStatus::Succeeded,
+                        "failed" => azure_core::http::poller::PollerStatus::Failed,
+                        "canceled" | "cancelled" => azure_core::http::poller::PollerStatus::Canceled,
+                        _ => azure_core::http::poller::PollerStatus::InProgress,
+                    }
+                }
+                fn find_status(value: &serde_json::Value) -> Option<azure_core::http::poller::PollerStatus> {
+                    if let Some(ps) = value
+                        .get("properties")
+                        .and_then(|p| p.get("provisioningState"))
+                        .and_then(|v| v.as_str())
+                    {
+                        return Some(map_status(ps));
+                    }
+                    if let Some(ps) = value.get("provisioningState").and_then(|v| v.as_str()) {
+                        return Some(map_status(ps));
+                    }
+                    if let Some(ps) = value.get("status").and_then(|v| v.as_str()) {
+                        return Some(map_status(ps));
+                    }
+                    None
+                }
+                match serde_json::to_value(&self.0).ok().and_then(|v| find_status(&v)) {
+                    Some(s) => s,
+                    None => azure_core::http::poller::PollerStatus::InProgress,
+                }
             }
         }
         #[derive(Clone)]
@@ -14980,6 +17200,61 @@ pub mod workload_networks {
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
+            }
+            #[doc = "Return a Poller over an LRO"]
+            pub fn poller(self) -> azure_core::Result<azure_core::http::poller::Poller<Operation>> {
+                let client = self.client.clone();
+                let initial = self.clone();
+                Ok(azure_core::http::poller::Poller::from_callback(
+                    move |state: azure_core::http::poller::PollerState<azure_core::http::Url>| {
+                        let client = client.clone();
+                        let initial = initial.clone();
+                        async move {
+                            use azure_core::http::poller::{PollerResult, PollerState, StatusMonitor as _};
+                            use azure_core::json;
+                            let (rsp, next_link) = match state {
+                                PollerState::Initial => {
+                                    let rsp = initial.clone().send().await?.into_raw_response();
+                                    let next = initial.clone().url()?;
+                                    (rsp, next)
+                                }
+                                PollerState::More(next_url) => {
+                                    let mut req =
+                                        typespec_client_core::http::request::Request::new(next_url.clone(), azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    let rsp = client.send(&mut req).await?;
+                                    (rsp, next_url.clone())
+                                }
+                            };
+                            if !rsp.status().is_success() {
+                                return Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
+                                    status: rsp.status(),
+                                    error_code: None,
+                                }));
+                            }
+                            let (status, headers, body) = rsp.deconstruct();
+                            let retry_after =
+                                azure_core::http::poller::get_retry_after(&headers, &azure_core::http::poller::PollerOptions::default());
+                            let bytes = body.collect().await?;
+                            let op: Operation = json::from_json(&bytes)?;
+                            let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
+                            Ok(match op.status() {
+                                azure_core::http::poller::PollerStatus::InProgress => PollerResult::InProgress {
+                                    response,
+                                    retry_after,
+                                    next: next_link,
+                                },
+                                _ => PollerResult::Done { response },
+                            })
+                        }
+                    },
+                    None,
+                ))
             }
         }
     }
@@ -15634,6 +17909,42 @@ pub mod workload_networks {
                 self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
             }
         }
+        #[derive(Clone, Debug, serde :: Serialize, serde :: Deserialize)]
+        #[serde(transparent)]
+        pub struct Operation(pub models::WorkloadNetworkVmGroup);
+        impl azure_core::http::poller::StatusMonitor for Operation {
+            type Output = models::WorkloadNetworkVmGroup;
+            fn status(&self) -> azure_core::http::poller::PollerStatus {
+                fn map_status(s: &str) -> azure_core::http::poller::PollerStatus {
+                    match s.to_ascii_lowercase().as_str() {
+                        "succeeded" => azure_core::http::poller::PollerStatus::Succeeded,
+                        "failed" => azure_core::http::poller::PollerStatus::Failed,
+                        "canceled" | "cancelled" => azure_core::http::poller::PollerStatus::Canceled,
+                        _ => azure_core::http::poller::PollerStatus::InProgress,
+                    }
+                }
+                fn find_status(value: &serde_json::Value) -> Option<azure_core::http::poller::PollerStatus> {
+                    if let Some(ps) = value
+                        .get("properties")
+                        .and_then(|p| p.get("provisioningState"))
+                        .and_then(|v| v.as_str())
+                    {
+                        return Some(map_status(ps));
+                    }
+                    if let Some(ps) = value.get("provisioningState").and_then(|v| v.as_str()) {
+                        return Some(map_status(ps));
+                    }
+                    if let Some(ps) = value.get("status").and_then(|v| v.as_str()) {
+                        return Some(map_status(ps));
+                    }
+                    None
+                }
+                match serde_json::to_value(&self.0).ok().and_then(|v| find_status(&v)) {
+                    Some(s) => s,
+                    None => azure_core::http::poller::PollerStatus::InProgress,
+                }
+            }
+        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -15698,6 +18009,61 @@ pub mod workload_networks {
                     }
                 })
             }
+            #[doc = "Return a Poller over an LRO"]
+            pub fn poller(self) -> azure_core::Result<azure_core::http::poller::Poller<Operation>> {
+                let client = self.client.clone();
+                let initial = self.clone();
+                Ok(azure_core::http::poller::Poller::from_callback(
+                    move |state: azure_core::http::poller::PollerState<azure_core::http::Url>| {
+                        let client = client.clone();
+                        let initial = initial.clone();
+                        async move {
+                            use azure_core::http::poller::{PollerResult, PollerState, StatusMonitor as _};
+                            use azure_core::json;
+                            let (rsp, next_link) = match state {
+                                PollerState::Initial => {
+                                    let rsp = initial.clone().send().await?.into_raw_response();
+                                    let next = initial.clone().url()?;
+                                    (rsp, next)
+                                }
+                                PollerState::More(next_url) => {
+                                    let mut req =
+                                        typespec_client_core::http::request::Request::new(next_url.clone(), azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    let rsp = client.send(&mut req).await?;
+                                    (rsp, next_url.clone())
+                                }
+                            };
+                            if !rsp.status().is_success() {
+                                return Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
+                                    status: rsp.status(),
+                                    error_code: None,
+                                }));
+                            }
+                            let (status, headers, body) = rsp.deconstruct();
+                            let retry_after =
+                                azure_core::http::poller::get_retry_after(&headers, &azure_core::http::poller::PollerOptions::default());
+                            let bytes = body.collect().await?;
+                            let op: Operation = json::from_json(&bytes)?;
+                            let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
+                            Ok(match op.status() {
+                                azure_core::http::poller::PollerStatus::InProgress => PollerResult::InProgress {
+                                    response,
+                                    retry_after,
+                                    next: next_link,
+                                },
+                                _ => PollerResult::Done { response },
+                            })
+                        }
+                    },
+                    None,
+                ))
+            }
         }
     }
     pub mod update_vm_group {
@@ -15744,6 +18110,42 @@ pub mod workload_networks {
             #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
             pub fn retry_after(&self) -> azure_core::Result<i32> {
                 self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
+            }
+        }
+        #[derive(Clone, Debug, serde :: Serialize, serde :: Deserialize)]
+        #[serde(transparent)]
+        pub struct Operation(pub models::WorkloadNetworkVmGroup);
+        impl azure_core::http::poller::StatusMonitor for Operation {
+            type Output = models::WorkloadNetworkVmGroup;
+            fn status(&self) -> azure_core::http::poller::PollerStatus {
+                fn map_status(s: &str) -> azure_core::http::poller::PollerStatus {
+                    match s.to_ascii_lowercase().as_str() {
+                        "succeeded" => azure_core::http::poller::PollerStatus::Succeeded,
+                        "failed" => azure_core::http::poller::PollerStatus::Failed,
+                        "canceled" | "cancelled" => azure_core::http::poller::PollerStatus::Canceled,
+                        _ => azure_core::http::poller::PollerStatus::InProgress,
+                    }
+                }
+                fn find_status(value: &serde_json::Value) -> Option<azure_core::http::poller::PollerStatus> {
+                    if let Some(ps) = value
+                        .get("properties")
+                        .and_then(|p| p.get("provisioningState"))
+                        .and_then(|v| v.as_str())
+                    {
+                        return Some(map_status(ps));
+                    }
+                    if let Some(ps) = value.get("provisioningState").and_then(|v| v.as_str()) {
+                        return Some(map_status(ps));
+                    }
+                    if let Some(ps) = value.get("status").and_then(|v| v.as_str()) {
+                        return Some(map_status(ps));
+                    }
+                    None
+                }
+                match serde_json::to_value(&self.0).ok().and_then(|v| find_status(&v)) {
+                    Some(s) => s,
+                    None => azure_core::http::poller::PollerStatus::InProgress,
+                }
             }
         }
         #[derive(Clone)]
@@ -15809,6 +18211,61 @@ pub mod workload_networks {
                         Ok(Response(this.client.send(&mut req).await?))
                     }
                 })
+            }
+            #[doc = "Return a Poller over an LRO"]
+            pub fn poller(self) -> azure_core::Result<azure_core::http::poller::Poller<Operation>> {
+                let client = self.client.clone();
+                let initial = self.clone();
+                Ok(azure_core::http::poller::Poller::from_callback(
+                    move |state: azure_core::http::poller::PollerState<azure_core::http::Url>| {
+                        let client = client.clone();
+                        let initial = initial.clone();
+                        async move {
+                            use azure_core::http::poller::{PollerResult, PollerState, StatusMonitor as _};
+                            use azure_core::json;
+                            let (rsp, next_link) = match state {
+                                PollerState::Initial => {
+                                    let rsp = initial.clone().send().await?.into_raw_response();
+                                    let next = initial.clone().url()?;
+                                    (rsp, next)
+                                }
+                                PollerState::More(next_url) => {
+                                    let mut req =
+                                        typespec_client_core::http::request::Request::new(next_url.clone(), azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    let rsp = client.send(&mut req).await?;
+                                    (rsp, next_url.clone())
+                                }
+                            };
+                            if !rsp.status().is_success() {
+                                return Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse {
+                                    status: rsp.status(),
+                                    error_code: None,
+                                }));
+                            }
+                            let (status, headers, body) = rsp.deconstruct();
+                            let retry_after =
+                                azure_core::http::poller::get_retry_after(&headers, &azure_core::http::poller::PollerOptions::default());
+                            let bytes = body.collect().await?;
+                            let op: Operation = json::from_json(&bytes)?;
+                            let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
+                            Ok(match op.status() {
+                                azure_core::http::poller::PollerStatus::InProgress => PollerResult::InProgress {
+                                    response,
+                                    retry_after,
+                                    next: next_link,
+                                },
+                                _ => PollerResult::Done { response },
+                            })
+                        }
+                    },
+                    None,
+                ))
             }
         }
     }
