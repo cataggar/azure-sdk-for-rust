@@ -218,15 +218,15 @@ fn get_spec_readmes(spec_folders: Vec<String>, pattern: impl AsRef<Utf8Path>) ->
 
         // Caller must provide the desired pattern explicitly (e.g., "resource-manager/**/readme.md").
         let absolute_pattern = io::join(&spec_folder_full, pattern)?;
-        for entry in glob::glob(absolute_pattern.as_str()).with_context(ErrorKind::Io, || format!("glob pattern {}", absolute_pattern))? {
-            if let Ok(path) = entry {
-                if let Ok(readme_path) = Utf8PathBuf::from_path_buf(path) {
-                    if !results.iter().any(|r| r.spec == spec && r.readme == readme_path) {
-                        results.push(SpecReadme {
-                            spec: spec.clone(),
-                            readme: readme_path,
-                        });
-                    }
+        for path in
+            (glob::glob(absolute_pattern.as_str()).with_context(ErrorKind::Io, || format!("glob pattern {}", absolute_pattern))?).flatten()
+        {
+            if let Ok(readme_path) = Utf8PathBuf::from_path_buf(path) {
+                if !results.iter().any(|r| r.spec == spec && r.readme == readme_path) {
+                    results.push(SpecReadme {
+                        spec: spec.clone(),
+                        readme: readme_path,
+                    });
                 }
             }
         }

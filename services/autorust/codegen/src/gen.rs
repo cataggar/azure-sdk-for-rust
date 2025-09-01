@@ -1,7 +1,7 @@
 use crate::{
     autorust_toml, cargo_toml, io, lib_rs,
     readme_md::{self, ReadmeMd},
-    run, CrateConfig, Error, ErrorKind, Result, ResultExt, RunConfig, SpecReadme,
+    run, CrateConfig, ErrorKind, Result, ResultExt, RunConfig, SpecReadme,
 };
 use std::{collections::HashMap, fs};
 
@@ -60,7 +60,7 @@ pub fn gen_crate(package_name: &str, spec: &SpecReadme, run_config: &RunConfig, 
         let input_files: Result<Vec<_>> = tag
             .input_files()
             .iter()
-            .map(|input_file| io::join(spec.readme(), input_file).map_err(Error::from))
+            .map(|input_file| io::join(spec.readme(), input_file))
             .collect();
         let input_files = input_files.with_context(ErrorKind::CodeGen, || format!("collecting input files for tag {name}"))?;
 

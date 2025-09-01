@@ -4,7 +4,7 @@
 
 use autorust_codegen::*;
 use autorust_openapi::Reference;
-use camino::{Utf8Path, Utf8PathBuf};
+use camino::Utf8PathBuf;
 use spec::TypedReference;
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;

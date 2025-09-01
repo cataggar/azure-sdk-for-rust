@@ -96,7 +96,7 @@ impl<'a> CodeGen<'a> {
     }
 
     pub fn has_xml(&self) -> bool {
-        self.spec.has_xml() || self.spec.operations().map_or(false, |f| f.iter().any(|op| op.has_xml()))
+        self.spec.has_xml() || self.spec.operations().is_ok_and(|f| f.iter().any(|op| op.has_xml()))
     }
 }
 

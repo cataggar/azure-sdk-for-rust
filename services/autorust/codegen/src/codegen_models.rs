@@ -565,7 +565,7 @@ impl<T> Ord for Depth<T> {
 
 impl<T> PartialOrd for Depth<T> {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.depth.cmp(&other.depth))
+        Some(self.cmp(other))
     }
 }
 
@@ -1152,11 +1152,10 @@ fn create_struct(
     let page_impl: Option<(Ident, TypeNameCode)> = if let Some(pageable) = pageable {
         let item_field = pageable.item_name.as_deref().unwrap_or("value");
         let item_ident = item_field.to_snake_case_ident()?;
-        if let Some(prop) = props.iter().find(|p| p.field_name == item_ident) {
-            Some((prop.field_name.clone(), prop.field_type.clone()))
-        } else {
-            None
-        }
+        props
+            .iter()
+            .find(|p| p.field_name == item_ident)
+            .map(|prop| (prop.field_name.clone(), prop.field_type.clone()))
     } else {
         None
     };
@@ -1291,7 +1290,7 @@ impl ToTokens for NamedTypeCode {
 }
 
 enum TypeCode {
-    Struct(StructCode),
+    Struct(Box<StructCode>),
     Enum(TokenStream),
     XmlWrapped(XmlWrappedCode),
 }
@@ -1349,7 +1348,7 @@ fn create_struct_field_code(
                 let code = create_struct(cg, property, property_name, None, needs_boxing)?;
                 Ok(NamedTypeCode {
                     type_name,
-                    code: Some(TypeCode::Struct(code)),
+                    code: Some(TypeCode::Struct(Box::new(code))),
                 })
             } else if property.xml_wrapped() {
                 let id = property_name.to_camel_case_ident()?;
@@ -1468,39 +1467,39 @@ mod union_code_tests {
         let schemas = setup_scenario();
 
         // Test case 1: Searching for (A) with start schema (A), there are no allOf properties
-        assert_eq!(
-            UnionCode::breadth_first_search_all_of(&create_ref_key(SCHEMA_1A), &schemas.get(SCHEMA_1A).unwrap().1),
-            false
-        );
+        assert!(!UnionCode::breadth_first_search_all_of(
+            &create_ref_key(SCHEMA_1A),
+            &schemas.get(SCHEMA_1A).unwrap().1
+        ));
 
         // Test case 2: Start schema (A) has allOf properties which includes search value (B)
-        assert_eq!(
-            UnionCode::breadth_first_search_all_of(&create_ref_key(SCHEMA_1A), &schemas.get(SCHEMA_2A).unwrap().1),
-            true
-        );
+        assert!(UnionCode::breadth_first_search_all_of(
+            &create_ref_key(SCHEMA_1A),
+            &schemas.get(SCHEMA_2A).unwrap().1
+        ));
 
         // Test case 3: Start schema (A) has allOf properties which includes search value (B), but itself is a discriminator
-        assert_eq!(
-            UnionCode::breadth_first_search_all_of(&create_ref_key(SCHEMA_1A), &schemas.get(SCHEMA_2B).unwrap().1),
-            true
-        );
+        assert!(UnionCode::breadth_first_search_all_of(
+            &create_ref_key(SCHEMA_1A),
+            &schemas.get(SCHEMA_2B).unwrap().1
+        ));
 
         // Test case 4: Start schema (A) has allOf properties, where one of those (B) contains a reference to what we're searching for (C)
-        assert_eq!(
-            UnionCode::breadth_first_search_all_of(&create_ref_key(SCHEMA_1A), &schemas.get(SCHEMA_3A).unwrap().1),
-            true
-        );
+        assert!(UnionCode::breadth_first_search_all_of(
+            &create_ref_key(SCHEMA_1A),
+            &schemas.get(SCHEMA_3A).unwrap().1
+        ));
 
         // Test case 5: Start schema (A) has allOf properties, where one of those (B) contains a reference to what we're searching for (C), but (B) is a discriminator
         // If we search for (B) instead, we should find it on (A)
-        assert_eq!(
-            UnionCode::breadth_first_search_all_of(&create_ref_key(SCHEMA_1A), &schemas.get(SCHEMA_3B).unwrap().1),
-            false
-        );
-        assert_eq!(
-            UnionCode::breadth_first_search_all_of(&create_ref_key(SCHEMA_2B), &schemas.get(SCHEMA_3B).unwrap().1),
-            true
-        );
+        assert!(!UnionCode::breadth_first_search_all_of(
+            &create_ref_key(SCHEMA_1A),
+            &schemas.get(SCHEMA_3B).unwrap().1
+        ));
+        assert!(UnionCode::breadth_first_search_all_of(
+            &create_ref_key(SCHEMA_2B),
+            &schemas.get(SCHEMA_3B).unwrap().1
+        ));
     }
 
     #[test]

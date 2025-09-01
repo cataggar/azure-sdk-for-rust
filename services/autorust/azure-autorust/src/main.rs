@@ -138,7 +138,7 @@ fn gen_crates(only_packages: &[&str]) -> Result<BTreeSet<String>> {
                 eprintln!("  caused by: {s}");
                 src = s.source();
             }
-            eprintln!("");
+            eprintln!();
         }
         return Err(Error::new(ErrorKind::CodeGen, "Failed to generate some crates"));
     }
