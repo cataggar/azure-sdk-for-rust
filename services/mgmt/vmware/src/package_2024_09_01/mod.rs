@@ -310,10 +310,15 @@ pub mod operations {
                             let (status, headers, body) = rsp.deconstruct();
                             let bytes = body.collect().await?;
                             let page: models::OperationListResult = serde_json::from_slice(&bytes)?;
+                            let bytes_for_json = bytes.clone();
                             let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
                             let response: azure_core::http::response::Response<models::OperationListResult, azure_core::http::JsonFormat> =
                                 raw.into();
-                            Ok(match azure_openapi_core::Continuable::continuation(&page) {
+                            let continuation = serde_json::from_slice::<serde_json::Value>(&bytes_for_json)
+                                .ok()
+                                .and_then(|v| v.get("nextLink").and_then(|x| x.as_str()).map(|s| s.to_string()))
+                                .filter(|s| !s.is_empty());
+                            Ok(match continuation {
                                 Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
                                 None => azure_core::http::pager::PagerResult::Done { response },
                             })
@@ -874,10 +879,15 @@ pub mod private_clouds {
                             let (status, headers, body) = rsp.deconstruct();
                             let bytes = body.collect().await?;
                             let page: models::PrivateCloudList = serde_json::from_slice(&bytes)?;
+                            let bytes_for_json = bytes.clone();
                             let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
                             let response: azure_core::http::response::Response<models::PrivateCloudList, azure_core::http::JsonFormat> =
                                 raw.into();
-                            Ok(match azure_openapi_core::Continuable::continuation(&page) {
+                            let continuation = serde_json::from_slice::<serde_json::Value>(&bytes_for_json)
+                                .ok()
+                                .and_then(|v| v.get("nextLink").and_then(|x| x.as_str()).map(|s| s.to_string()))
+                                .filter(|s| !s.is_empty());
+                            Ok(match continuation {
                                 Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
                                 None => azure_core::http::pager::PagerResult::Done { response },
                             })
@@ -1023,10 +1033,15 @@ pub mod private_clouds {
                             let (status, headers, body) = rsp.deconstruct();
                             let bytes = body.collect().await?;
                             let page: models::PrivateCloudList = serde_json::from_slice(&bytes)?;
+                            let bytes_for_json = bytes.clone();
                             let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
                             let response: azure_core::http::response::Response<models::PrivateCloudList, azure_core::http::JsonFormat> =
                                 raw.into();
-                            Ok(match azure_openapi_core::Continuable::continuation(&page) {
+                            let continuation = serde_json::from_slice::<serde_json::Value>(&bytes_for_json)
+                                .ok()
+                                .and_then(|v| v.get("nextLink").and_then(|x| x.as_str()).map(|s| s.to_string()))
+                                .filter(|s| !s.is_empty());
+                            Ok(match continuation {
                                 Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
                                 None => azure_core::http::pager::PagerResult::Done { response },
                             })
@@ -1153,7 +1168,7 @@ pub mod private_clouds {
             pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
-            pub fn headers(&self) -> Headers {
+            pub fn headers(&self) -> Headers<'_> {
                 Headers(self.0.headers())
             }
         }
@@ -1260,7 +1275,7 @@ pub mod private_clouds {
             pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
-            pub fn headers(&self) -> Headers {
+            pub fn headers(&self) -> Headers<'_> {
                 Headers(self.0.headers())
             }
         }
@@ -1365,7 +1380,7 @@ pub mod private_clouds {
             pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
-            pub fn headers(&self) -> Headers {
+            pub fn headers(&self) -> Headers<'_> {
                 Headers(self.0.headers())
             }
         }
@@ -1565,7 +1580,7 @@ pub mod private_clouds {
             pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
-            pub fn headers(&self) -> Headers {
+            pub fn headers(&self) -> Headers<'_> {
                 Headers(self.0.headers())
             }
         }
@@ -1669,7 +1684,7 @@ pub mod private_clouds {
             pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
-            pub fn headers(&self) -> Headers {
+            pub fn headers(&self) -> Headers<'_> {
                 Headers(self.0.headers())
             }
         }
@@ -1910,10 +1925,15 @@ pub mod skus {
                             let (status, headers, body) = rsp.deconstruct();
                             let bytes = body.collect().await?;
                             let page: models::PagedResourceSku = serde_json::from_slice(&bytes)?;
+                            let bytes_for_json = bytes.clone();
                             let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
                             let response: azure_core::http::response::Response<models::PagedResourceSku, azure_core::http::JsonFormat> =
                                 raw.into();
-                            Ok(match azure_openapi_core::Continuable::continuation(&page) {
+                            let continuation = serde_json::from_slice::<serde_json::Value>(&bytes_for_json)
+                                .ok()
+                                .and_then(|v| v.get("nextLink").and_then(|x| x.as_str()).map(|s| s.to_string()))
+                                .filter(|s| !s.is_empty());
+                            Ok(match continuation {
                                 Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
                                 None => azure_core::http::pager::PagerResult::Done { response },
                             })
@@ -2158,10 +2178,15 @@ pub mod addons {
                             let (status, headers, body) = rsp.deconstruct();
                             let bytes = body.collect().await?;
                             let page: models::AddonList = serde_json::from_slice(&bytes)?;
+                            let bytes_for_json = bytes.clone();
                             let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
                             let response: azure_core::http::response::Response<models::AddonList, azure_core::http::JsonFormat> =
                                 raw.into();
-                            Ok(match azure_openapi_core::Continuable::continuation(&page) {
+                            let continuation = serde_json::from_slice::<serde_json::Value>(&bytes_for_json)
+                                .ok()
+                                .and_then(|v| v.get("nextLink").and_then(|x| x.as_str()).map(|s| s.to_string()))
+                                .filter(|s| !s.is_empty());
+                            Ok(match continuation {
                                 Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
                                 None => azure_core::http::pager::PagerResult::Done { response },
                             })
@@ -2289,7 +2314,7 @@ pub mod addons {
             pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
-            pub fn headers(&self) -> Headers {
+            pub fn headers(&self) -> Headers<'_> {
                 Headers(self.0.headers())
             }
         }
@@ -2391,7 +2416,7 @@ pub mod addons {
             pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
-            pub fn headers(&self) -> Headers {
+            pub fn headers(&self) -> Headers<'_> {
                 Headers(self.0.headers())
             }
         }
@@ -2715,12 +2740,17 @@ pub mod authorizations {
                             let (status, headers, body) = rsp.deconstruct();
                             let bytes = body.collect().await?;
                             let page: models::ExpressRouteAuthorizationList = serde_json::from_slice(&bytes)?;
+                            let bytes_for_json = bytes.clone();
                             let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
                             let response: azure_core::http::response::Response<
                                 models::ExpressRouteAuthorizationList,
                                 azure_core::http::JsonFormat,
                             > = raw.into();
-                            Ok(match azure_openapi_core::Continuable::continuation(&page) {
+                            let continuation = serde_json::from_slice::<serde_json::Value>(&bytes_for_json)
+                                .ok()
+                                .and_then(|v| v.get("nextLink").and_then(|x| x.as_str()).map(|s| s.to_string()))
+                                .filter(|s| !s.is_empty());
+                            Ok(match continuation {
                                 Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
                                 None => azure_core::http::pager::PagerResult::Done { response },
                             })
@@ -2848,7 +2878,7 @@ pub mod authorizations {
             pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
-            pub fn headers(&self) -> Headers {
+            pub fn headers(&self) -> Headers<'_> {
                 Headers(self.0.headers())
             }
         }
@@ -2950,7 +2980,7 @@ pub mod authorizations {
             pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
-            pub fn headers(&self) -> Headers {
+            pub fn headers(&self) -> Headers<'_> {
                 Headers(self.0.headers())
             }
         }
@@ -3274,10 +3304,15 @@ pub mod cloud_links {
                             let (status, headers, body) = rsp.deconstruct();
                             let bytes = body.collect().await?;
                             let page: models::CloudLinkList = serde_json::from_slice(&bytes)?;
+                            let bytes_for_json = bytes.clone();
                             let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
                             let response: azure_core::http::response::Response<models::CloudLinkList, azure_core::http::JsonFormat> =
                                 raw.into();
-                            Ok(match azure_openapi_core::Continuable::continuation(&page) {
+                            let continuation = serde_json::from_slice::<serde_json::Value>(&bytes_for_json)
+                                .ok()
+                                .and_then(|v| v.get("nextLink").and_then(|x| x.as_str()).map(|s| s.to_string()))
+                                .filter(|s| !s.is_empty());
+                            Ok(match continuation {
                                 Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
                                 None => azure_core::http::pager::PagerResult::Done { response },
                             })
@@ -3405,7 +3440,7 @@ pub mod cloud_links {
             pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
-            pub fn headers(&self) -> Headers {
+            pub fn headers(&self) -> Headers<'_> {
                 Headers(self.0.headers())
             }
         }
@@ -3507,7 +3542,7 @@ pub mod cloud_links {
             pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
-            pub fn headers(&self) -> Headers {
+            pub fn headers(&self) -> Headers<'_> {
                 Headers(self.0.headers())
             }
         }
@@ -3878,10 +3913,15 @@ pub mod clusters {
                             let (status, headers, body) = rsp.deconstruct();
                             let bytes = body.collect().await?;
                             let page: models::ClusterList = serde_json::from_slice(&bytes)?;
+                            let bytes_for_json = bytes.clone();
                             let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
                             let response: azure_core::http::response::Response<models::ClusterList, azure_core::http::JsonFormat> =
                                 raw.into();
-                            Ok(match azure_openapi_core::Continuable::continuation(&page) {
+                            let continuation = serde_json::from_slice::<serde_json::Value>(&bytes_for_json)
+                                .ok()
+                                .and_then(|v| v.get("nextLink").and_then(|x| x.as_str()).map(|s| s.to_string()))
+                                .filter(|s| !s.is_empty());
+                            Ok(match continuation {
                                 Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
                                 None => azure_core::http::pager::PagerResult::Done { response },
                             })
@@ -4009,7 +4049,7 @@ pub mod clusters {
             pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
-            pub fn headers(&self) -> Headers {
+            pub fn headers(&self) -> Headers<'_> {
                 Headers(self.0.headers())
             }
         }
@@ -4117,7 +4157,7 @@ pub mod clusters {
             pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
-            pub fn headers(&self) -> Headers {
+            pub fn headers(&self) -> Headers<'_> {
                 Headers(self.0.headers())
             }
         }
@@ -4223,7 +4263,7 @@ pub mod clusters {
             pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
-            pub fn headers(&self) -> Headers {
+            pub fn headers(&self) -> Headers<'_> {
                 Headers(self.0.headers())
             }
         }
@@ -4658,10 +4698,15 @@ pub mod datastores {
                             let (status, headers, body) = rsp.deconstruct();
                             let bytes = body.collect().await?;
                             let page: models::DatastoreList = serde_json::from_slice(&bytes)?;
+                            let bytes_for_json = bytes.clone();
                             let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
                             let response: azure_core::http::response::Response<models::DatastoreList, azure_core::http::JsonFormat> =
                                 raw.into();
-                            Ok(match azure_openapi_core::Continuable::continuation(&page) {
+                            let continuation = serde_json::from_slice::<serde_json::Value>(&bytes_for_json)
+                                .ok()
+                                .and_then(|v| v.get("nextLink").and_then(|x| x.as_str()).map(|s| s.to_string()))
+                                .filter(|s| !s.is_empty());
+                            Ok(match continuation {
                                 Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
                                 None => azure_core::http::pager::PagerResult::Done { response },
                             })
@@ -4790,7 +4835,7 @@ pub mod datastores {
             pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
-            pub fn headers(&self) -> Headers {
+            pub fn headers(&self) -> Headers<'_> {
                 Headers(self.0.headers())
             }
         }
@@ -4893,7 +4938,7 @@ pub mod datastores {
             pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
-            pub fn headers(&self) -> Headers {
+            pub fn headers(&self) -> Headers<'_> {
                 Headers(self.0.headers())
             }
         }
@@ -5178,10 +5223,15 @@ pub mod hosts {
                             let (status, headers, body) = rsp.deconstruct();
                             let bytes = body.collect().await?;
                             let page: models::HostListResult = serde_json::from_slice(&bytes)?;
+                            let bytes_for_json = bytes.clone();
                             let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
                             let response: azure_core::http::response::Response<models::HostListResult, azure_core::http::JsonFormat> =
                                 raw.into();
-                            Ok(match azure_openapi_core::Continuable::continuation(&page) {
+                            let continuation = serde_json::from_slice::<serde_json::Value>(&bytes_for_json)
+                                .ok()
+                                .and_then(|v| v.get("nextLink").and_then(|x| x.as_str()).map(|s| s.to_string()))
+                                .filter(|s| !s.is_empty());
+                            Ok(match continuation {
                                 Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
                                 None => azure_core::http::pager::PagerResult::Done { response },
                             })
@@ -5565,12 +5615,17 @@ pub mod placement_policies {
                             let (status, headers, body) = rsp.deconstruct();
                             let bytes = body.collect().await?;
                             let page: models::PlacementPoliciesList = serde_json::from_slice(&bytes)?;
+                            let bytes_for_json = bytes.clone();
                             let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
                             let response: azure_core::http::response::Response<
                                 models::PlacementPoliciesList,
                                 azure_core::http::JsonFormat,
                             > = raw.into();
-                            Ok(match azure_openapi_core::Continuable::continuation(&page) {
+                            let continuation = serde_json::from_slice::<serde_json::Value>(&bytes_for_json)
+                                .ok()
+                                .and_then(|v| v.get("nextLink").and_then(|x| x.as_str()).map(|s| s.to_string()))
+                                .filter(|s| !s.is_empty());
+                            Ok(match continuation {
                                 Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
                                 None => azure_core::http::pager::PagerResult::Done { response },
                             })
@@ -5703,7 +5758,7 @@ pub mod placement_policies {
             pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
-            pub fn headers(&self) -> Headers {
+            pub fn headers(&self) -> Headers<'_> {
                 Headers(self.0.headers())
             }
         }
@@ -5816,7 +5871,7 @@ pub mod placement_policies {
             pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
-            pub fn headers(&self) -> Headers {
+            pub fn headers(&self) -> Headers<'_> {
                 Headers(self.0.headers())
             }
         }
@@ -5927,7 +5982,7 @@ pub mod placement_policies {
             pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
-            pub fn headers(&self) -> Headers {
+            pub fn headers(&self) -> Headers<'_> {
                 Headers(self.0.headers())
             }
         }
@@ -6244,10 +6299,15 @@ pub mod virtual_machines {
                             let (status, headers, body) = rsp.deconstruct();
                             let bytes = body.collect().await?;
                             let page: models::VirtualMachinesList = serde_json::from_slice(&bytes)?;
+                            let bytes_for_json = bytes.clone();
                             let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
                             let response: azure_core::http::response::Response<models::VirtualMachinesList, azure_core::http::JsonFormat> =
                                 raw.into();
-                            Ok(match azure_openapi_core::Continuable::continuation(&page) {
+                            let continuation = serde_json::from_slice::<serde_json::Value>(&bytes_for_json)
+                                .ok()
+                                .and_then(|v| v.get("nextLink").and_then(|x| x.as_str()).map(|s| s.to_string()))
+                                .filter(|s| !s.is_empty());
+                            Ok(match continuation {
                                 Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
                                 None => azure_core::http::pager::PagerResult::Done { response },
                             })
@@ -6374,7 +6434,7 @@ pub mod virtual_machines {
             pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
-            pub fn headers(&self) -> Headers {
+            pub fn headers(&self) -> Headers<'_> {
                 Headers(self.0.headers())
             }
         }
@@ -6698,12 +6758,17 @@ pub mod global_reach_connections {
                             let (status, headers, body) = rsp.deconstruct();
                             let bytes = body.collect().await?;
                             let page: models::GlobalReachConnectionList = serde_json::from_slice(&bytes)?;
+                            let bytes_for_json = bytes.clone();
                             let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
                             let response: azure_core::http::response::Response<
                                 models::GlobalReachConnectionList,
                                 azure_core::http::JsonFormat,
                             > = raw.into();
-                            Ok(match azure_openapi_core::Continuable::continuation(&page) {
+                            let continuation = serde_json::from_slice::<serde_json::Value>(&bytes_for_json)
+                                .ok()
+                                .and_then(|v| v.get("nextLink").and_then(|x| x.as_str()).map(|s| s.to_string()))
+                                .filter(|s| !s.is_empty());
+                            Ok(match continuation {
                                 Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
                                 None => azure_core::http::pager::PagerResult::Done { response },
                             })
@@ -6831,7 +6896,7 @@ pub mod global_reach_connections {
             pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
-            pub fn headers(&self) -> Headers {
+            pub fn headers(&self) -> Headers<'_> {
                 Headers(self.0.headers())
             }
         }
@@ -6933,7 +6998,7 @@ pub mod global_reach_connections {
             pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
-            pub fn headers(&self) -> Headers {
+            pub fn headers(&self) -> Headers<'_> {
                 Headers(self.0.headers())
             }
         }
@@ -7257,12 +7322,17 @@ pub mod hcx_enterprise_sites {
                             let (status, headers, body) = rsp.deconstruct();
                             let bytes = body.collect().await?;
                             let page: models::HcxEnterpriseSiteList = serde_json::from_slice(&bytes)?;
+                            let bytes_for_json = bytes.clone();
                             let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
                             let response: azure_core::http::response::Response<
                                 models::HcxEnterpriseSiteList,
                                 azure_core::http::JsonFormat,
                             > = raw.into();
-                            Ok(match azure_openapi_core::Continuable::continuation(&page) {
+                            let continuation = serde_json::from_slice::<serde_json::Value>(&bytes_for_json)
+                                .ok()
+                                .and_then(|v| v.get("nextLink").and_then(|x| x.as_str()).map(|s| s.to_string()))
+                                .filter(|s| !s.is_empty());
+                            Ok(match continuation {
                                 Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
                                 None => azure_core::http::pager::PagerResult::Done { response },
                             })
@@ -7785,10 +7855,15 @@ pub mod iscsi_paths {
                             let (status, headers, body) = rsp.deconstruct();
                             let bytes = body.collect().await?;
                             let page: models::IscsiPathListResult = serde_json::from_slice(&bytes)?;
+                            let bytes_for_json = bytes.clone();
                             let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
                             let response: azure_core::http::response::Response<models::IscsiPathListResult, azure_core::http::JsonFormat> =
                                 raw.into();
-                            Ok(match azure_openapi_core::Continuable::continuation(&page) {
+                            let continuation = serde_json::from_slice::<serde_json::Value>(&bytes_for_json)
+                                .ok()
+                                .and_then(|v| v.get("nextLink").and_then(|x| x.as_str()).map(|s| s.to_string()))
+                                .filter(|s| !s.is_empty());
+                            Ok(match continuation {
                                 Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
                                 None => azure_core::http::pager::PagerResult::Done { response },
                             })
@@ -7915,7 +7990,7 @@ pub mod iscsi_paths {
             pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
-            pub fn headers(&self) -> Headers {
+            pub fn headers(&self) -> Headers<'_> {
                 Headers(self.0.headers())
             }
         }
@@ -8016,7 +8091,7 @@ pub mod iscsi_paths {
             pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
-            pub fn headers(&self) -> Headers {
+            pub fn headers(&self) -> Headers<'_> {
                 Headers(self.0.headers())
             }
         }
@@ -8292,12 +8367,17 @@ pub mod provisioned_networks {
                             let (status, headers, body) = rsp.deconstruct();
                             let bytes = body.collect().await?;
                             let page: models::ProvisionedNetworkListResult = serde_json::from_slice(&bytes)?;
+                            let bytes_for_json = bytes.clone();
                             let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
                             let response: azure_core::http::response::Response<
                                 models::ProvisionedNetworkListResult,
                                 azure_core::http::JsonFormat,
                             > = raw.into();
-                            Ok(match azure_openapi_core::Continuable::continuation(&page) {
+                            let continuation = serde_json::from_slice::<serde_json::Value>(&bytes_for_json)
+                                .ok()
+                                .and_then(|v| v.get("nextLink").and_then(|x| x.as_str()).map(|s| s.to_string()))
+                                .filter(|s| !s.is_empty());
+                            Ok(match continuation {
                                 Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
                                 None => azure_core::http::pager::PagerResult::Done { response },
                             })
@@ -8639,12 +8719,17 @@ pub mod pure_storage_policies {
                             let (status, headers, body) = rsp.deconstruct();
                             let bytes = body.collect().await?;
                             let page: models::PureStoragePolicyListResult = serde_json::from_slice(&bytes)?;
+                            let bytes_for_json = bytes.clone();
                             let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
                             let response: azure_core::http::response::Response<
                                 models::PureStoragePolicyListResult,
                                 azure_core::http::JsonFormat,
                             > = raw.into();
-                            Ok(match azure_openapi_core::Continuable::continuation(&page) {
+                            let continuation = serde_json::from_slice::<serde_json::Value>(&bytes_for_json)
+                                .ok()
+                                .and_then(|v| v.get("nextLink").and_then(|x| x.as_str()).map(|s| s.to_string()))
+                                .filter(|s| !s.is_empty());
+                            Ok(match continuation {
                                 Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
                                 None => azure_core::http::pager::PagerResult::Done { response },
                             })
@@ -8772,7 +8857,7 @@ pub mod pure_storage_policies {
             pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
-            pub fn headers(&self) -> Headers {
+            pub fn headers(&self) -> Headers<'_> {
                 Headers(self.0.headers())
             }
         }
@@ -8879,7 +8964,7 @@ pub mod pure_storage_policies {
             pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
-            pub fn headers(&self) -> Headers {
+            pub fn headers(&self) -> Headers<'_> {
                 Headers(self.0.headers())
             }
         }
@@ -9226,10 +9311,15 @@ pub mod script_executions {
                             let (status, headers, body) = rsp.deconstruct();
                             let bytes = body.collect().await?;
                             let page: models::ScriptExecutionsList = serde_json::from_slice(&bytes)?;
+                            let bytes_for_json = bytes.clone();
                             let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
                             let response: azure_core::http::response::Response<models::ScriptExecutionsList, azure_core::http::JsonFormat> =
                                 raw.into();
-                            Ok(match azure_openapi_core::Continuable::continuation(&page) {
+                            let continuation = serde_json::from_slice::<serde_json::Value>(&bytes_for_json)
+                                .ok()
+                                .and_then(|v| v.get("nextLink").and_then(|x| x.as_str()).map(|s| s.to_string()))
+                                .filter(|s| !s.is_empty());
+                            Ok(match continuation {
                                 Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
                                 None => azure_core::http::pager::PagerResult::Done { response },
                             })
@@ -9357,7 +9447,7 @@ pub mod script_executions {
             pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
-            pub fn headers(&self) -> Headers {
+            pub fn headers(&self) -> Headers<'_> {
                 Headers(self.0.headers())
             }
         }
@@ -9459,7 +9549,7 @@ pub mod script_executions {
             pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
-            pub fn headers(&self) -> Headers {
+            pub fn headers(&self) -> Headers<'_> {
                 Headers(self.0.headers())
             }
         }
@@ -9840,10 +9930,15 @@ pub mod script_packages {
                             let (status, headers, body) = rsp.deconstruct();
                             let bytes = body.collect().await?;
                             let page: models::ScriptPackagesList = serde_json::from_slice(&bytes)?;
+                            let bytes_for_json = bytes.clone();
                             let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
                             let response: azure_core::http::response::Response<models::ScriptPackagesList, azure_core::http::JsonFormat> =
                                 raw.into();
-                            Ok(match azure_openapi_core::Continuable::continuation(&page) {
+                            let continuation = serde_json::from_slice::<serde_json::Value>(&bytes_for_json)
+                                .ok()
+                                .and_then(|v| v.get("nextLink").and_then(|x| x.as_str()).map(|s| s.to_string()))
+                                .filter(|s| !s.is_empty());
+                            Ok(match continuation {
                                 Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
                                 None => azure_core::http::pager::PagerResult::Done { response },
                             })
@@ -10145,10 +10240,15 @@ pub mod script_cmdlets {
                             let (status, headers, body) = rsp.deconstruct();
                             let bytes = body.collect().await?;
                             let page: models::ScriptCmdletsList = serde_json::from_slice(&bytes)?;
+                            let bytes_for_json = bytes.clone();
                             let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
                             let response: azure_core::http::response::Response<models::ScriptCmdletsList, azure_core::http::JsonFormat> =
                                 raw.into();
-                            Ok(match azure_openapi_core::Continuable::continuation(&page) {
+                            let continuation = serde_json::from_slice::<serde_json::Value>(&bytes_for_json)
+                                .ok()
+                                .and_then(|v| v.get("nextLink").and_then(|x| x.as_str()).map(|s| s.to_string()))
+                                .filter(|s| !s.is_empty());
+                            Ok(match continuation {
                                 Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
                                 None => azure_core::http::pager::PagerResult::Done { response },
                             })
@@ -11293,10 +11393,15 @@ pub mod workload_networks {
                             let (status, headers, body) = rsp.deconstruct();
                             let bytes = body.collect().await?;
                             let page: models::WorkloadNetworkList = serde_json::from_slice(&bytes)?;
+                            let bytes_for_json = bytes.clone();
                             let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
                             let response: azure_core::http::response::Response<models::WorkloadNetworkList, azure_core::http::JsonFormat> =
                                 raw.into();
-                            Ok(match azure_openapi_core::Continuable::continuation(&page) {
+                            let continuation = serde_json::from_slice::<serde_json::Value>(&bytes_for_json)
+                                .ok()
+                                .and_then(|v| v.get("nextLink").and_then(|x| x.as_str()).map(|s| s.to_string()))
+                                .filter(|s| !s.is_empty());
+                            Ok(match continuation {
                                 Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
                                 None => azure_core::http::pager::PagerResult::Done { response },
                             })
@@ -11536,12 +11641,17 @@ pub mod workload_networks {
                             let (status, headers, body) = rsp.deconstruct();
                             let bytes = body.collect().await?;
                             let page: models::WorkloadNetworkDhcpList = serde_json::from_slice(&bytes)?;
+                            let bytes_for_json = bytes.clone();
                             let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
                             let response: azure_core::http::response::Response<
                                 models::WorkloadNetworkDhcpList,
                                 azure_core::http::JsonFormat,
                             > = raw.into();
-                            Ok(match azure_openapi_core::Continuable::continuation(&page) {
+                            let continuation = serde_json::from_slice::<serde_json::Value>(&bytes_for_json)
+                                .ok()
+                                .and_then(|v| v.get("nextLink").and_then(|x| x.as_str()).map(|s| s.to_string()))
+                                .filter(|s| !s.is_empty());
+                            Ok(match continuation {
                                 Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
                                 None => azure_core::http::pager::PagerResult::Done { response },
                             })
@@ -11666,7 +11776,7 @@ pub mod workload_networks {
             pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
-            pub fn headers(&self) -> Headers {
+            pub fn headers(&self) -> Headers<'_> {
                 Headers(self.0.headers())
             }
         }
@@ -11771,7 +11881,7 @@ pub mod workload_networks {
             pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
-            pub fn headers(&self) -> Headers {
+            pub fn headers(&self) -> Headers<'_> {
                 Headers(self.0.headers())
             }
         }
@@ -11874,7 +11984,7 @@ pub mod workload_networks {
             pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
-            pub fn headers(&self) -> Headers {
+            pub fn headers(&self) -> Headers<'_> {
                 Headers(self.0.headers())
             }
         }
@@ -12097,12 +12207,17 @@ pub mod workload_networks {
                             let (status, headers, body) = rsp.deconstruct();
                             let bytes = body.collect().await?;
                             let page: models::WorkloadNetworkDnsServicesList = serde_json::from_slice(&bytes)?;
+                            let bytes_for_json = bytes.clone();
                             let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
                             let response: azure_core::http::response::Response<
                                 models::WorkloadNetworkDnsServicesList,
                                 azure_core::http::JsonFormat,
                             > = raw.into();
-                            Ok(match azure_openapi_core::Continuable::continuation(&page) {
+                            let continuation = serde_json::from_slice::<serde_json::Value>(&bytes_for_json)
+                                .ok()
+                                .and_then(|v| v.get("nextLink").and_then(|x| x.as_str()).map(|s| s.to_string()))
+                                .filter(|s| !s.is_empty());
+                            Ok(match continuation {
                                 Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
                                 None => azure_core::http::pager::PagerResult::Done { response },
                             })
@@ -12230,7 +12345,7 @@ pub mod workload_networks {
             pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
-            pub fn headers(&self) -> Headers {
+            pub fn headers(&self) -> Headers<'_> {
                 Headers(self.0.headers())
             }
         }
@@ -12338,7 +12453,7 @@ pub mod workload_networks {
             pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
-            pub fn headers(&self) -> Headers {
+            pub fn headers(&self) -> Headers<'_> {
                 Headers(self.0.headers())
             }
         }
@@ -12444,7 +12559,7 @@ pub mod workload_networks {
             pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
-            pub fn headers(&self) -> Headers {
+            pub fn headers(&self) -> Headers<'_> {
                 Headers(self.0.headers())
             }
         }
@@ -12670,12 +12785,17 @@ pub mod workload_networks {
                             let (status, headers, body) = rsp.deconstruct();
                             let bytes = body.collect().await?;
                             let page: models::WorkloadNetworkDnsZonesList = serde_json::from_slice(&bytes)?;
+                            let bytes_for_json = bytes.clone();
                             let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
                             let response: azure_core::http::response::Response<
                                 models::WorkloadNetworkDnsZonesList,
                                 azure_core::http::JsonFormat,
                             > = raw.into();
-                            Ok(match azure_openapi_core::Continuable::continuation(&page) {
+                            let continuation = serde_json::from_slice::<serde_json::Value>(&bytes_for_json)
+                                .ok()
+                                .and_then(|v| v.get("nextLink").and_then(|x| x.as_str()).map(|s| s.to_string()))
+                                .filter(|s| !s.is_empty());
+                            Ok(match continuation {
                                 Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
                                 None => azure_core::http::pager::PagerResult::Done { response },
                             })
@@ -12803,7 +12923,7 @@ pub mod workload_networks {
             pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
-            pub fn headers(&self) -> Headers {
+            pub fn headers(&self) -> Headers<'_> {
                 Headers(self.0.headers())
             }
         }
@@ -12911,7 +13031,7 @@ pub mod workload_networks {
             pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
-            pub fn headers(&self) -> Headers {
+            pub fn headers(&self) -> Headers<'_> {
                 Headers(self.0.headers())
             }
         }
@@ -13017,7 +13137,7 @@ pub mod workload_networks {
             pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
-            pub fn headers(&self) -> Headers {
+            pub fn headers(&self) -> Headers<'_> {
                 Headers(self.0.headers())
             }
         }
@@ -13243,12 +13363,17 @@ pub mod workload_networks {
                             let (status, headers, body) = rsp.deconstruct();
                             let bytes = body.collect().await?;
                             let page: models::WorkloadNetworkGatewayList = serde_json::from_slice(&bytes)?;
+                            let bytes_for_json = bytes.clone();
                             let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
                             let response: azure_core::http::response::Response<
                                 models::WorkloadNetworkGatewayList,
                                 azure_core::http::JsonFormat,
                             > = raw.into();
-                            Ok(match azure_openapi_core::Continuable::continuation(&page) {
+                            let continuation = serde_json::from_slice::<serde_json::Value>(&bytes_for_json)
+                                .ok()
+                                .and_then(|v| v.get("nextLink").and_then(|x| x.as_str()).map(|s| s.to_string()))
+                                .filter(|s| !s.is_empty());
+                            Ok(match continuation {
                                 Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
                                 None => azure_core::http::pager::PagerResult::Done { response },
                             })
@@ -13489,12 +13614,17 @@ pub mod workload_networks {
                             let (status, headers, body) = rsp.deconstruct();
                             let bytes = body.collect().await?;
                             let page: models::WorkloadNetworkPortMirroringList = serde_json::from_slice(&bytes)?;
+                            let bytes_for_json = bytes.clone();
                             let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
                             let response: azure_core::http::response::Response<
                                 models::WorkloadNetworkPortMirroringList,
                                 azure_core::http::JsonFormat,
                             > = raw.into();
-                            Ok(match azure_openapi_core::Continuable::continuation(&page) {
+                            let continuation = serde_json::from_slice::<serde_json::Value>(&bytes_for_json)
+                                .ok()
+                                .and_then(|v| v.get("nextLink").and_then(|x| x.as_str()).map(|s| s.to_string()))
+                                .filter(|s| !s.is_empty());
+                            Ok(match continuation {
                                 Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
                                 None => azure_core::http::pager::PagerResult::Done { response },
                             })
@@ -13619,7 +13749,7 @@ pub mod workload_networks {
             pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
-            pub fn headers(&self) -> Headers {
+            pub fn headers(&self) -> Headers<'_> {
                 Headers(self.0.headers())
             }
         }
@@ -13724,7 +13854,7 @@ pub mod workload_networks {
             pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
-            pub fn headers(&self) -> Headers {
+            pub fn headers(&self) -> Headers<'_> {
                 Headers(self.0.headers())
             }
         }
@@ -13827,7 +13957,7 @@ pub mod workload_networks {
             pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
-            pub fn headers(&self) -> Headers {
+            pub fn headers(&self) -> Headers<'_> {
                 Headers(self.0.headers())
             }
         }
@@ -14050,12 +14180,17 @@ pub mod workload_networks {
                             let (status, headers, body) = rsp.deconstruct();
                             let bytes = body.collect().await?;
                             let page: models::WorkloadNetworkPublicIPsList = serde_json::from_slice(&bytes)?;
+                            let bytes_for_json = bytes.clone();
                             let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
                             let response: azure_core::http::response::Response<
                                 models::WorkloadNetworkPublicIPsList,
                                 azure_core::http::JsonFormat,
                             > = raw.into();
-                            Ok(match azure_openapi_core::Continuable::continuation(&page) {
+                            let continuation = serde_json::from_slice::<serde_json::Value>(&bytes_for_json)
+                                .ok()
+                                .and_then(|v| v.get("nextLink").and_then(|x| x.as_str()).map(|s| s.to_string()))
+                                .filter(|s| !s.is_empty());
+                            Ok(match continuation {
                                 Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
                                 None => azure_core::http::pager::PagerResult::Done { response },
                             })
@@ -14183,7 +14318,7 @@ pub mod workload_networks {
             pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
-            pub fn headers(&self) -> Headers {
+            pub fn headers(&self) -> Headers<'_> {
                 Headers(self.0.headers())
             }
         }
@@ -14285,7 +14420,7 @@ pub mod workload_networks {
             pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
-            pub fn headers(&self) -> Headers {
+            pub fn headers(&self) -> Headers<'_> {
                 Headers(self.0.headers())
             }
         }
@@ -14511,12 +14646,17 @@ pub mod workload_networks {
                             let (status, headers, body) = rsp.deconstruct();
                             let bytes = body.collect().await?;
                             let page: models::WorkloadNetworkSegmentsList = serde_json::from_slice(&bytes)?;
+                            let bytes_for_json = bytes.clone();
                             let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
                             let response: azure_core::http::response::Response<
                                 models::WorkloadNetworkSegmentsList,
                                 azure_core::http::JsonFormat,
                             > = raw.into();
-                            Ok(match azure_openapi_core::Continuable::continuation(&page) {
+                            let continuation = serde_json::from_slice::<serde_json::Value>(&bytes_for_json)
+                                .ok()
+                                .and_then(|v| v.get("nextLink").and_then(|x| x.as_str()).map(|s| s.to_string()))
+                                .filter(|s| !s.is_empty());
+                            Ok(match continuation {
                                 Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
                                 None => azure_core::http::pager::PagerResult::Done { response },
                             })
@@ -14644,7 +14784,7 @@ pub mod workload_networks {
             pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
-            pub fn headers(&self) -> Headers {
+            pub fn headers(&self) -> Headers<'_> {
                 Headers(self.0.headers())
             }
         }
@@ -14752,7 +14892,7 @@ pub mod workload_networks {
             pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
-            pub fn headers(&self) -> Headers {
+            pub fn headers(&self) -> Headers<'_> {
                 Headers(self.0.headers())
             }
         }
@@ -14858,7 +14998,7 @@ pub mod workload_networks {
             pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
-            pub fn headers(&self) -> Headers {
+            pub fn headers(&self) -> Headers<'_> {
                 Headers(self.0.headers())
             }
         }
@@ -15084,12 +15224,17 @@ pub mod workload_networks {
                             let (status, headers, body) = rsp.deconstruct();
                             let bytes = body.collect().await?;
                             let page: models::WorkloadNetworkVirtualMachinesList = serde_json::from_slice(&bytes)?;
+                            let bytes_for_json = bytes.clone();
                             let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
                             let response: azure_core::http::response::Response<
                                 models::WorkloadNetworkVirtualMachinesList,
                                 azure_core::http::JsonFormat,
                             > = raw.into();
-                            Ok(match azure_openapi_core::Continuable::continuation(&page) {
+                            let continuation = serde_json::from_slice::<serde_json::Value>(&bytes_for_json)
+                                .ok()
+                                .and_then(|v| v.get("nextLink").and_then(|x| x.as_str()).map(|s| s.to_string()))
+                                .filter(|s| !s.is_empty());
+                            Ok(match continuation {
                                 Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
                                 None => azure_core::http::pager::PagerResult::Done { response },
                             })
@@ -15330,12 +15475,17 @@ pub mod workload_networks {
                             let (status, headers, body) = rsp.deconstruct();
                             let bytes = body.collect().await?;
                             let page: models::WorkloadNetworkVmGroupsList = serde_json::from_slice(&bytes)?;
+                            let bytes_for_json = bytes.clone();
                             let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
                             let response: azure_core::http::response::Response<
                                 models::WorkloadNetworkVmGroupsList,
                                 azure_core::http::JsonFormat,
                             > = raw.into();
-                            Ok(match azure_openapi_core::Continuable::continuation(&page) {
+                            let continuation = serde_json::from_slice::<serde_json::Value>(&bytes_for_json)
+                                .ok()
+                                .and_then(|v| v.get("nextLink").and_then(|x| x.as_str()).map(|s| s.to_string()))
+                                .filter(|s| !s.is_empty());
+                            Ok(match continuation {
                                 Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
                                 None => azure_core::http::pager::PagerResult::Done { response },
                             })
@@ -15463,7 +15613,7 @@ pub mod workload_networks {
             pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
-            pub fn headers(&self) -> Headers {
+            pub fn headers(&self) -> Headers<'_> {
                 Headers(self.0.headers())
             }
         }
@@ -15571,7 +15721,7 @@ pub mod workload_networks {
             pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
-            pub fn headers(&self) -> Headers {
+            pub fn headers(&self) -> Headers<'_> {
                 Headers(self.0.headers())
             }
         }
@@ -15677,7 +15827,7 @@ pub mod workload_networks {
             pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
                 &self.0
             }
-            pub fn headers(&self) -> Headers {
+            pub fn headers(&self) -> Headers<'_> {
                 Headers(self.0.headers())
             }
         }

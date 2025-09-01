@@ -127,6 +127,7 @@ name = "azure_mgmt_vmware"
 version = "0.21.0"
 dependencies = [
  "anyhow",
+ "async-trait",
  "azure_core",
  "azure_identity",
  "azure_openapi_core",
@@ -140,7 +141,6 @@ dependencies = [
  "time",
  "tokio",
  "typespec_client_core",
- "typespec_macros",
 ]
 
 [[package]]

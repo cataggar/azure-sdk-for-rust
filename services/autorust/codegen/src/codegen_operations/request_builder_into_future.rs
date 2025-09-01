@@ -23,13 +23,13 @@ impl RequestBuilderIntoFutureCode {
 
 /// Adds the `IntoFuture` implementation to the `RequestBuilder` struct.
 impl ToTokens for RequestBuilderIntoFutureCode {
-    fn to_tokens(&self, tokens: &mut TokenStream) {
+    fn to_tokens(&self, _tokens: &mut TokenStream) {
         // Skip generating IntoFuture if response is pageable
         if self.response_code.pageable.is_some() {
             return;
         }
 
-        let into_future = if let Some(response_type) = self.response_code.response_type() {
+        let _into_future = if let Some(response_type) = self.response_code.response_type() {
             let (func, rest) = if self.lro {
                 if let Some(lro_options) = &self.lro_options {
                     let final_state = match lro_options.final_state_via {
@@ -174,7 +174,7 @@ impl ToTokens for RequestBuilderIntoFutureCode {
             quote! {}
         };
 
-        // TODO Disabled for now.
-        // tokens.extend(into_future);
+        // Disabled: do not emit IntoFuture for now (pending azure_core::lro alignment).
+        // Keep `_into_future` to avoid unused variable warnings.
     }
 }

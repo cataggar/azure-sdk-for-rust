@@ -117,7 +117,8 @@ impl ToTokens for ResponseCode {
         };
 
         let headers_fn = if self.headers.has_headers() {
-            quote! { pub fn headers(&self) -> Headers { Headers(self.0.headers()) } }
+            // Use explicit elided lifetime in return type to avoid mismatched_lifetime_syntaxes warnings.
+            quote! { pub fn headers(&self) -> Headers<'_> { Headers(self.0.headers()) } }
         } else {
             quote! {}
         };

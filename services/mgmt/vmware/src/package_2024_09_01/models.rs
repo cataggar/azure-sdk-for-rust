@@ -67,12 +67,6 @@ pub struct AddonList {
     #[serde(rename = "nextLink", default, skip_serializing_if = "Option::is_none")]
     pub next_link: Option<String>,
 }
-impl azure_openapi_core::Continuable for AddonList {
-    type Continuation = String;
-    fn continuation(&self) -> Option<Self::Continuation> {
-        self.next_link.clone().filter(|value| !value.is_empty())
-    }
-}
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 # [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
 impl azure_core::http::pager::Page for AddonList {
@@ -468,12 +462,6 @@ pub struct CloudLinkList {
     #[serde(rename = "nextLink", default, skip_serializing_if = "Option::is_none")]
     pub next_link: Option<String>,
 }
-impl azure_openapi_core::Continuable for CloudLinkList {
-    type Continuation = String;
-    fn continuation(&self) -> Option<Self::Continuation> {
-        self.next_link.clone().filter(|value| !value.is_empty())
-    }
-}
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 # [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
 impl azure_core::http::pager::Page for CloudLinkList {
@@ -616,12 +604,6 @@ pub struct ClusterList {
     #[doc = "The link to the next page of items"]
     #[serde(rename = "nextLink", default, skip_serializing_if = "Option::is_none")]
     pub next_link: Option<String>,
-}
-impl azure_openapi_core::Continuable for ClusterList {
-    type Continuation = String;
-    fn continuation(&self) -> Option<Self::Continuation> {
-        self.next_link.clone().filter(|value| !value.is_empty())
-    }
 }
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 # [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
@@ -801,12 +783,6 @@ pub struct DatastoreList {
     #[doc = "The link to the next page of items"]
     #[serde(rename = "nextLink", default, skip_serializing_if = "Option::is_none")]
     pub next_link: Option<String>,
-}
-impl azure_openapi_core::Continuable for DatastoreList {
-    type Continuation = String;
-    fn continuation(&self) -> Option<Self::Continuation> {
-        self.next_link.clone().filter(|value| !value.is_empty())
-    }
 }
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 # [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
@@ -1428,12 +1404,6 @@ pub struct ErrorResponse {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub error: Option<ErrorDetail>,
 }
-impl azure_openapi_core::Continuable for ErrorResponse {
-    type Continuation = String;
-    fn continuation(&self) -> Option<Self::Continuation> {
-        None
-    }
-}
 impl ErrorResponse {
     pub fn new() -> Self {
         Self::default()
@@ -1461,12 +1431,6 @@ pub struct ExpressRouteAuthorizationList {
     #[doc = "The link to the next page of items"]
     #[serde(rename = "nextLink", default, skip_serializing_if = "Option::is_none")]
     pub next_link: Option<String>,
-}
-impl azure_openapi_core::Continuable for ExpressRouteAuthorizationList {
-    type Continuation = String;
-    fn continuation(&self) -> Option<Self::Continuation> {
-        self.next_link.clone().filter(|value| !value.is_empty())
-    }
 }
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 # [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
@@ -1577,12 +1541,6 @@ pub struct GlobalReachConnectionList {
     #[doc = "The link to the next page of items"]
     #[serde(rename = "nextLink", default, skip_serializing_if = "Option::is_none")]
     pub next_link: Option<String>,
-}
-impl azure_openapi_core::Continuable for GlobalReachConnectionList {
-    type Continuation = String;
-    fn continuation(&self) -> Option<Self::Continuation> {
-        self.next_link.clone().filter(|value| !value.is_empty())
-    }
 }
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 # [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
@@ -1727,12 +1685,6 @@ pub struct HcxEnterpriseSiteList {
     #[doc = "The link to the next page of items"]
     #[serde(rename = "nextLink", default, skip_serializing_if = "Option::is_none")]
     pub next_link: Option<String>,
-}
-impl azure_openapi_core::Continuable for HcxEnterpriseSiteList {
-    type Continuation = String;
-    fn continuation(&self) -> Option<Self::Continuation> {
-        self.next_link.clone().filter(|value| !value.is_empty())
-    }
 }
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 # [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
@@ -1915,12 +1867,6 @@ pub struct HostListResult {
     #[doc = "The link to the next page of items"]
     #[serde(rename = "nextLink", default, skip_serializing_if = "Option::is_none")]
     pub next_link: Option<String>,
-}
-impl azure_openapi_core::Continuable for HostListResult {
-    type Continuation = String;
-    fn continuation(&self) -> Option<Self::Continuation> {
-        self.next_link.clone().filter(|value| !value.is_empty())
-    }
 }
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 # [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
@@ -2150,12 +2096,6 @@ pub struct IscsiPathListResult {
     #[doc = "The link to the next page of items"]
     #[serde(rename = "nextLink", default, skip_serializing_if = "Option::is_none")]
     pub next_link: Option<String>,
-}
-impl azure_openapi_core::Continuable for IscsiPathListResult {
-    type Continuation = String;
-    fn continuation(&self) -> Option<Self::Continuation> {
-        self.next_link.clone().filter(|value| !value.is_empty())
-    }
 }
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 # [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
@@ -2451,12 +2391,6 @@ pub struct OperationListResult {
     #[serde(rename = "nextLink", default, skip_serializing_if = "Option::is_none")]
     pub next_link: Option<String>,
 }
-impl azure_openapi_core::Continuable for OperationListResult {
-    type Continuation = String;
-    fn continuation(&self) -> Option<Self::Continuation> {
-        self.next_link.clone().filter(|value| !value.is_empty())
-    }
-}
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 # [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
 impl azure_core::http::pager::Page for OperationListResult {
@@ -2538,12 +2472,6 @@ pub struct PagedResourceSku {
     #[serde(rename = "nextLink", default, skip_serializing_if = "Option::is_none")]
     pub next_link: Option<String>,
 }
-impl azure_openapi_core::Continuable for PagedResourceSku {
-    type Continuation = String;
-    fn continuation(&self) -> Option<Self::Continuation> {
-        self.next_link.clone().filter(|value| !value.is_empty())
-    }
-}
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 # [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
 impl azure_core::http::pager::Page for PagedResourceSku {
@@ -2566,12 +2494,6 @@ pub struct PlacementPoliciesList {
     #[doc = "The link to the next page of items"]
     #[serde(rename = "nextLink", default, skip_serializing_if = "Option::is_none")]
     pub next_link: Option<String>,
-}
-impl azure_openapi_core::Continuable for PlacementPoliciesList {
-    type Continuation = String;
-    fn continuation(&self) -> Option<Self::Continuation> {
-        self.next_link.clone().filter(|value| !value.is_empty())
-    }
 }
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 # [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
@@ -2917,12 +2839,6 @@ pub struct PrivateCloudList {
     #[serde(rename = "nextLink", default, skip_serializing_if = "Option::is_none")]
     pub next_link: Option<String>,
 }
-impl azure_openapi_core::Continuable for PrivateCloudList {
-    type Continuation = String;
-    fn continuation(&self) -> Option<Self::Continuation> {
-        self.next_link.clone().filter(|value| !value.is_empty())
-    }
-}
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 # [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
 impl azure_core::http::pager::Page for PrivateCloudList {
@@ -3228,12 +3144,6 @@ pub struct ProvisionedNetworkListResult {
     #[serde(rename = "nextLink", default, skip_serializing_if = "Option::is_none")]
     pub next_link: Option<String>,
 }
-impl azure_openapi_core::Continuable for ProvisionedNetworkListResult {
-    type Continuation = String;
-    fn continuation(&self) -> Option<Self::Continuation> {
-        self.next_link.clone().filter(|value| !value.is_empty())
-    }
-}
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 # [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
 impl azure_core::http::pager::Page for ProvisionedNetworkListResult {
@@ -3392,12 +3302,6 @@ pub struct PureStoragePolicyListResult {
     #[doc = "The link to the next page of items"]
     #[serde(rename = "nextLink", default, skip_serializing_if = "Option::is_none")]
     pub next_link: Option<String>,
-}
-impl azure_openapi_core::Continuable for PureStoragePolicyListResult {
-    type Continuation = String;
-    fn continuation(&self) -> Option<Self::Continuation> {
-        self.next_link.clone().filter(|value| !value.is_empty())
-    }
 }
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 # [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
@@ -3955,12 +3859,6 @@ pub struct ScriptCmdletsList {
     #[serde(rename = "nextLink", default, skip_serializing_if = "Option::is_none")]
     pub next_link: Option<String>,
 }
-impl azure_openapi_core::Continuable for ScriptCmdletsList {
-    type Continuation = String;
-    fn continuation(&self) -> Option<Self::Continuation> {
-        self.next_link.clone().filter(|value| !value.is_empty())
-    }
-}
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 # [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
 impl azure_core::http::pager::Page for ScriptCmdletsList {
@@ -4199,12 +4097,6 @@ pub struct ScriptExecutionsList {
     #[serde(rename = "nextLink", default, skip_serializing_if = "Option::is_none")]
     pub next_link: Option<String>,
 }
-impl azure_openapi_core::Continuable for ScriptExecutionsList {
-    type Continuation = String;
-    fn continuation(&self) -> Option<Self::Continuation> {
-        self.next_link.clone().filter(|value| !value.is_empty())
-    }
-}
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 # [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
 impl azure_core::http::pager::Page for ScriptExecutionsList {
@@ -4345,12 +4237,6 @@ pub struct ScriptPackagesList {
     #[doc = "The link to the next page of items"]
     #[serde(rename = "nextLink", default, skip_serializing_if = "Option::is_none")]
     pub next_link: Option<String>,
-}
-impl azure_openapi_core::Continuable for ScriptPackagesList {
-    type Continuation = String;
-    fn continuation(&self) -> Option<Self::Continuation> {
-        self.next_link.clone().filter(|value| !value.is_empty())
-    }
 }
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 # [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
@@ -4942,12 +4828,6 @@ pub struct VirtualMachinesList {
     #[serde(rename = "nextLink", default, skip_serializing_if = "Option::is_none")]
     pub next_link: Option<String>,
 }
-impl azure_openapi_core::Continuable for VirtualMachinesList {
-    type Continuation = String;
-    fn continuation(&self) -> Option<Self::Continuation> {
-        self.next_link.clone().filter(|value| !value.is_empty())
-    }
-}
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 # [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
 impl azure_core::http::pager::Page for VirtualMachinesList {
@@ -5133,12 +5013,6 @@ pub struct WorkloadNetworkDhcpList {
     #[doc = "The link to the next page of items"]
     #[serde(rename = "nextLink", default, skip_serializing_if = "Option::is_none")]
     pub next_link: Option<String>,
-}
-impl azure_openapi_core::Continuable for WorkloadNetworkDhcpList {
-    type Continuation = String;
-    fn continuation(&self) -> Option<Self::Continuation> {
-        self.next_link.clone().filter(|value| !value.is_empty())
-    }
 }
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 # [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
@@ -5348,12 +5222,6 @@ pub struct WorkloadNetworkDnsServicesList {
     #[serde(rename = "nextLink", default, skip_serializing_if = "Option::is_none")]
     pub next_link: Option<String>,
 }
-impl azure_openapi_core::Continuable for WorkloadNetworkDnsServicesList {
-    type Continuation = String;
-    fn continuation(&self) -> Option<Self::Continuation> {
-        self.next_link.clone().filter(|value| !value.is_empty())
-    }
-}
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 # [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
 impl azure_core::http::pager::Page for WorkloadNetworkDnsServicesList {
@@ -5475,12 +5343,6 @@ pub struct WorkloadNetworkDnsZonesList {
     #[serde(rename = "nextLink", default, skip_serializing_if = "Option::is_none")]
     pub next_link: Option<String>,
 }
-impl azure_openapi_core::Continuable for WorkloadNetworkDnsZonesList {
-    type Continuation = String;
-    fn continuation(&self) -> Option<Self::Continuation> {
-        self.next_link.clone().filter(|value| !value.is_empty())
-    }
-}
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 # [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
 impl azure_core::http::pager::Page for WorkloadNetworkDnsZonesList {
@@ -5517,12 +5379,6 @@ pub struct WorkloadNetworkGatewayList {
     #[doc = "The link to the next page of items"]
     #[serde(rename = "nextLink", default, skip_serializing_if = "Option::is_none")]
     pub next_link: Option<String>,
-}
-impl azure_openapi_core::Continuable for WorkloadNetworkGatewayList {
-    type Continuation = String;
-    fn continuation(&self) -> Option<Self::Continuation> {
-        self.next_link.clone().filter(|value| !value.is_empty())
-    }
 }
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 # [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
@@ -5565,12 +5421,6 @@ pub struct WorkloadNetworkList {
     #[serde(rename = "nextLink", default, skip_serializing_if = "Option::is_none")]
     pub next_link: Option<String>,
 }
-impl azure_openapi_core::Continuable for WorkloadNetworkList {
-    type Continuation = String;
-    fn continuation(&self) -> Option<Self::Continuation> {
-        self.next_link.clone().filter(|value| !value.is_empty())
-    }
-}
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 # [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
 impl azure_core::http::pager::Page for WorkloadNetworkList {
@@ -5607,12 +5457,6 @@ pub struct WorkloadNetworkPortMirroringList {
     #[doc = "The link to the next page of items"]
     #[serde(rename = "nextLink", default, skip_serializing_if = "Option::is_none")]
     pub next_link: Option<String>,
-}
-impl azure_openapi_core::Continuable for WorkloadNetworkPortMirroringList {
-    type Continuation = String;
-    fn continuation(&self) -> Option<Self::Continuation> {
-        self.next_link.clone().filter(|value| !value.is_empty())
-    }
 }
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 # [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
@@ -5849,12 +5693,6 @@ pub struct WorkloadNetworkPublicIPsList {
     #[serde(rename = "nextLink", default, skip_serializing_if = "Option::is_none")]
     pub next_link: Option<String>,
 }
-impl azure_openapi_core::Continuable for WorkloadNetworkPublicIPsList {
-    type Continuation = String;
-    fn continuation(&self) -> Option<Self::Continuation> {
-        self.next_link.clone().filter(|value| !value.is_empty())
-    }
-}
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 # [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
 impl azure_core::http::pager::Page for WorkloadNetworkPublicIPsList {
@@ -6004,12 +5842,6 @@ pub struct WorkloadNetworkSegmentsList {
     #[serde(rename = "nextLink", default, skip_serializing_if = "Option::is_none")]
     pub next_link: Option<String>,
 }
-impl azure_openapi_core::Continuable for WorkloadNetworkSegmentsList {
-    type Continuation = String;
-    fn continuation(&self) -> Option<Self::Continuation> {
-        self.next_link.clone().filter(|value| !value.is_empty())
-    }
-}
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 # [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
 impl azure_core::http::pager::Page for WorkloadNetworkSegmentsList {
@@ -6120,12 +5952,6 @@ pub struct WorkloadNetworkVmGroupsList {
     #[serde(rename = "nextLink", default, skip_serializing_if = "Option::is_none")]
     pub next_link: Option<String>,
 }
-impl azure_openapi_core::Continuable for WorkloadNetworkVmGroupsList {
-    type Continuation = String;
-    fn continuation(&self) -> Option<Self::Continuation> {
-        self.next_link.clone().filter(|value| !value.is_empty())
-    }
-}
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 # [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
 impl azure_core::http::pager::Page for WorkloadNetworkVmGroupsList {
@@ -6180,12 +6006,6 @@ pub struct WorkloadNetworkVirtualMachinesList {
     #[doc = "The link to the next page of items"]
     #[serde(rename = "nextLink", default, skip_serializing_if = "Option::is_none")]
     pub next_link: Option<String>,
-}
-impl azure_openapi_core::Continuable for WorkloadNetworkVirtualMachinesList {
-    type Continuation = String;
-    fn continuation(&self) -> Option<Self::Continuation> {
-        self.next_link.clone().filter(|value| !value.is_empty())
-    }
 }
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 # [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]

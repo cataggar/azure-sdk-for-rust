@@ -165,9 +165,16 @@ impl ToTokens for RequestBuilderSendCode {
                                     let (status, headers, body) = rsp.deconstruct();
                                     let bytes = body.collect().await?;
                                     let page: #response_type = serde_json::from_slice(&bytes)?;
+                                    // Clone bytes before moving into RawResponse so we can parse continuation after.
+                                    let bytes_for_json = bytes.clone();
                                     let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
                                     let response: azure_core::http::response::Response<#response_type, azure_core::http::JsonFormat> = raw.into();
-                                    Ok(match azure_openapi_core::Continuable::continuation(&page) {
+                                    // Extract continuation from the JSON field specified by x-ms-pageable.nextLinkName
+                                    let continuation = serde_json::from_slice::<serde_json::Value>(&bytes_for_json)
+                                        .ok()
+                                        .and_then(|v| v.get(#next_link_name).and_then(|x| x.as_str()).map(|s| s.to_string()))
+                                        .filter(|s| !s.is_empty());
+                                    Ok(match continuation {
                                         Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
                                         None => azure_core::http::pager::PagerResult::Done { response },
                                     })
@@ -208,9 +215,16 @@ impl ToTokens for RequestBuilderSendCode {
                                     let (status, headers, body) = rsp.deconstruct();
                                     let bytes = body.collect().await?;
                                     let page: #response_type = serde_json::from_slice(&bytes)?;
+                                    // Clone bytes before moving into RawResponse so we can parse continuation after.
+                                    let bytes_for_json = bytes.clone();
                                     let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
                                     let response: azure_core::http::response::Response<#response_type, azure_core::http::JsonFormat> = raw.into();
-                                    Ok(match azure_openapi_core::Continuable::continuation(&page) {
+                                    // Extract continuation from the JSON field specified by x-ms-pageable.nextLinkName
+                                    let continuation = serde_json::from_slice::<serde_json::Value>(&bytes_for_json)
+                                        .ok()
+                                        .and_then(|v| v.get(#next_link_name).and_then(|x| x.as_str()).map(|s| s.to_string()))
+                                        .filter(|s| !s.is_empty());
+                                    Ok(match continuation {
                                         Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
                                         None => azure_core::http::pager::PagerResult::Done { response },
                                     })
