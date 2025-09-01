@@ -894,7 +894,7 @@ pub struct StructCode {
     default_code: TokenStream,
     props: Vec<StructPropCode>,
     // When set, also emit an impl of azure_core::http::pager::Page for this struct
-    page_impl: Option<(Ident, TypeNameCode)>,
+    pager_code: Option<PagerCode>,
     implement_default: bool,
     new_fn_params: Vec<TokenStream>,
     new_fn_body: TokenStream,
@@ -909,7 +909,7 @@ impl ToTokens for StructCode {
             struct_name_code,
             default_code,
             props,
-            page_impl,
+            pager_code,
             implement_default,
             new_fn_params,
             new_fn_body,
@@ -918,18 +918,8 @@ impl ToTokens for StructCode {
         } = self;
 
         // Optional Page impl tokens
-        let page_impl_tokens: TokenStream = if let Some((field_name, field_type)) = page_impl {
-            quote! {
-                #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
-                #[cfg_attr(target_arch = "wasm32", async_trait::async_trait(?Send))]
-                impl azure_core::http::pager::Page for #struct_name_code {
-                    type Item = <#field_type as IntoIterator>::Item;
-                    type IntoIter = <#field_type as IntoIterator>::IntoIter;
-                    async fn into_items(self) -> azure_core::Result<Self::IntoIter> {
-                        Ok(self.#field_name.into_iter())
-                    }
-                }
-            }
+        let page_impl_tokens: TokenStream = if let Some(pager) = pager_code {
+            pager.to_token_stream()
         } else {
             TokenStream::new()
         };
@@ -973,6 +963,31 @@ impl ToTokens for StructCode {
                 }
             });
         }
+    }
+}
+
+pub struct PagerCode {
+    pub struct_name: Ident,
+    pub field_name: Ident,
+    pub field_type: TypeNameCode,
+}
+
+impl ToTokens for PagerCode {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        let struct_name = &self.struct_name;
+        let field_name = &self.field_name;
+        let field_type = &self.field_type;
+        tokens.extend(quote! {
+            #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
+            #[cfg_attr(target_arch = "wasm32", async_trait::async_trait(?Send))]
+            impl azure_core::http::pager::Page for #struct_name {
+                type Item = <#field_type as IntoIterator>::Item;
+                type IntoIter = <#field_type as IntoIterator>::IntoIter;
+                async fn into_items(self) -> azure_core::Result<Self::IntoIter> {
+                    Ok(self.#field_name.into_iter())
+                }
+            }
+        });
     }
 }
 
@@ -1149,13 +1164,14 @@ fn create_struct(
     let doc_comment = DocCommentCode::from(&schema.schema.common.description);
 
     // Determine if we can implement Page for this model based on x-ms-pageable.itemName (default 'value')
-    let page_impl: Option<(Ident, TypeNameCode)> = if let Some(pageable) = pageable {
+    let pager_code: Option<PagerCode> = if let Some(pageable) = pageable {
         let item_field = pageable.item_name.as_deref().unwrap_or("value");
         let item_ident = item_field.to_snake_case_ident()?;
-        props
-            .iter()
-            .find(|p| p.field_name == item_ident)
-            .map(|prop| (prop.field_name.clone(), prop.field_type.clone()))
+        props.iter().find(|p| p.field_name == item_ident).map(|prop| PagerCode {
+            struct_name: struct_name_code.clone(),
+            field_name: prop.field_name.clone(),
+            field_type: prop.field_type.clone(),
+        })
     } else {
         None
     };
@@ -1165,7 +1181,7 @@ fn create_struct(
         struct_name_code,
         default_code,
         props,
-        page_impl,
+        pager_code,
         implement_default: schema.implement_default(),
         new_fn_params,
         new_fn_body,
