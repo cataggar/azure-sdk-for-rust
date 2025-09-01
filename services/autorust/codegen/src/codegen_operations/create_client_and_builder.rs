@@ -88,7 +88,7 @@ pub fn create_client(modules: &[String], endpoint: Option<&str>) -> Result<Token
             }
         }
 
-        impl Client {
+    impl Client {
             pub(crate) async fn bearer_token(&self) -> azure_core::Result<azure_core::credentials::Secret> {
                 let credential = self.token_credential();
                 let response = credential.get_token(&self.scopes(), None).await?;
@@ -104,9 +104,24 @@ pub fn create_client(modules: &[String], endpoint: Option<&str>) -> Result<Token
             pub(crate) fn scopes(&self) -> Vec<&str> {
                 self.scopes.iter().map(String::as_str).collect()
             }
-            pub(crate) async fn send(&self, request: &mut typespec_client_core::http::request::Request) -> azure_core::Result<typespec_client_core::http::response::RawResponse> {
+            pub async fn send_raw(
+                &self,
+                request: &mut typespec_client_core::http::request::Request,
+            ) -> azure_core::Result<typespec_client_core::http::response::RawResponse> {
                 let context = typespec_client_core::http::Context::default();
                 self.pipeline.send(&context, request).await
+            }
+
+            #[doc = "Send the request and return a typed Response<T> (JSON by default)."]
+            pub async fn send<T>(
+                &self,
+                request: &mut typespec_client_core::http::request::Request,
+            ) -> azure_core::Result<azure_core::http::response::Response<T, azure_core::http::JsonFormat>>
+            where
+                T: serde::de::DeserializeOwned,
+            {
+                let raw = self.send_raw(request).await?;
+                Ok(raw.into())
             }
 
             #[doc = "Create a new `ClientBuilder`."]

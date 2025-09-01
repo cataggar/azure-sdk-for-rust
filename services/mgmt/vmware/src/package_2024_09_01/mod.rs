@@ -67,12 +67,23 @@ impl Client {
     pub(crate) fn scopes(&self) -> Vec<&str> {
         self.scopes.iter().map(String::as_str).collect()
     }
-    pub(crate) async fn send(
+    pub async fn send_raw(
         &self,
         request: &mut typespec_client_core::http::request::Request,
     ) -> azure_core::Result<typespec_client_core::http::response::RawResponse> {
         let context = typespec_client_core::http::Context::default();
         self.pipeline.send(&context, request).await
+    }
+    #[doc = "Send the request and return a typed Response<T> (JSON by default)."]
+    pub async fn send<T>(
+        &self,
+        request: &mut typespec_client_core::http::request::Request,
+    ) -> azure_core::Result<azure_core::http::response::Response<T, azure_core::http::JsonFormat>>
+    where
+        T: serde::de::DeserializeOwned,
+    {
+        let raw = self.send_raw(request).await?;
+        Ok(raw.into())
     }
     #[doc = "Create a new `ClientBuilder`."]
     #[must_use]
@@ -185,32 +196,6 @@ pub mod operations {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::OperationListResult> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::OperationListResult = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -246,11 +231,15 @@ pub mod operations {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<azure_core::http::response::Response<models::OperationListResult, azure_core::http::JsonFormat>>,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -263,7 +252,10 @@ pub mod operations {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::OperationListResult, azure_core::http::JsonFormat> =
+                            raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -277,7 +269,26 @@ pub mod operations {
                         let initial = initial.clone();
                         async move {
                             let rsp = match state {
-                                azure_core::http::pager::PagerState::Initial => initial.clone().send().await?.into_raw_response(),
+                                azure_core::http::pager::PagerState::Initial => {
+                                    let url = initial.url()?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    let has_api_version_already = req
+                                        .url_mut()
+                                        .query_pairs()
+                                        .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                                    if !has_api_version_already {
+                                        req.url_mut()
+                                            .query_pairs_mut()
+                                            .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                                    }
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    client.send_raw(&mut req).await?
+                                }
                                 azure_core::http::pager::PagerState::More(next_url) => {
                                     let mut url = client.endpoint().clone();
                                     url.set_path("");
@@ -298,7 +309,7 @@ pub mod operations {
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
                                     req.set_body(azure_openapi_core::EMPTY_BODY);
-                                    client.send(&mut req).await?
+                                    client.send_raw(&mut req).await?
                                 }
                             };
                             if !rsp.status().is_success() {
@@ -377,32 +388,6 @@ pub mod locations {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::Quota> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::Quota = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -443,11 +428,13 @@ pub mod locations {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<'static, azure_core::Result<azure_core::http::response::Response<models::Quota, azure_core::http::JsonFormat>>>
+            {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -461,7 +448,9 @@ pub mod locations {
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.insert_header(azure_core::http::headers::CONTENT_LENGTH, "0");
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::Quota, azure_core::http::JsonFormat> = raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -473,32 +462,6 @@ pub mod locations {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::Trial> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::Trial = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -545,11 +508,13 @@ pub mod locations {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<'static, azure_core::Result<azure_core::http::response::Response<models::Trial, azure_core::http::JsonFormat>>>
+            {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -567,7 +532,9 @@ pub mod locations {
                             azure_openapi_core::EMPTY_BODY
                         };
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::Trial, azure_core::http::JsonFormat> = raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -750,32 +717,6 @@ pub mod private_clouds {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::PrivateCloudList> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::PrivateCloudList = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -815,11 +756,15 @@ pub mod private_clouds {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<azure_core::http::response::Response<models::PrivateCloudList, azure_core::http::JsonFormat>>,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -832,7 +777,10 @@ pub mod private_clouds {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::PrivateCloudList, azure_core::http::JsonFormat> =
+                            raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -846,7 +794,26 @@ pub mod private_clouds {
                         let initial = initial.clone();
                         async move {
                             let rsp = match state {
-                                azure_core::http::pager::PagerState::Initial => initial.clone().send().await?.into_raw_response(),
+                                azure_core::http::pager::PagerState::Initial => {
+                                    let url = initial.url()?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    let has_api_version_already = req
+                                        .url_mut()
+                                        .query_pairs()
+                                        .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                                    if !has_api_version_already {
+                                        req.url_mut()
+                                            .query_pairs_mut()
+                                            .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                                    }
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    client.send_raw(&mut req).await?
+                                }
                                 azure_core::http::pager::PagerState::More(next_url) => {
                                     let mut url = client.endpoint().clone();
                                     url.set_path("");
@@ -867,7 +834,7 @@ pub mod private_clouds {
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
                                     req.set_body(azure_openapi_core::EMPTY_BODY);
-                                    client.send(&mut req).await?
+                                    client.send_raw(&mut req).await?
                                 }
                             };
                             if !rsp.status().is_success() {
@@ -903,32 +870,6 @@ pub mod private_clouds {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::PrivateCloudList> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::PrivateCloudList = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -969,11 +910,15 @@ pub mod private_clouds {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<azure_core::http::response::Response<models::PrivateCloudList, azure_core::http::JsonFormat>>,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -986,7 +931,10 @@ pub mod private_clouds {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::PrivateCloudList, azure_core::http::JsonFormat> =
+                            raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -1000,7 +948,26 @@ pub mod private_clouds {
                         let initial = initial.clone();
                         async move {
                             let rsp = match state {
-                                azure_core::http::pager::PagerState::Initial => initial.clone().send().await?.into_raw_response(),
+                                azure_core::http::pager::PagerState::Initial => {
+                                    let url = initial.url()?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    let has_api_version_already = req
+                                        .url_mut()
+                                        .query_pairs()
+                                        .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                                    if !has_api_version_already {
+                                        req.url_mut()
+                                            .query_pairs_mut()
+                                            .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                                    }
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    client.send_raw(&mut req).await?
+                                }
                                 azure_core::http::pager::PagerState::More(next_url) => {
                                     let mut url = client.endpoint().clone();
                                     url.set_path("");
@@ -1021,7 +988,7 @@ pub mod private_clouds {
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
                                     req.set_body(azure_openapi_core::EMPTY_BODY);
-                                    client.send(&mut req).await?
+                                    client.send_raw(&mut req).await?
                                 }
                             };
                             if !rsp.status().is_success() {
@@ -1057,32 +1024,6 @@ pub mod private_clouds {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::PrivateCloud> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::PrivateCloud = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -1124,11 +1065,15 @@ pub mod private_clouds {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<azure_core::http::response::Response<models::PrivateCloud, azure_core::http::JsonFormat>>,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -1141,7 +1086,9 @@ pub mod private_clouds {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::PrivateCloud, azure_core::http::JsonFormat> = raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -1153,42 +1100,6 @@ pub mod private_clouds {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::PrivateCloud> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::PrivateCloud = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-            pub fn headers(&self) -> Headers<'_> {
-                Headers(self.0.headers())
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
-        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
-        impl<'a> Headers<'a> {
-            #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
-            pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
-            }
-        }
         #[derive(Clone, Debug, serde :: Serialize, serde :: Deserialize)]
         #[serde(transparent)]
         pub struct Operation(pub models::PrivateCloud);
@@ -1266,11 +1177,15 @@ pub mod private_clouds {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<azure_core::http::response::Response<models::PrivateCloud, azure_core::http::JsonFormat>>,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -1284,7 +1199,9 @@ pub mod private_clouds {
                         req.insert_header("content-type", "application/json");
                         let req_body = azure_core::json::to_json(&this.private_cloud)?;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::PrivateCloud, azure_core::http::JsonFormat> = raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -1301,7 +1218,15 @@ pub mod private_clouds {
                             use azure_core::json;
                             let (rsp, next_link) = match state {
                                 PollerState::Initial => {
-                                    let rsp = initial.clone().send().await?.into_raw_response();
+                                    let url = initial.url()?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    let rsp = client.send_raw(&mut req).await?;
                                     let next = initial.clone().url()?;
                                     (rsp, next)
                                 }
@@ -1314,7 +1239,7 @@ pub mod private_clouds {
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
                                     req.set_body(azure_openapi_core::EMPTY_BODY);
-                                    let rsp = client.send(&mut req).await?;
+                                    let rsp = client.send_raw(&mut req).await?;
                                     (rsp, next_url.clone())
                                 }
                             };
@@ -1351,46 +1276,6 @@ pub mod private_clouds {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::PrivateCloud> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::PrivateCloud = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-            pub fn headers(&self) -> Headers<'_> {
-                Headers(self.0.headers())
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
-        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
-        impl<'a> Headers<'a> {
-            #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
-            pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
-            }
-            #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
-            pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
-            }
-        }
         #[derive(Clone, Debug, serde :: Serialize, serde :: Deserialize)]
         #[serde(transparent)]
         pub struct Operation(pub models::PrivateCloud);
@@ -1468,11 +1353,15 @@ pub mod private_clouds {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<azure_core::http::response::Response<models::PrivateCloud, azure_core::http::JsonFormat>>,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -1486,7 +1375,9 @@ pub mod private_clouds {
                         req.insert_header("content-type", "application/json");
                         let req_body = azure_core::json::to_json(&this.private_cloud_update)?;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::PrivateCloud, azure_core::http::JsonFormat> = raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -1503,7 +1394,15 @@ pub mod private_clouds {
                             use azure_core::json;
                             let (rsp, next_link) = match state {
                                 PollerState::Initial => {
-                                    let rsp = initial.clone().send().await?.into_raw_response();
+                                    let url = initial.url()?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    let rsp = client.send_raw(&mut req).await?;
                                     let next = initial.clone().url()?;
                                     (rsp, next)
                                 }
@@ -1516,7 +1415,7 @@ pub mod private_clouds {
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
                                     req.set_body(azure_openapi_core::EMPTY_BODY);
-                                    let rsp = client.send(&mut req).await?;
+                                    let rsp = client.send_raw(&mut req).await?;
                                     (rsp, next_url.clone())
                                 }
                             };
@@ -1553,40 +1452,6 @@ pub mod private_clouds {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-            pub fn headers(&self) -> Headers<'_> {
-                Headers(self.0.headers())
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
-        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
-        impl<'a> Headers<'a> {
-            #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
-            pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
-            }
-            #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
-            pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -1627,11 +1492,8 @@ pub mod private_clouds {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            #[doc = "Returns a future that sends the request and returns the raw HTTP response."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<azure_core::http::response::RawResponse>> {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -1644,7 +1506,7 @@ pub mod private_clouds {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        this.client.send_raw(&mut req).await
                     }
                 })
             }
@@ -1656,32 +1518,6 @@ pub mod private_clouds {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::AdminCredentials> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::AdminCredentials = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -1723,11 +1559,15 @@ pub mod private_clouds {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<azure_core::http::response::Response<models::AdminCredentials, azure_core::http::JsonFormat>>,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -1741,7 +1581,10 @@ pub mod private_clouds {
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.insert_header(azure_core::http::headers::CONTENT_LENGTH, "0");
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::AdminCredentials, azure_core::http::JsonFormat> =
+                            raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -1753,40 +1596,6 @@ pub mod private_clouds {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-            pub fn headers(&self) -> Headers<'_> {
-                Headers(self.0.headers())
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
-        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
-        impl<'a> Headers<'a> {
-            #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
-            pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
-            }
-            #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
-            pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -1827,11 +1636,8 @@ pub mod private_clouds {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            #[doc = "Returns a future that sends the request and returns the raw HTTP response."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<azure_core::http::response::RawResponse>> {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -1845,7 +1651,7 @@ pub mod private_clouds {
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.insert_header(azure_core::http::headers::CONTENT_LENGTH, "0");
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        this.client.send_raw(&mut req).await
                     }
                 })
             }
@@ -1857,40 +1663,6 @@ pub mod private_clouds {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-            pub fn headers(&self) -> Headers<'_> {
-                Headers(self.0.headers())
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
-        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
-        impl<'a> Headers<'a> {
-            #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
-            pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
-            }
-            #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
-            pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -1931,11 +1703,8 @@ pub mod private_clouds {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            #[doc = "Returns a future that sends the request and returns the raw HTTP response."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<azure_core::http::response::RawResponse>> {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -1949,7 +1718,7 @@ pub mod private_clouds {
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.insert_header(azure_core::http::headers::CONTENT_LENGTH, "0");
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        this.client.send_raw(&mut req).await
                     }
                 })
             }
@@ -1981,32 +1750,6 @@ pub mod skus {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::PagedResourceSku> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::PagedResourceSku = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -2043,11 +1786,15 @@ pub mod skus {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<azure_core::http::response::Response<models::PagedResourceSku, azure_core::http::JsonFormat>>,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -2060,7 +1807,10 @@ pub mod skus {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::PagedResourceSku, azure_core::http::JsonFormat> =
+                            raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -2074,7 +1824,26 @@ pub mod skus {
                         let initial = initial.clone();
                         async move {
                             let rsp = match state {
-                                azure_core::http::pager::PagerState::Initial => initial.clone().send().await?.into_raw_response(),
+                                azure_core::http::pager::PagerState::Initial => {
+                                    let url = initial.url()?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    let has_api_version_already = req
+                                        .url_mut()
+                                        .query_pairs()
+                                        .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                                    if !has_api_version_already {
+                                        req.url_mut()
+                                            .query_pairs_mut()
+                                            .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                                    }
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    client.send_raw(&mut req).await?
+                                }
                                 azure_core::http::pager::PagerState::More(next_url) => {
                                     let mut url = client.endpoint().clone();
                                     url.set_path("");
@@ -2095,7 +1864,7 @@ pub mod skus {
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
                                     req.set_body(azure_openapi_core::EMPTY_BODY);
-                                    client.send(&mut req).await?
+                                    client.send_raw(&mut req).await?
                                 }
                             };
                             if !rsp.status().is_success() {
@@ -2229,32 +1998,6 @@ pub mod addons {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::AddonList> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::AddonList = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -2296,11 +2039,13 @@ pub mod addons {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<'static, azure_core::Result<azure_core::http::response::Response<models::AddonList, azure_core::http::JsonFormat>>>
+            {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -2313,7 +2058,9 @@ pub mod addons {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::AddonList, azure_core::http::JsonFormat> = raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -2327,7 +2074,26 @@ pub mod addons {
                         let initial = initial.clone();
                         async move {
                             let rsp = match state {
-                                azure_core::http::pager::PagerState::Initial => initial.clone().send().await?.into_raw_response(),
+                                azure_core::http::pager::PagerState::Initial => {
+                                    let url = initial.url()?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    let has_api_version_already = req
+                                        .url_mut()
+                                        .query_pairs()
+                                        .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                                    if !has_api_version_already {
+                                        req.url_mut()
+                                            .query_pairs_mut()
+                                            .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                                    }
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    client.send_raw(&mut req).await?
+                                }
                                 azure_core::http::pager::PagerState::More(next_url) => {
                                     let mut url = client.endpoint().clone();
                                     url.set_path("");
@@ -2348,7 +2114,7 @@ pub mod addons {
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
                                     req.set_body(azure_openapi_core::EMPTY_BODY);
-                                    client.send(&mut req).await?
+                                    client.send_raw(&mut req).await?
                                 }
                             };
                             if !rsp.status().is_success() {
@@ -2384,32 +2150,6 @@ pub mod addons {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::Addon> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::Addon = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -2452,11 +2192,13 @@ pub mod addons {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<'static, azure_core::Result<azure_core::http::response::Response<models::Addon, azure_core::http::JsonFormat>>>
+            {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -2469,7 +2211,9 @@ pub mod addons {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::Addon, azure_core::http::JsonFormat> = raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -2481,42 +2225,6 @@ pub mod addons {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::Addon> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::Addon = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-            pub fn headers(&self) -> Headers<'_> {
-                Headers(self.0.headers())
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
-        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
-        impl<'a> Headers<'a> {
-            #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
-            pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
-            }
-        }
         #[derive(Clone, Debug, serde :: Serialize, serde :: Deserialize)]
         #[serde(transparent)]
         pub struct Operation(pub models::Addon);
@@ -2595,11 +2303,13 @@ pub mod addons {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<'static, azure_core::Result<azure_core::http::response::Response<models::Addon, azure_core::http::JsonFormat>>>
+            {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -2613,7 +2323,9 @@ pub mod addons {
                         req.insert_header("content-type", "application/json");
                         let req_body = azure_core::json::to_json(&this.addon)?;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::Addon, azure_core::http::JsonFormat> = raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -2630,7 +2342,15 @@ pub mod addons {
                             use azure_core::json;
                             let (rsp, next_link) = match state {
                                 PollerState::Initial => {
-                                    let rsp = initial.clone().send().await?.into_raw_response();
+                                    let url = initial.url()?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    let rsp = client.send_raw(&mut req).await?;
                                     let next = initial.clone().url()?;
                                     (rsp, next)
                                 }
@@ -2643,7 +2363,7 @@ pub mod addons {
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
                                     req.set_body(azure_openapi_core::EMPTY_BODY);
-                                    let rsp = client.send(&mut req).await?;
+                                    let rsp = client.send_raw(&mut req).await?;
                                     (rsp, next_url.clone())
                                 }
                             };
@@ -2680,40 +2400,6 @@ pub mod addons {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-            pub fn headers(&self) -> Headers<'_> {
-                Headers(self.0.headers())
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
-        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
-        impl<'a> Headers<'a> {
-            #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
-            pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
-            }
-            #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
-            pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -2755,11 +2441,8 @@ pub mod addons {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            #[doc = "Returns a future that sends the request and returns the raw HTTP response."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<azure_core::http::response::RawResponse>> {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -2772,7 +2455,7 @@ pub mod addons {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        this.client.send_raw(&mut req).await
                     }
                 })
             }
@@ -2882,32 +2565,6 @@ pub mod authorizations {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::ExpressRouteAuthorizationList> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::ExpressRouteAuthorizationList = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -2949,11 +2606,17 @@ pub mod authorizations {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<
+                    azure_core::http::response::Response<models::ExpressRouteAuthorizationList, azure_core::http::JsonFormat>,
+                >,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -2966,7 +2629,12 @@ pub mod authorizations {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<
+                            models::ExpressRouteAuthorizationList,
+                            azure_core::http::JsonFormat,
+                        > = raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -2980,7 +2648,26 @@ pub mod authorizations {
                         let initial = initial.clone();
                         async move {
                             let rsp = match state {
-                                azure_core::http::pager::PagerState::Initial => initial.clone().send().await?.into_raw_response(),
+                                azure_core::http::pager::PagerState::Initial => {
+                                    let url = initial.url()?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    let has_api_version_already = req
+                                        .url_mut()
+                                        .query_pairs()
+                                        .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                                    if !has_api_version_already {
+                                        req.url_mut()
+                                            .query_pairs_mut()
+                                            .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                                    }
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    client.send_raw(&mut req).await?
+                                }
                                 azure_core::http::pager::PagerState::More(next_url) => {
                                     let mut url = client.endpoint().clone();
                                     url.set_path("");
@@ -3001,7 +2688,7 @@ pub mod authorizations {
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
                                     req.set_body(azure_openapi_core::EMPTY_BODY);
-                                    client.send(&mut req).await?
+                                    client.send_raw(&mut req).await?
                                 }
                             };
                             if !rsp.status().is_success() {
@@ -3039,32 +2726,6 @@ pub mod authorizations {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::ExpressRouteAuthorization> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::ExpressRouteAuthorization = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -3107,11 +2768,15 @@ pub mod authorizations {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<azure_core::http::response::Response<models::ExpressRouteAuthorization, azure_core::http::JsonFormat>>,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -3124,7 +2789,12 @@ pub mod authorizations {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<
+                            models::ExpressRouteAuthorization,
+                            azure_core::http::JsonFormat,
+                        > = raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -3136,42 +2806,6 @@ pub mod authorizations {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::ExpressRouteAuthorization> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::ExpressRouteAuthorization = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-            pub fn headers(&self) -> Headers<'_> {
-                Headers(self.0.headers())
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
-        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
-        impl<'a> Headers<'a> {
-            #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
-            pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
-            }
-        }
         #[derive(Clone, Debug, serde :: Serialize, serde :: Deserialize)]
         #[serde(transparent)]
         pub struct Operation(pub models::ExpressRouteAuthorization);
@@ -3250,11 +2884,15 @@ pub mod authorizations {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<azure_core::http::response::Response<models::ExpressRouteAuthorization, azure_core::http::JsonFormat>>,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -3268,7 +2906,12 @@ pub mod authorizations {
                         req.insert_header("content-type", "application/json");
                         let req_body = azure_core::json::to_json(&this.authorization)?;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<
+                            models::ExpressRouteAuthorization,
+                            azure_core::http::JsonFormat,
+                        > = raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -3285,7 +2928,15 @@ pub mod authorizations {
                             use azure_core::json;
                             let (rsp, next_link) = match state {
                                 PollerState::Initial => {
-                                    let rsp = initial.clone().send().await?.into_raw_response();
+                                    let url = initial.url()?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    let rsp = client.send_raw(&mut req).await?;
                                     let next = initial.clone().url()?;
                                     (rsp, next)
                                 }
@@ -3298,7 +2949,7 @@ pub mod authorizations {
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
                                     req.set_body(azure_openapi_core::EMPTY_BODY);
-                                    let rsp = client.send(&mut req).await?;
+                                    let rsp = client.send_raw(&mut req).await?;
                                     (rsp, next_url.clone())
                                 }
                             };
@@ -3335,40 +2986,6 @@ pub mod authorizations {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-            pub fn headers(&self) -> Headers<'_> {
-                Headers(self.0.headers())
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
-        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
-        impl<'a> Headers<'a> {
-            #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
-            pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
-            }
-            #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
-            pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -3410,11 +3027,8 @@ pub mod authorizations {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            #[doc = "Returns a future that sends the request and returns the raw HTTP response."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<azure_core::http::response::RawResponse>> {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -3427,7 +3041,7 @@ pub mod authorizations {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        this.client.send_raw(&mut req).await
                     }
                 })
             }
@@ -3537,32 +3151,6 @@ pub mod cloud_links {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::CloudLinkList> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::CloudLinkList = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -3604,11 +3192,15 @@ pub mod cloud_links {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<azure_core::http::response::Response<models::CloudLinkList, azure_core::http::JsonFormat>>,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -3621,7 +3213,10 @@ pub mod cloud_links {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::CloudLinkList, azure_core::http::JsonFormat> =
+                            raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -3635,7 +3230,26 @@ pub mod cloud_links {
                         let initial = initial.clone();
                         async move {
                             let rsp = match state {
-                                azure_core::http::pager::PagerState::Initial => initial.clone().send().await?.into_raw_response(),
+                                azure_core::http::pager::PagerState::Initial => {
+                                    let url = initial.url()?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    let has_api_version_already = req
+                                        .url_mut()
+                                        .query_pairs()
+                                        .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                                    if !has_api_version_already {
+                                        req.url_mut()
+                                            .query_pairs_mut()
+                                            .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                                    }
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    client.send_raw(&mut req).await?
+                                }
                                 azure_core::http::pager::PagerState::More(next_url) => {
                                     let mut url = client.endpoint().clone();
                                     url.set_path("");
@@ -3656,7 +3270,7 @@ pub mod cloud_links {
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
                                     req.set_body(azure_openapi_core::EMPTY_BODY);
-                                    client.send(&mut req).await?
+                                    client.send_raw(&mut req).await?
                                 }
                             };
                             if !rsp.status().is_success() {
@@ -3692,32 +3306,6 @@ pub mod cloud_links {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::CloudLink> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::CloudLink = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -3760,11 +3348,13 @@ pub mod cloud_links {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<'static, azure_core::Result<azure_core::http::response::Response<models::CloudLink, azure_core::http::JsonFormat>>>
+            {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -3777,7 +3367,9 @@ pub mod cloud_links {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::CloudLink, azure_core::http::JsonFormat> = raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -3789,42 +3381,6 @@ pub mod cloud_links {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::CloudLink> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::CloudLink = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-            pub fn headers(&self) -> Headers<'_> {
-                Headers(self.0.headers())
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
-        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
-        impl<'a> Headers<'a> {
-            #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
-            pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
-            }
-        }
         #[derive(Clone, Debug, serde :: Serialize, serde :: Deserialize)]
         #[serde(transparent)]
         pub struct Operation(pub models::CloudLink);
@@ -3903,11 +3459,13 @@ pub mod cloud_links {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<'static, azure_core::Result<azure_core::http::response::Response<models::CloudLink, azure_core::http::JsonFormat>>>
+            {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -3921,7 +3479,9 @@ pub mod cloud_links {
                         req.insert_header("content-type", "application/json");
                         let req_body = azure_core::json::to_json(&this.cloud_link)?;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::CloudLink, azure_core::http::JsonFormat> = raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -3938,7 +3498,15 @@ pub mod cloud_links {
                             use azure_core::json;
                             let (rsp, next_link) = match state {
                                 PollerState::Initial => {
-                                    let rsp = initial.clone().send().await?.into_raw_response();
+                                    let url = initial.url()?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    let rsp = client.send_raw(&mut req).await?;
                                     let next = initial.clone().url()?;
                                     (rsp, next)
                                 }
@@ -3951,7 +3519,7 @@ pub mod cloud_links {
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
                                     req.set_body(azure_openapi_core::EMPTY_BODY);
-                                    let rsp = client.send(&mut req).await?;
+                                    let rsp = client.send_raw(&mut req).await?;
                                     (rsp, next_url.clone())
                                 }
                             };
@@ -3988,40 +3556,6 @@ pub mod cloud_links {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-            pub fn headers(&self) -> Headers<'_> {
-                Headers(self.0.headers())
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
-        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
-        impl<'a> Headers<'a> {
-            #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
-            pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
-            }
-            #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
-            pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -4063,11 +3597,8 @@ pub mod cloud_links {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            #[doc = "Returns a future that sends the request and returns the raw HTTP response."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<azure_core::http::response::RawResponse>> {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -4080,7 +3611,7 @@ pub mod cloud_links {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        this.client.send_raw(&mut req).await
                     }
                 })
             }
@@ -4237,32 +3768,6 @@ pub mod clusters {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::ClusterList> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::ClusterList = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -4304,11 +3809,15 @@ pub mod clusters {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<azure_core::http::response::Response<models::ClusterList, azure_core::http::JsonFormat>>,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -4321,7 +3830,9 @@ pub mod clusters {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::ClusterList, azure_core::http::JsonFormat> = raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -4335,7 +3846,26 @@ pub mod clusters {
                         let initial = initial.clone();
                         async move {
                             let rsp = match state {
-                                azure_core::http::pager::PagerState::Initial => initial.clone().send().await?.into_raw_response(),
+                                azure_core::http::pager::PagerState::Initial => {
+                                    let url = initial.url()?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    let has_api_version_already = req
+                                        .url_mut()
+                                        .query_pairs()
+                                        .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                                    if !has_api_version_already {
+                                        req.url_mut()
+                                            .query_pairs_mut()
+                                            .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                                    }
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    client.send_raw(&mut req).await?
+                                }
                                 azure_core::http::pager::PagerState::More(next_url) => {
                                     let mut url = client.endpoint().clone();
                                     url.set_path("");
@@ -4356,7 +3886,7 @@ pub mod clusters {
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
                                     req.set_body(azure_openapi_core::EMPTY_BODY);
-                                    client.send(&mut req).await?
+                                    client.send_raw(&mut req).await?
                                 }
                             };
                             if !rsp.status().is_success() {
@@ -4392,32 +3922,6 @@ pub mod clusters {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::Cluster> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::Cluster = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -4460,11 +3964,13 @@ pub mod clusters {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<'static, azure_core::Result<azure_core::http::response::Response<models::Cluster, azure_core::http::JsonFormat>>>
+            {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -4477,7 +3983,9 @@ pub mod clusters {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::Cluster, azure_core::http::JsonFormat> = raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -4489,42 +3997,6 @@ pub mod clusters {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::Cluster> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::Cluster = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-            pub fn headers(&self) -> Headers<'_> {
-                Headers(self.0.headers())
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
-        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
-        impl<'a> Headers<'a> {
-            #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
-            pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
-            }
-        }
         #[derive(Clone, Debug, serde :: Serialize, serde :: Deserialize)]
         #[serde(transparent)]
         pub struct Operation(pub models::Cluster);
@@ -4603,11 +4075,13 @@ pub mod clusters {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<'static, azure_core::Result<azure_core::http::response::Response<models::Cluster, azure_core::http::JsonFormat>>>
+            {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -4621,7 +4095,9 @@ pub mod clusters {
                         req.insert_header("content-type", "application/json");
                         let req_body = azure_core::json::to_json(&this.cluster)?;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::Cluster, azure_core::http::JsonFormat> = raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -4638,7 +4114,15 @@ pub mod clusters {
                             use azure_core::json;
                             let (rsp, next_link) = match state {
                                 PollerState::Initial => {
-                                    let rsp = initial.clone().send().await?.into_raw_response();
+                                    let url = initial.url()?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    let rsp = client.send_raw(&mut req).await?;
                                     let next = initial.clone().url()?;
                                     (rsp, next)
                                 }
@@ -4651,7 +4135,7 @@ pub mod clusters {
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
                                     req.set_body(azure_openapi_core::EMPTY_BODY);
-                                    let rsp = client.send(&mut req).await?;
+                                    let rsp = client.send_raw(&mut req).await?;
                                     (rsp, next_url.clone())
                                 }
                             };
@@ -4688,46 +4172,6 @@ pub mod clusters {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::Cluster> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::Cluster = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-            pub fn headers(&self) -> Headers<'_> {
-                Headers(self.0.headers())
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
-        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
-        impl<'a> Headers<'a> {
-            #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
-            pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
-            }
-            #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
-            pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
-            }
-        }
         #[derive(Clone, Debug, serde :: Serialize, serde :: Deserialize)]
         #[serde(transparent)]
         pub struct Operation(pub models::Cluster);
@@ -4806,11 +4250,13 @@ pub mod clusters {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<'static, azure_core::Result<azure_core::http::response::Response<models::Cluster, azure_core::http::JsonFormat>>>
+            {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -4824,7 +4270,9 @@ pub mod clusters {
                         req.insert_header("content-type", "application/json");
                         let req_body = azure_core::json::to_json(&this.cluster_update)?;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::Cluster, azure_core::http::JsonFormat> = raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -4841,7 +4289,15 @@ pub mod clusters {
                             use azure_core::json;
                             let (rsp, next_link) = match state {
                                 PollerState::Initial => {
-                                    let rsp = initial.clone().send().await?.into_raw_response();
+                                    let url = initial.url()?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    let rsp = client.send_raw(&mut req).await?;
                                     let next = initial.clone().url()?;
                                     (rsp, next)
                                 }
@@ -4854,7 +4310,7 @@ pub mod clusters {
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
                                     req.set_body(azure_openapi_core::EMPTY_BODY);
-                                    let rsp = client.send(&mut req).await?;
+                                    let rsp = client.send_raw(&mut req).await?;
                                     (rsp, next_url.clone())
                                 }
                             };
@@ -4891,40 +4347,6 @@ pub mod clusters {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-            pub fn headers(&self) -> Headers<'_> {
-                Headers(self.0.headers())
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
-        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
-        impl<'a> Headers<'a> {
-            #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
-            pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
-            }
-            #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
-            pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -4966,11 +4388,8 @@ pub mod clusters {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            #[doc = "Returns a future that sends the request and returns the raw HTTP response."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<azure_core::http::response::RawResponse>> {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -4983,7 +4402,7 @@ pub mod clusters {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        this.client.send_raw(&mut req).await
                     }
                 })
             }
@@ -4995,32 +4414,6 @@ pub mod clusters {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::ClusterZoneList> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::ClusterZoneList = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -5063,11 +4456,15 @@ pub mod clusters {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<azure_core::http::response::Response<models::ClusterZoneList, azure_core::http::JsonFormat>>,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -5081,7 +4478,10 @@ pub mod clusters {
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.insert_header(azure_core::http::headers::CONTENT_LENGTH, "0");
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::ClusterZoneList, azure_core::http::JsonFormat> =
+                            raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -5203,32 +4603,6 @@ pub mod datastores {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::DatastoreList> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::DatastoreList = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -5271,11 +4645,15 @@ pub mod datastores {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<azure_core::http::response::Response<models::DatastoreList, azure_core::http::JsonFormat>>,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -5288,7 +4666,10 @@ pub mod datastores {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::DatastoreList, azure_core::http::JsonFormat> =
+                            raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -5302,7 +4683,26 @@ pub mod datastores {
                         let initial = initial.clone();
                         async move {
                             let rsp = match state {
-                                azure_core::http::pager::PagerState::Initial => initial.clone().send().await?.into_raw_response(),
+                                azure_core::http::pager::PagerState::Initial => {
+                                    let url = initial.url()?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    let has_api_version_already = req
+                                        .url_mut()
+                                        .query_pairs()
+                                        .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                                    if !has_api_version_already {
+                                        req.url_mut()
+                                            .query_pairs_mut()
+                                            .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                                    }
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    client.send_raw(&mut req).await?
+                                }
                                 azure_core::http::pager::PagerState::More(next_url) => {
                                     let mut url = client.endpoint().clone();
                                     url.set_path("");
@@ -5323,7 +4723,7 @@ pub mod datastores {
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
                                     req.set_body(azure_openapi_core::EMPTY_BODY);
-                                    client.send(&mut req).await?
+                                    client.send_raw(&mut req).await?
                                 }
                             };
                             if !rsp.status().is_success() {
@@ -5359,32 +4759,6 @@ pub mod datastores {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::Datastore> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::Datastore = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -5428,11 +4802,13 @@ pub mod datastores {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<'static, azure_core::Result<azure_core::http::response::Response<models::Datastore, azure_core::http::JsonFormat>>>
+            {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -5445,7 +4821,9 @@ pub mod datastores {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::Datastore, azure_core::http::JsonFormat> = raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -5457,42 +4835,6 @@ pub mod datastores {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::Datastore> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::Datastore = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-            pub fn headers(&self) -> Headers<'_> {
-                Headers(self.0.headers())
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
-        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
-        impl<'a> Headers<'a> {
-            #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
-            pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
-            }
-        }
         #[derive(Clone, Debug, serde :: Serialize, serde :: Deserialize)]
         #[serde(transparent)]
         pub struct Operation(pub models::Datastore);
@@ -5572,11 +4914,13 @@ pub mod datastores {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<'static, azure_core::Result<azure_core::http::response::Response<models::Datastore, azure_core::http::JsonFormat>>>
+            {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -5590,7 +4934,9 @@ pub mod datastores {
                         req.insert_header("content-type", "application/json");
                         let req_body = azure_core::json::to_json(&this.datastore)?;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::Datastore, azure_core::http::JsonFormat> = raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -5607,7 +4953,15 @@ pub mod datastores {
                             use azure_core::json;
                             let (rsp, next_link) = match state {
                                 PollerState::Initial => {
-                                    let rsp = initial.clone().send().await?.into_raw_response();
+                                    let url = initial.url()?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    let rsp = client.send_raw(&mut req).await?;
                                     let next = initial.clone().url()?;
                                     (rsp, next)
                                 }
@@ -5620,7 +4974,7 @@ pub mod datastores {
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
                                     req.set_body(azure_openapi_core::EMPTY_BODY);
-                                    let rsp = client.send(&mut req).await?;
+                                    let rsp = client.send_raw(&mut req).await?;
                                     (rsp, next_url.clone())
                                 }
                             };
@@ -5657,40 +5011,6 @@ pub mod datastores {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-            pub fn headers(&self) -> Headers<'_> {
-                Headers(self.0.headers())
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
-        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
-        impl<'a> Headers<'a> {
-            #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
-            pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
-            }
-            #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
-            pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -5733,11 +5053,8 @@ pub mod datastores {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            #[doc = "Returns a future that sends the request and returns the raw HTTP response."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<azure_core::http::response::RawResponse>> {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -5750,7 +5067,7 @@ pub mod datastores {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        this.client.send_raw(&mut req).await
                     }
                 })
             }
@@ -5819,32 +5136,6 @@ pub mod hosts {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::HostListResult> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::HostListResult = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -5887,11 +5178,15 @@ pub mod hosts {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<azure_core::http::response::Response<models::HostListResult, azure_core::http::JsonFormat>>,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -5904,7 +5199,10 @@ pub mod hosts {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::HostListResult, azure_core::http::JsonFormat> =
+                            raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -5918,7 +5216,26 @@ pub mod hosts {
                         let initial = initial.clone();
                         async move {
                             let rsp = match state {
-                                azure_core::http::pager::PagerState::Initial => initial.clone().send().await?.into_raw_response(),
+                                azure_core::http::pager::PagerState::Initial => {
+                                    let url = initial.url()?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    let has_api_version_already = req
+                                        .url_mut()
+                                        .query_pairs()
+                                        .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                                    if !has_api_version_already {
+                                        req.url_mut()
+                                            .query_pairs_mut()
+                                            .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                                    }
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    client.send_raw(&mut req).await?
+                                }
                                 azure_core::http::pager::PagerState::More(next_url) => {
                                     let mut url = client.endpoint().clone();
                                     url.set_path("");
@@ -5939,7 +5256,7 @@ pub mod hosts {
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
                                     req.set_body(azure_openapi_core::EMPTY_BODY);
-                                    client.send(&mut req).await?
+                                    client.send_raw(&mut req).await?
                                 }
                             };
                             if !rsp.status().is_success() {
@@ -5975,32 +5292,6 @@ pub mod hosts {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::Host> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::Host = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -6044,11 +5335,13 @@ pub mod hosts {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<'static, azure_core::Result<azure_core::http::response::Response<models::Host, azure_core::http::JsonFormat>>>
+            {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -6061,7 +5354,9 @@ pub mod hosts {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::Host, azure_core::http::JsonFormat> = raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -6211,32 +5506,6 @@ pub mod placement_policies {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::PlacementPoliciesList> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::PlacementPoliciesList = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -6279,11 +5548,15 @@ pub mod placement_policies {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<azure_core::http::response::Response<models::PlacementPoliciesList, azure_core::http::JsonFormat>>,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -6296,7 +5569,10 @@ pub mod placement_policies {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::PlacementPoliciesList, azure_core::http::JsonFormat> =
+                            raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -6310,7 +5586,26 @@ pub mod placement_policies {
                         let initial = initial.clone();
                         async move {
                             let rsp = match state {
-                                azure_core::http::pager::PagerState::Initial => initial.clone().send().await?.into_raw_response(),
+                                azure_core::http::pager::PagerState::Initial => {
+                                    let url = initial.url()?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    let has_api_version_already = req
+                                        .url_mut()
+                                        .query_pairs()
+                                        .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                                    if !has_api_version_already {
+                                        req.url_mut()
+                                            .query_pairs_mut()
+                                            .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                                    }
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    client.send_raw(&mut req).await?
+                                }
                                 azure_core::http::pager::PagerState::More(next_url) => {
                                     let mut url = client.endpoint().clone();
                                     url.set_path("");
@@ -6331,7 +5626,7 @@ pub mod placement_policies {
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
                                     req.set_body(azure_openapi_core::EMPTY_BODY);
-                                    client.send(&mut req).await?
+                                    client.send_raw(&mut req).await?
                                 }
                             };
                             if !rsp.status().is_success() {
@@ -6369,32 +5664,6 @@ pub mod placement_policies {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::PlacementPolicy> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::PlacementPolicy = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -6442,11 +5711,15 @@ pub mod placement_policies {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<azure_core::http::response::Response<models::PlacementPolicy, azure_core::http::JsonFormat>>,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -6459,7 +5732,10 @@ pub mod placement_policies {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::PlacementPolicy, azure_core::http::JsonFormat> =
+                            raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -6471,42 +5747,6 @@ pub mod placement_policies {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::PlacementPolicy> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::PlacementPolicy = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-            pub fn headers(&self) -> Headers<'_> {
-                Headers(self.0.headers())
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
-        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
-        impl<'a> Headers<'a> {
-            #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
-            pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
-            }
-        }
         #[derive(Clone, Debug, serde :: Serialize, serde :: Deserialize)]
         #[serde(transparent)]
         pub struct Operation(pub models::PlacementPolicy);
@@ -6590,11 +5830,15 @@ pub mod placement_policies {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<azure_core::http::response::Response<models::PlacementPolicy, azure_core::http::JsonFormat>>,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -6608,7 +5852,10 @@ pub mod placement_policies {
                         req.insert_header("content-type", "application/json");
                         let req_body = azure_core::json::to_json(&this.placement_policy)?;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::PlacementPolicy, azure_core::http::JsonFormat> =
+                            raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -6625,7 +5872,15 @@ pub mod placement_policies {
                             use azure_core::json;
                             let (rsp, next_link) = match state {
                                 PollerState::Initial => {
-                                    let rsp = initial.clone().send().await?.into_raw_response();
+                                    let url = initial.url()?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    let rsp = client.send_raw(&mut req).await?;
                                     let next = initial.clone().url()?;
                                     (rsp, next)
                                 }
@@ -6638,7 +5893,7 @@ pub mod placement_policies {
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
                                     req.set_body(azure_openapi_core::EMPTY_BODY);
-                                    let rsp = client.send(&mut req).await?;
+                                    let rsp = client.send_raw(&mut req).await?;
                                     (rsp, next_url.clone())
                                 }
                             };
@@ -6675,46 +5930,6 @@ pub mod placement_policies {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::PlacementPolicy> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::PlacementPolicy = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-            pub fn headers(&self) -> Headers<'_> {
-                Headers(self.0.headers())
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
-        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
-        impl<'a> Headers<'a> {
-            #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
-            pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
-            }
-            #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
-            pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
-            }
-        }
         #[derive(Clone, Debug, serde :: Serialize, serde :: Deserialize)]
         #[serde(transparent)]
         pub struct Operation(pub models::PlacementPolicy);
@@ -6798,11 +6013,15 @@ pub mod placement_policies {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<azure_core::http::response::Response<models::PlacementPolicy, azure_core::http::JsonFormat>>,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -6816,7 +6035,10 @@ pub mod placement_policies {
                         req.insert_header("content-type", "application/json");
                         let req_body = azure_core::json::to_json(&this.placement_policy_update)?;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::PlacementPolicy, azure_core::http::JsonFormat> =
+                            raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -6833,7 +6055,15 @@ pub mod placement_policies {
                             use azure_core::json;
                             let (rsp, next_link) = match state {
                                 PollerState::Initial => {
-                                    let rsp = initial.clone().send().await?.into_raw_response();
+                                    let url = initial.url()?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    let rsp = client.send_raw(&mut req).await?;
                                     let next = initial.clone().url()?;
                                     (rsp, next)
                                 }
@@ -6846,7 +6076,7 @@ pub mod placement_policies {
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
                                     req.set_body(azure_openapi_core::EMPTY_BODY);
-                                    let rsp = client.send(&mut req).await?;
+                                    let rsp = client.send_raw(&mut req).await?;
                                     (rsp, next_url.clone())
                                 }
                             };
@@ -6883,40 +6113,6 @@ pub mod placement_policies {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-            pub fn headers(&self) -> Headers<'_> {
-                Headers(self.0.headers())
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
-        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
-        impl<'a> Headers<'a> {
-            #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
-            pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
-            }
-            #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
-            pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -6963,11 +6159,8 @@ pub mod placement_policies {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            #[doc = "Returns a future that sends the request and returns the raw HTTP response."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<azure_core::http::response::RawResponse>> {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -6980,7 +6173,7 @@ pub mod placement_policies {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        this.client.send_raw(&mut req).await
                     }
                 })
             }
@@ -7077,32 +6270,6 @@ pub mod virtual_machines {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::VirtualMachinesList> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::VirtualMachinesList = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -7145,11 +6312,15 @@ pub mod virtual_machines {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<azure_core::http::response::Response<models::VirtualMachinesList, azure_core::http::JsonFormat>>,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -7162,7 +6333,10 @@ pub mod virtual_machines {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::VirtualMachinesList, azure_core::http::JsonFormat> =
+                            raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -7176,7 +6350,26 @@ pub mod virtual_machines {
                         let initial = initial.clone();
                         async move {
                             let rsp = match state {
-                                azure_core::http::pager::PagerState::Initial => initial.clone().send().await?.into_raw_response(),
+                                azure_core::http::pager::PagerState::Initial => {
+                                    let url = initial.url()?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    let has_api_version_already = req
+                                        .url_mut()
+                                        .query_pairs()
+                                        .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                                    if !has_api_version_already {
+                                        req.url_mut()
+                                            .query_pairs_mut()
+                                            .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                                    }
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    client.send_raw(&mut req).await?
+                                }
                                 azure_core::http::pager::PagerState::More(next_url) => {
                                     let mut url = client.endpoint().clone();
                                     url.set_path("");
@@ -7197,7 +6390,7 @@ pub mod virtual_machines {
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
                                     req.set_body(azure_openapi_core::EMPTY_BODY);
-                                    client.send(&mut req).await?
+                                    client.send_raw(&mut req).await?
                                 }
                             };
                             if !rsp.status().is_success() {
@@ -7233,32 +6426,6 @@ pub mod virtual_machines {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::VirtualMachine> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::VirtualMachine = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -7306,11 +6473,15 @@ pub mod virtual_machines {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<azure_core::http::response::Response<models::VirtualMachine, azure_core::http::JsonFormat>>,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -7323,7 +6494,10 @@ pub mod virtual_machines {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::VirtualMachine, azure_core::http::JsonFormat> =
+                            raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -7335,40 +6509,6 @@ pub mod virtual_machines {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-            pub fn headers(&self) -> Headers<'_> {
-                Headers(self.0.headers())
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
-        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
-        impl<'a> Headers<'a> {
-            #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
-            pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
-            }
-            #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
-            pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -7409,11 +6549,8 @@ pub mod virtual_machines {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            #[doc = "Returns a future that sends the request and returns the raw HTTP response."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<azure_core::http::response::RawResponse>> {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -7427,7 +6564,7 @@ pub mod virtual_machines {
                         req.insert_header("content-type", "application/json");
                         let req_body = azure_core::json::to_json(&this.restrict_movement)?;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        this.client.send_raw(&mut req).await
                     }
                 })
             }
@@ -7537,32 +6674,6 @@ pub mod global_reach_connections {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::GlobalReachConnectionList> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::GlobalReachConnectionList = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -7604,11 +6715,15 @@ pub mod global_reach_connections {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<azure_core::http::response::Response<models::GlobalReachConnectionList, azure_core::http::JsonFormat>>,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -7621,7 +6736,12 @@ pub mod global_reach_connections {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<
+                            models::GlobalReachConnectionList,
+                            azure_core::http::JsonFormat,
+                        > = raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -7635,7 +6755,26 @@ pub mod global_reach_connections {
                         let initial = initial.clone();
                         async move {
                             let rsp = match state {
-                                azure_core::http::pager::PagerState::Initial => initial.clone().send().await?.into_raw_response(),
+                                azure_core::http::pager::PagerState::Initial => {
+                                    let url = initial.url()?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    let has_api_version_already = req
+                                        .url_mut()
+                                        .query_pairs()
+                                        .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                                    if !has_api_version_already {
+                                        req.url_mut()
+                                            .query_pairs_mut()
+                                            .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                                    }
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    client.send_raw(&mut req).await?
+                                }
                                 azure_core::http::pager::PagerState::More(next_url) => {
                                     let mut url = client.endpoint().clone();
                                     url.set_path("");
@@ -7656,7 +6795,7 @@ pub mod global_reach_connections {
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
                                     req.set_body(azure_openapi_core::EMPTY_BODY);
-                                    client.send(&mut req).await?
+                                    client.send_raw(&mut req).await?
                                 }
                             };
                             if !rsp.status().is_success() {
@@ -7694,32 +6833,6 @@ pub mod global_reach_connections {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::GlobalReachConnection> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::GlobalReachConnection = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -7762,11 +6875,15 @@ pub mod global_reach_connections {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<azure_core::http::response::Response<models::GlobalReachConnection, azure_core::http::JsonFormat>>,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -7779,7 +6896,10 @@ pub mod global_reach_connections {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::GlobalReachConnection, azure_core::http::JsonFormat> =
+                            raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -7791,42 +6911,6 @@ pub mod global_reach_connections {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::GlobalReachConnection> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::GlobalReachConnection = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-            pub fn headers(&self) -> Headers<'_> {
-                Headers(self.0.headers())
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
-        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
-        impl<'a> Headers<'a> {
-            #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
-            pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
-            }
-        }
         #[derive(Clone, Debug, serde :: Serialize, serde :: Deserialize)]
         #[serde(transparent)]
         pub struct Operation(pub models::GlobalReachConnection);
@@ -7905,11 +6989,15 @@ pub mod global_reach_connections {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<azure_core::http::response::Response<models::GlobalReachConnection, azure_core::http::JsonFormat>>,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -7923,7 +7011,10 @@ pub mod global_reach_connections {
                         req.insert_header("content-type", "application/json");
                         let req_body = azure_core::json::to_json(&this.global_reach_connection)?;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::GlobalReachConnection, azure_core::http::JsonFormat> =
+                            raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -7940,7 +7031,15 @@ pub mod global_reach_connections {
                             use azure_core::json;
                             let (rsp, next_link) = match state {
                                 PollerState::Initial => {
-                                    let rsp = initial.clone().send().await?.into_raw_response();
+                                    let url = initial.url()?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    let rsp = client.send_raw(&mut req).await?;
                                     let next = initial.clone().url()?;
                                     (rsp, next)
                                 }
@@ -7953,7 +7052,7 @@ pub mod global_reach_connections {
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
                                     req.set_body(azure_openapi_core::EMPTY_BODY);
-                                    let rsp = client.send(&mut req).await?;
+                                    let rsp = client.send_raw(&mut req).await?;
                                     (rsp, next_url.clone())
                                 }
                             };
@@ -7990,40 +7089,6 @@ pub mod global_reach_connections {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-            pub fn headers(&self) -> Headers<'_> {
-                Headers(self.0.headers())
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
-        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
-        impl<'a> Headers<'a> {
-            #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
-            pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
-            }
-            #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
-            pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -8065,11 +7130,8 @@ pub mod global_reach_connections {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            #[doc = "Returns a future that sends the request and returns the raw HTTP response."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<azure_core::http::response::RawResponse>> {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -8082,7 +7144,7 @@ pub mod global_reach_connections {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        this.client.send_raw(&mut req).await
                     }
                 })
             }
@@ -8192,32 +7254,6 @@ pub mod hcx_enterprise_sites {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::HcxEnterpriseSiteList> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::HcxEnterpriseSiteList = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -8259,11 +7295,15 @@ pub mod hcx_enterprise_sites {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<azure_core::http::response::Response<models::HcxEnterpriseSiteList, azure_core::http::JsonFormat>>,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -8276,7 +7316,10 @@ pub mod hcx_enterprise_sites {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::HcxEnterpriseSiteList, azure_core::http::JsonFormat> =
+                            raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -8290,7 +7333,26 @@ pub mod hcx_enterprise_sites {
                         let initial = initial.clone();
                         async move {
                             let rsp = match state {
-                                azure_core::http::pager::PagerState::Initial => initial.clone().send().await?.into_raw_response(),
+                                azure_core::http::pager::PagerState::Initial => {
+                                    let url = initial.url()?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    let has_api_version_already = req
+                                        .url_mut()
+                                        .query_pairs()
+                                        .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                                    if !has_api_version_already {
+                                        req.url_mut()
+                                            .query_pairs_mut()
+                                            .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                                    }
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    client.send_raw(&mut req).await?
+                                }
                                 azure_core::http::pager::PagerState::More(next_url) => {
                                     let mut url = client.endpoint().clone();
                                     url.set_path("");
@@ -8311,7 +7373,7 @@ pub mod hcx_enterprise_sites {
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
                                     req.set_body(azure_openapi_core::EMPTY_BODY);
-                                    client.send(&mut req).await?
+                                    client.send_raw(&mut req).await?
                                 }
                             };
                             if !rsp.status().is_success() {
@@ -8349,32 +7411,6 @@ pub mod hcx_enterprise_sites {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::HcxEnterpriseSite> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::HcxEnterpriseSite = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -8417,11 +7453,15 @@ pub mod hcx_enterprise_sites {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<azure_core::http::response::Response<models::HcxEnterpriseSite, azure_core::http::JsonFormat>>,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -8434,7 +7474,10 @@ pub mod hcx_enterprise_sites {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::HcxEnterpriseSite, azure_core::http::JsonFormat> =
+                            raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -8446,32 +7489,6 @@ pub mod hcx_enterprise_sites {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::HcxEnterpriseSite> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::HcxEnterpriseSite = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -8515,11 +7532,15 @@ pub mod hcx_enterprise_sites {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<azure_core::http::response::Response<models::HcxEnterpriseSite, azure_core::http::JsonFormat>>,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -8533,7 +7554,10 @@ pub mod hcx_enterprise_sites {
                         req.insert_header("content-type", "application/json");
                         let req_body = azure_core::json::to_json(&this.hcx_enterprise_site)?;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::HcxEnterpriseSite, azure_core::http::JsonFormat> =
+                            raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -8545,26 +7569,6 @@ pub mod hcx_enterprise_sites {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -8607,11 +7611,8 @@ pub mod hcx_enterprise_sites {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            #[doc = "Returns a future that sends the request and returns the raw HTTP response."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<azure_core::http::response::RawResponse>> {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -8624,7 +7625,7 @@ pub mod hcx_enterprise_sites {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        this.client.send_raw(&mut req).await
                     }
                 })
             }
@@ -8725,32 +7726,6 @@ pub mod iscsi_paths {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::IscsiPathListResult> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::IscsiPathListResult = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -8792,11 +7767,15 @@ pub mod iscsi_paths {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<azure_core::http::response::Response<models::IscsiPathListResult, azure_core::http::JsonFormat>>,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -8809,7 +7788,10 @@ pub mod iscsi_paths {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::IscsiPathListResult, azure_core::http::JsonFormat> =
+                            raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -8823,7 +7805,26 @@ pub mod iscsi_paths {
                         let initial = initial.clone();
                         async move {
                             let rsp = match state {
-                                azure_core::http::pager::PagerState::Initial => initial.clone().send().await?.into_raw_response(),
+                                azure_core::http::pager::PagerState::Initial => {
+                                    let url = initial.url()?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    let has_api_version_already = req
+                                        .url_mut()
+                                        .query_pairs()
+                                        .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                                    if !has_api_version_already {
+                                        req.url_mut()
+                                            .query_pairs_mut()
+                                            .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                                    }
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    client.send_raw(&mut req).await?
+                                }
                                 azure_core::http::pager::PagerState::More(next_url) => {
                                     let mut url = client.endpoint().clone();
                                     url.set_path("");
@@ -8844,7 +7845,7 @@ pub mod iscsi_paths {
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
                                     req.set_body(azure_openapi_core::EMPTY_BODY);
-                                    client.send(&mut req).await?
+                                    client.send_raw(&mut req).await?
                                 }
                             };
                             if !rsp.status().is_success() {
@@ -8880,32 +7881,6 @@ pub mod iscsi_paths {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::IscsiPath> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::IscsiPath = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -8947,11 +7922,13 @@ pub mod iscsi_paths {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<'static, azure_core::Result<azure_core::http::response::Response<models::IscsiPath, azure_core::http::JsonFormat>>>
+            {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -8964,7 +7941,9 @@ pub mod iscsi_paths {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::IscsiPath, azure_core::http::JsonFormat> = raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -8976,42 +7955,6 @@ pub mod iscsi_paths {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::IscsiPath> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::IscsiPath = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-            pub fn headers(&self) -> Headers<'_> {
-                Headers(self.0.headers())
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
-        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
-        impl<'a> Headers<'a> {
-            #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
-            pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
-            }
-        }
         #[derive(Clone, Debug, serde :: Serialize, serde :: Deserialize)]
         #[serde(transparent)]
         pub struct Operation(pub models::IscsiPath);
@@ -9089,11 +8032,13 @@ pub mod iscsi_paths {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<'static, azure_core::Result<azure_core::http::response::Response<models::IscsiPath, azure_core::http::JsonFormat>>>
+            {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -9107,7 +8052,9 @@ pub mod iscsi_paths {
                         req.insert_header("content-type", "application/json");
                         let req_body = azure_core::json::to_json(&this.resource)?;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::IscsiPath, azure_core::http::JsonFormat> = raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -9124,7 +8071,15 @@ pub mod iscsi_paths {
                             use azure_core::json;
                             let (rsp, next_link) = match state {
                                 PollerState::Initial => {
-                                    let rsp = initial.clone().send().await?.into_raw_response();
+                                    let url = initial.url()?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    let rsp = client.send_raw(&mut req).await?;
                                     let next = initial.clone().url()?;
                                     (rsp, next)
                                 }
@@ -9137,7 +8092,7 @@ pub mod iscsi_paths {
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
                                     req.set_body(azure_openapi_core::EMPTY_BODY);
-                                    let rsp = client.send(&mut req).await?;
+                                    let rsp = client.send_raw(&mut req).await?;
                                     (rsp, next_url.clone())
                                 }
                             };
@@ -9174,40 +8129,6 @@ pub mod iscsi_paths {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-            pub fn headers(&self) -> Headers<'_> {
-                Headers(self.0.headers())
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
-        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
-        impl<'a> Headers<'a> {
-            #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
-            pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
-            }
-            #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
-            pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -9248,11 +8169,8 @@ pub mod iscsi_paths {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            #[doc = "Returns a future that sends the request and returns the raw HTTP response."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<azure_core::http::response::RawResponse>> {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -9265,7 +8183,7 @@ pub mod iscsi_paths {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        this.client.send_raw(&mut req).await
                     }
                 })
             }
@@ -9328,32 +8246,6 @@ pub mod provisioned_networks {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::ProvisionedNetworkListResult> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::ProvisionedNetworkListResult = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -9395,11 +8287,17 @@ pub mod provisioned_networks {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<
+                    azure_core::http::response::Response<models::ProvisionedNetworkListResult, azure_core::http::JsonFormat>,
+                >,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -9412,7 +8310,12 @@ pub mod provisioned_networks {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<
+                            models::ProvisionedNetworkListResult,
+                            azure_core::http::JsonFormat,
+                        > = raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -9426,7 +8329,26 @@ pub mod provisioned_networks {
                         let initial = initial.clone();
                         async move {
                             let rsp = match state {
-                                azure_core::http::pager::PagerState::Initial => initial.clone().send().await?.into_raw_response(),
+                                azure_core::http::pager::PagerState::Initial => {
+                                    let url = initial.url()?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    let has_api_version_already = req
+                                        .url_mut()
+                                        .query_pairs()
+                                        .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                                    if !has_api_version_already {
+                                        req.url_mut()
+                                            .query_pairs_mut()
+                                            .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                                    }
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    client.send_raw(&mut req).await?
+                                }
                                 azure_core::http::pager::PagerState::More(next_url) => {
                                     let mut url = client.endpoint().clone();
                                     url.set_path("");
@@ -9447,7 +8369,7 @@ pub mod provisioned_networks {
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
                                     req.set_body(azure_openapi_core::EMPTY_BODY);
-                                    client.send(&mut req).await?
+                                    client.send_raw(&mut req).await?
                                 }
                             };
                             if !rsp.status().is_success() {
@@ -9485,32 +8407,6 @@ pub mod provisioned_networks {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::ProvisionedNetwork> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::ProvisionedNetwork = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -9553,11 +8449,15 @@ pub mod provisioned_networks {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<azure_core::http::response::Response<models::ProvisionedNetwork, azure_core::http::JsonFormat>>,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -9570,7 +8470,10 @@ pub mod provisioned_networks {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::ProvisionedNetwork, azure_core::http::JsonFormat> =
+                            raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -9680,32 +8583,6 @@ pub mod pure_storage_policies {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::PureStoragePolicyListResult> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::PureStoragePolicyListResult = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -9747,11 +8624,15 @@ pub mod pure_storage_policies {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<azure_core::http::response::Response<models::PureStoragePolicyListResult, azure_core::http::JsonFormat>>,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -9764,7 +8645,12 @@ pub mod pure_storage_policies {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<
+                            models::PureStoragePolicyListResult,
+                            azure_core::http::JsonFormat,
+                        > = raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -9778,7 +8664,26 @@ pub mod pure_storage_policies {
                         let initial = initial.clone();
                         async move {
                             let rsp = match state {
-                                azure_core::http::pager::PagerState::Initial => initial.clone().send().await?.into_raw_response(),
+                                azure_core::http::pager::PagerState::Initial => {
+                                    let url = initial.url()?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    let has_api_version_already = req
+                                        .url_mut()
+                                        .query_pairs()
+                                        .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                                    if !has_api_version_already {
+                                        req.url_mut()
+                                            .query_pairs_mut()
+                                            .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                                    }
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    client.send_raw(&mut req).await?
+                                }
                                 azure_core::http::pager::PagerState::More(next_url) => {
                                     let mut url = client.endpoint().clone();
                                     url.set_path("");
@@ -9799,7 +8704,7 @@ pub mod pure_storage_policies {
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
                                     req.set_body(azure_openapi_core::EMPTY_BODY);
-                                    client.send(&mut req).await?
+                                    client.send_raw(&mut req).await?
                                 }
                             };
                             if !rsp.status().is_success() {
@@ -9837,32 +8742,6 @@ pub mod pure_storage_policies {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::PureStoragePolicy> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::PureStoragePolicy = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -9905,11 +8784,15 @@ pub mod pure_storage_policies {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<azure_core::http::response::Response<models::PureStoragePolicy, azure_core::http::JsonFormat>>,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -9922,7 +8805,10 @@ pub mod pure_storage_policies {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::PureStoragePolicy, azure_core::http::JsonFormat> =
+                            raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -9934,47 +8820,6 @@ pub mod pure_storage_policies {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::PureStoragePolicy> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::PureStoragePolicy = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-            pub fn headers(&self) -> Headers<'_> {
-                Headers(self.0.headers())
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
-        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
-        impl<'a> Headers<'a> {
-            #[doc = "A link to the status monitor"]
-            pub fn azure_async_operation(&self) -> azure_core::Result<&str> {
-                self.0
-                    .get_str(&azure_core::http::headers::HeaderName::from_static("azure-asyncoperation"))
-            }
-            #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
-            pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
-            }
-        }
         #[derive(Clone, Debug, serde :: Serialize, serde :: Deserialize)]
         #[serde(transparent)]
         pub struct Operation(pub models::PureStoragePolicy);
@@ -10053,11 +8898,15 @@ pub mod pure_storage_policies {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<azure_core::http::response::Response<models::PureStoragePolicy, azure_core::http::JsonFormat>>,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -10071,7 +8920,10 @@ pub mod pure_storage_policies {
                         req.insert_header("content-type", "application/json");
                         let req_body = azure_core::json::to_json(&this.resource)?;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::PureStoragePolicy, azure_core::http::JsonFormat> =
+                            raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -10088,7 +8940,15 @@ pub mod pure_storage_policies {
                             use azure_core::json;
                             let (rsp, next_link) = match state {
                                 PollerState::Initial => {
-                                    let rsp = initial.clone().send().await?.into_raw_response();
+                                    let url = initial.url()?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    let rsp = client.send_raw(&mut req).await?;
                                     let next = initial.clone().url()?;
                                     (rsp, next)
                                 }
@@ -10101,7 +8961,7 @@ pub mod pure_storage_policies {
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
                                     req.set_body(azure_openapi_core::EMPTY_BODY);
-                                    let rsp = client.send(&mut req).await?;
+                                    let rsp = client.send_raw(&mut req).await?;
                                     (rsp, next_url.clone())
                                 }
                             };
@@ -10138,40 +8998,6 @@ pub mod pure_storage_policies {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-            pub fn headers(&self) -> Headers<'_> {
-                Headers(self.0.headers())
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
-        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
-        impl<'a> Headers<'a> {
-            #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
-            pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
-            }
-            #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
-            pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -10213,11 +9039,8 @@ pub mod pure_storage_policies {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            #[doc = "Returns a future that sends the request and returns the raw HTTP response."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<azure_core::http::response::RawResponse>> {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -10230,7 +9053,7 @@ pub mod pure_storage_policies {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        this.client.send_raw(&mut req).await
                     }
                 })
             }
@@ -10363,32 +9186,6 @@ pub mod script_executions {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::ScriptExecutionsList> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::ScriptExecutionsList = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -10430,11 +9227,15 @@ pub mod script_executions {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<azure_core::http::response::Response<models::ScriptExecutionsList, azure_core::http::JsonFormat>>,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -10447,7 +9248,10 @@ pub mod script_executions {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::ScriptExecutionsList, azure_core::http::JsonFormat> =
+                            raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -10461,7 +9265,26 @@ pub mod script_executions {
                         let initial = initial.clone();
                         async move {
                             let rsp = match state {
-                                azure_core::http::pager::PagerState::Initial => initial.clone().send().await?.into_raw_response(),
+                                azure_core::http::pager::PagerState::Initial => {
+                                    let url = initial.url()?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    let has_api_version_already = req
+                                        .url_mut()
+                                        .query_pairs()
+                                        .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                                    if !has_api_version_already {
+                                        req.url_mut()
+                                            .query_pairs_mut()
+                                            .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                                    }
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    client.send_raw(&mut req).await?
+                                }
                                 azure_core::http::pager::PagerState::More(next_url) => {
                                     let mut url = client.endpoint().clone();
                                     url.set_path("");
@@ -10482,7 +9305,7 @@ pub mod script_executions {
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
                                     req.set_body(azure_openapi_core::EMPTY_BODY);
-                                    client.send(&mut req).await?
+                                    client.send_raw(&mut req).await?
                                 }
                             };
                             if !rsp.status().is_success() {
@@ -10518,32 +9341,6 @@ pub mod script_executions {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::ScriptExecution> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::ScriptExecution = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -10586,11 +9383,15 @@ pub mod script_executions {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<azure_core::http::response::Response<models::ScriptExecution, azure_core::http::JsonFormat>>,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -10603,7 +9404,10 @@ pub mod script_executions {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::ScriptExecution, azure_core::http::JsonFormat> =
+                            raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -10615,42 +9419,6 @@ pub mod script_executions {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::ScriptExecution> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::ScriptExecution = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-            pub fn headers(&self) -> Headers<'_> {
-                Headers(self.0.headers())
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
-        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
-        impl<'a> Headers<'a> {
-            #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
-            pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
-            }
-        }
         #[derive(Clone, Debug, serde :: Serialize, serde :: Deserialize)]
         #[serde(transparent)]
         pub struct Operation(pub models::ScriptExecution);
@@ -10729,11 +9497,15 @@ pub mod script_executions {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<azure_core::http::response::Response<models::ScriptExecution, azure_core::http::JsonFormat>>,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -10747,7 +9519,10 @@ pub mod script_executions {
                         req.insert_header("content-type", "application/json");
                         let req_body = azure_core::json::to_json(&this.script_execution)?;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::ScriptExecution, azure_core::http::JsonFormat> =
+                            raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -10764,7 +9539,15 @@ pub mod script_executions {
                             use azure_core::json;
                             let (rsp, next_link) = match state {
                                 PollerState::Initial => {
-                                    let rsp = initial.clone().send().await?.into_raw_response();
+                                    let url = initial.url()?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    let rsp = client.send_raw(&mut req).await?;
                                     let next = initial.clone().url()?;
                                     (rsp, next)
                                 }
@@ -10777,7 +9560,7 @@ pub mod script_executions {
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
                                     req.set_body(azure_openapi_core::EMPTY_BODY);
-                                    let rsp = client.send(&mut req).await?;
+                                    let rsp = client.send_raw(&mut req).await?;
                                     (rsp, next_url.clone())
                                 }
                             };
@@ -10814,40 +9597,6 @@ pub mod script_executions {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-            pub fn headers(&self) -> Headers<'_> {
-                Headers(self.0.headers())
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
-        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
-        impl<'a> Headers<'a> {
-            #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
-            pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
-            }
-            #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
-            pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -10889,11 +9638,8 @@ pub mod script_executions {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            #[doc = "Returns a future that sends the request and returns the raw HTTP response."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<azure_core::http::response::RawResponse>> {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -10906,7 +9652,7 @@ pub mod script_executions {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        this.client.send_raw(&mut req).await
                     }
                 })
             }
@@ -10918,32 +9664,6 @@ pub mod script_executions {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::ScriptExecution> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::ScriptExecution = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -10992,11 +9712,15 @@ pub mod script_executions {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<azure_core::http::response::Response<models::ScriptExecution, azure_core::http::JsonFormat>>,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -11010,7 +9734,10 @@ pub mod script_executions {
                         req.insert_header("content-type", "application/json");
                         let req_body = azure_core::json::to_json(&this.script_output_stream_type)?;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::ScriptExecution, azure_core::http::JsonFormat> =
+                            raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -11073,32 +9800,6 @@ pub mod script_packages {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::ScriptPackagesList> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::ScriptPackagesList = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -11140,11 +9841,15 @@ pub mod script_packages {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<azure_core::http::response::Response<models::ScriptPackagesList, azure_core::http::JsonFormat>>,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -11157,7 +9862,10 @@ pub mod script_packages {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::ScriptPackagesList, azure_core::http::JsonFormat> =
+                            raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -11171,7 +9879,26 @@ pub mod script_packages {
                         let initial = initial.clone();
                         async move {
                             let rsp = match state {
-                                azure_core::http::pager::PagerState::Initial => initial.clone().send().await?.into_raw_response(),
+                                azure_core::http::pager::PagerState::Initial => {
+                                    let url = initial.url()?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    let has_api_version_already = req
+                                        .url_mut()
+                                        .query_pairs()
+                                        .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                                    if !has_api_version_already {
+                                        req.url_mut()
+                                            .query_pairs_mut()
+                                            .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                                    }
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    client.send_raw(&mut req).await?
+                                }
                                 azure_core::http::pager::PagerState::More(next_url) => {
                                     let mut url = client.endpoint().clone();
                                     url.set_path("");
@@ -11192,7 +9919,7 @@ pub mod script_packages {
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
                                     req.set_body(azure_openapi_core::EMPTY_BODY);
-                                    client.send(&mut req).await?
+                                    client.send_raw(&mut req).await?
                                 }
                             };
                             if !rsp.status().is_success() {
@@ -11228,32 +9955,6 @@ pub mod script_packages {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::ScriptPackage> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::ScriptPackage = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -11296,11 +9997,15 @@ pub mod script_packages {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<azure_core::http::response::Response<models::ScriptPackage, azure_core::http::JsonFormat>>,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -11313,7 +10018,10 @@ pub mod script_packages {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::ScriptPackage, azure_core::http::JsonFormat> =
+                            raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -11382,32 +10090,6 @@ pub mod script_cmdlets {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::ScriptCmdletsList> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::ScriptCmdletsList = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -11450,11 +10132,15 @@ pub mod script_cmdlets {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<azure_core::http::response::Response<models::ScriptCmdletsList, azure_core::http::JsonFormat>>,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -11467,7 +10153,10 @@ pub mod script_cmdlets {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::ScriptCmdletsList, azure_core::http::JsonFormat> =
+                            raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -11481,7 +10170,26 @@ pub mod script_cmdlets {
                         let initial = initial.clone();
                         async move {
                             let rsp = match state {
-                                azure_core::http::pager::PagerState::Initial => initial.clone().send().await?.into_raw_response(),
+                                azure_core::http::pager::PagerState::Initial => {
+                                    let url = initial.url()?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    let has_api_version_already = req
+                                        .url_mut()
+                                        .query_pairs()
+                                        .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                                    if !has_api_version_already {
+                                        req.url_mut()
+                                            .query_pairs_mut()
+                                            .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                                    }
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    client.send_raw(&mut req).await?
+                                }
                                 azure_core::http::pager::PagerState::More(next_url) => {
                                     let mut url = client.endpoint().clone();
                                     url.set_path("");
@@ -11502,7 +10210,7 @@ pub mod script_cmdlets {
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
                                     req.set_body(azure_openapi_core::EMPTY_BODY);
-                                    client.send(&mut req).await?
+                                    client.send_raw(&mut req).await?
                                 }
                             };
                             if !rsp.status().is_success() {
@@ -11538,32 +10246,6 @@ pub mod script_cmdlets {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::ScriptCmdlet> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::ScriptCmdlet = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -11611,11 +10293,15 @@ pub mod script_cmdlets {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<azure_core::http::response::Response<models::ScriptCmdlet, azure_core::http::JsonFormat>>,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -11628,7 +10314,9 @@ pub mod script_cmdlets {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::ScriptCmdlet, azure_core::http::JsonFormat> = raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -12536,32 +11224,6 @@ pub mod workload_networks {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkList> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::WorkloadNetworkList = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -12603,11 +11265,15 @@ pub mod workload_networks {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<azure_core::http::response::Response<models::WorkloadNetworkList, azure_core::http::JsonFormat>>,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -12620,7 +11286,10 @@ pub mod workload_networks {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::WorkloadNetworkList, azure_core::http::JsonFormat> =
+                            raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -12634,7 +11303,26 @@ pub mod workload_networks {
                         let initial = initial.clone();
                         async move {
                             let rsp = match state {
-                                azure_core::http::pager::PagerState::Initial => initial.clone().send().await?.into_raw_response(),
+                                azure_core::http::pager::PagerState::Initial => {
+                                    let url = initial.url()?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    let has_api_version_already = req
+                                        .url_mut()
+                                        .query_pairs()
+                                        .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                                    if !has_api_version_already {
+                                        req.url_mut()
+                                            .query_pairs_mut()
+                                            .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                                    }
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    client.send_raw(&mut req).await?
+                                }
                                 azure_core::http::pager::PagerState::More(next_url) => {
                                     let mut url = client.endpoint().clone();
                                     url.set_path("");
@@ -12655,7 +11343,7 @@ pub mod workload_networks {
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
                                     req.set_body(azure_openapi_core::EMPTY_BODY);
-                                    client.send(&mut req).await?
+                                    client.send_raw(&mut req).await?
                                 }
                             };
                             if !rsp.status().is_success() {
@@ -12691,32 +11379,6 @@ pub mod workload_networks {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetwork> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::WorkloadNetwork = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -12758,11 +11420,15 @@ pub mod workload_networks {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<azure_core::http::response::Response<models::WorkloadNetwork, azure_core::http::JsonFormat>>,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -12775,7 +11441,10 @@ pub mod workload_networks {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::WorkloadNetwork, azure_core::http::JsonFormat> =
+                            raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -12787,32 +11456,6 @@ pub mod workload_networks {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkDhcpList> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::WorkloadNetworkDhcpList = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -12851,11 +11494,15 @@ pub mod workload_networks {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<azure_core::http::response::Response<models::WorkloadNetworkDhcpList, azure_core::http::JsonFormat>>,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -12868,7 +11515,10 @@ pub mod workload_networks {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::WorkloadNetworkDhcpList, azure_core::http::JsonFormat> =
+                            raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -12882,7 +11532,26 @@ pub mod workload_networks {
                         let initial = initial.clone();
                         async move {
                             let rsp = match state {
-                                azure_core::http::pager::PagerState::Initial => initial.clone().send().await?.into_raw_response(),
+                                azure_core::http::pager::PagerState::Initial => {
+                                    let url = initial.url()?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    let has_api_version_already = req
+                                        .url_mut()
+                                        .query_pairs()
+                                        .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                                    if !has_api_version_already {
+                                        req.url_mut()
+                                            .query_pairs_mut()
+                                            .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                                    }
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    client.send_raw(&mut req).await?
+                                }
                                 azure_core::http::pager::PagerState::More(next_url) => {
                                     let mut url = client.endpoint().clone();
                                     url.set_path("");
@@ -12903,7 +11572,7 @@ pub mod workload_networks {
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
                                     req.set_body(azure_openapi_core::EMPTY_BODY);
-                                    client.send(&mut req).await?
+                                    client.send_raw(&mut req).await?
                                 }
                             };
                             if !rsp.status().is_success() {
@@ -12941,32 +11610,6 @@ pub mod workload_networks {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkDhcp> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::WorkloadNetworkDhcp = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -13006,11 +11649,15 @@ pub mod workload_networks {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<azure_core::http::response::Response<models::WorkloadNetworkDhcp, azure_core::http::JsonFormat>>,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -13023,7 +11670,10 @@ pub mod workload_networks {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::WorkloadNetworkDhcp, azure_core::http::JsonFormat> =
+                            raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -13035,42 +11685,6 @@ pub mod workload_networks {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkDhcp> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::WorkloadNetworkDhcp = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-            pub fn headers(&self) -> Headers<'_> {
-                Headers(self.0.headers())
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
-        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
-        impl<'a> Headers<'a> {
-            #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
-            pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
-            }
-        }
         #[derive(Clone, Debug, serde :: Serialize, serde :: Deserialize)]
         #[serde(transparent)]
         pub struct Operation(pub models::WorkloadNetworkDhcp);
@@ -13146,11 +11760,15 @@ pub mod workload_networks {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<azure_core::http::response::Response<models::WorkloadNetworkDhcp, azure_core::http::JsonFormat>>,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -13164,7 +11782,10 @@ pub mod workload_networks {
                         req.insert_header("content-type", "application/json");
                         let req_body = azure_core::json::to_json(&this.workload_network_dhcp)?;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::WorkloadNetworkDhcp, azure_core::http::JsonFormat> =
+                            raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -13181,7 +11802,15 @@ pub mod workload_networks {
                             use azure_core::json;
                             let (rsp, next_link) = match state {
                                 PollerState::Initial => {
-                                    let rsp = initial.clone().send().await?.into_raw_response();
+                                    let url = initial.url()?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    let rsp = client.send_raw(&mut req).await?;
                                     let next = initial.clone().url()?;
                                     (rsp, next)
                                 }
@@ -13194,7 +11823,7 @@ pub mod workload_networks {
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
                                     req.set_body(azure_openapi_core::EMPTY_BODY);
-                                    let rsp = client.send(&mut req).await?;
+                                    let rsp = client.send_raw(&mut req).await?;
                                     (rsp, next_url.clone())
                                 }
                             };
@@ -13231,46 +11860,6 @@ pub mod workload_networks {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkDhcp> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::WorkloadNetworkDhcp = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-            pub fn headers(&self) -> Headers<'_> {
-                Headers(self.0.headers())
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
-        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
-        impl<'a> Headers<'a> {
-            #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
-            pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
-            }
-            #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
-            pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
-            }
-        }
         #[derive(Clone, Debug, serde :: Serialize, serde :: Deserialize)]
         #[serde(transparent)]
         pub struct Operation(pub models::WorkloadNetworkDhcp);
@@ -13346,11 +11935,15 @@ pub mod workload_networks {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<azure_core::http::response::Response<models::WorkloadNetworkDhcp, azure_core::http::JsonFormat>>,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -13364,7 +11957,10 @@ pub mod workload_networks {
                         req.insert_header("content-type", "application/json");
                         let req_body = azure_core::json::to_json(&this.workload_network_dhcp)?;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::WorkloadNetworkDhcp, azure_core::http::JsonFormat> =
+                            raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -13381,7 +11977,15 @@ pub mod workload_networks {
                             use azure_core::json;
                             let (rsp, next_link) = match state {
                                 PollerState::Initial => {
-                                    let rsp = initial.clone().send().await?.into_raw_response();
+                                    let url = initial.url()?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    let rsp = client.send_raw(&mut req).await?;
                                     let next = initial.clone().url()?;
                                     (rsp, next)
                                 }
@@ -13394,7 +11998,7 @@ pub mod workload_networks {
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
                                     req.set_body(azure_openapi_core::EMPTY_BODY);
-                                    let rsp = client.send(&mut req).await?;
+                                    let rsp = client.send_raw(&mut req).await?;
                                     (rsp, next_url.clone())
                                 }
                             };
@@ -13431,40 +12035,6 @@ pub mod workload_networks {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-            pub fn headers(&self) -> Headers<'_> {
-                Headers(self.0.headers())
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
-        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
-        impl<'a> Headers<'a> {
-            #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
-            pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
-            }
-            #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
-            pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -13503,11 +12073,8 @@ pub mod workload_networks {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            #[doc = "Returns a future that sends the request and returns the raw HTTP response."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<azure_core::http::response::RawResponse>> {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -13520,7 +12087,7 @@ pub mod workload_networks {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        this.client.send_raw(&mut req).await
                     }
                 })
             }
@@ -13532,32 +12099,6 @@ pub mod workload_networks {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkDnsServicesList> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::WorkloadNetworkDnsServicesList = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -13599,11 +12140,17 @@ pub mod workload_networks {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<
+                    azure_core::http::response::Response<models::WorkloadNetworkDnsServicesList, azure_core::http::JsonFormat>,
+                >,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -13616,7 +12163,12 @@ pub mod workload_networks {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<
+                            models::WorkloadNetworkDnsServicesList,
+                            azure_core::http::JsonFormat,
+                        > = raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -13630,7 +12182,26 @@ pub mod workload_networks {
                         let initial = initial.clone();
                         async move {
                             let rsp = match state {
-                                azure_core::http::pager::PagerState::Initial => initial.clone().send().await?.into_raw_response(),
+                                azure_core::http::pager::PagerState::Initial => {
+                                    let url = initial.url()?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    let has_api_version_already = req
+                                        .url_mut()
+                                        .query_pairs()
+                                        .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                                    if !has_api_version_already {
+                                        req.url_mut()
+                                            .query_pairs_mut()
+                                            .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                                    }
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    client.send_raw(&mut req).await?
+                                }
                                 azure_core::http::pager::PagerState::More(next_url) => {
                                     let mut url = client.endpoint().clone();
                                     url.set_path("");
@@ -13651,7 +12222,7 @@ pub mod workload_networks {
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
                                     req.set_body(azure_openapi_core::EMPTY_BODY);
-                                    client.send(&mut req).await?
+                                    client.send_raw(&mut req).await?
                                 }
                             };
                             if !rsp.status().is_success() {
@@ -13689,32 +12260,6 @@ pub mod workload_networks {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkDnsService> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::WorkloadNetworkDnsService = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -13757,11 +12302,15 @@ pub mod workload_networks {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<azure_core::http::response::Response<models::WorkloadNetworkDnsService, azure_core::http::JsonFormat>>,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -13774,7 +12323,12 @@ pub mod workload_networks {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<
+                            models::WorkloadNetworkDnsService,
+                            azure_core::http::JsonFormat,
+                        > = raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -13786,42 +12340,6 @@ pub mod workload_networks {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkDnsService> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::WorkloadNetworkDnsService = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-            pub fn headers(&self) -> Headers<'_> {
-                Headers(self.0.headers())
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
-        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
-        impl<'a> Headers<'a> {
-            #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
-            pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
-            }
-        }
         #[derive(Clone, Debug, serde :: Serialize, serde :: Deserialize)]
         #[serde(transparent)]
         pub struct Operation(pub models::WorkloadNetworkDnsService);
@@ -13900,11 +12418,15 @@ pub mod workload_networks {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<azure_core::http::response::Response<models::WorkloadNetworkDnsService, azure_core::http::JsonFormat>>,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -13918,7 +12440,12 @@ pub mod workload_networks {
                         req.insert_header("content-type", "application/json");
                         let req_body = azure_core::json::to_json(&this.workload_network_dns_service)?;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<
+                            models::WorkloadNetworkDnsService,
+                            azure_core::http::JsonFormat,
+                        > = raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -13935,7 +12462,15 @@ pub mod workload_networks {
                             use azure_core::json;
                             let (rsp, next_link) = match state {
                                 PollerState::Initial => {
-                                    let rsp = initial.clone().send().await?.into_raw_response();
+                                    let url = initial.url()?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    let rsp = client.send_raw(&mut req).await?;
                                     let next = initial.clone().url()?;
                                     (rsp, next)
                                 }
@@ -13948,7 +12483,7 @@ pub mod workload_networks {
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
                                     req.set_body(azure_openapi_core::EMPTY_BODY);
-                                    let rsp = client.send(&mut req).await?;
+                                    let rsp = client.send_raw(&mut req).await?;
                                     (rsp, next_url.clone())
                                 }
                             };
@@ -13985,46 +12520,6 @@ pub mod workload_networks {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkDnsService> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::WorkloadNetworkDnsService = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-            pub fn headers(&self) -> Headers<'_> {
-                Headers(self.0.headers())
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
-        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
-        impl<'a> Headers<'a> {
-            #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
-            pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
-            }
-            #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
-            pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
-            }
-        }
         #[derive(Clone, Debug, serde :: Serialize, serde :: Deserialize)]
         #[serde(transparent)]
         pub struct Operation(pub models::WorkloadNetworkDnsService);
@@ -14103,11 +12598,15 @@ pub mod workload_networks {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<azure_core::http::response::Response<models::WorkloadNetworkDnsService, azure_core::http::JsonFormat>>,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -14121,7 +12620,12 @@ pub mod workload_networks {
                         req.insert_header("content-type", "application/json");
                         let req_body = azure_core::json::to_json(&this.workload_network_dns_service)?;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<
+                            models::WorkloadNetworkDnsService,
+                            azure_core::http::JsonFormat,
+                        > = raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -14138,7 +12642,15 @@ pub mod workload_networks {
                             use azure_core::json;
                             let (rsp, next_link) = match state {
                                 PollerState::Initial => {
-                                    let rsp = initial.clone().send().await?.into_raw_response();
+                                    let url = initial.url()?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    let rsp = client.send_raw(&mut req).await?;
                                     let next = initial.clone().url()?;
                                     (rsp, next)
                                 }
@@ -14151,7 +12663,7 @@ pub mod workload_networks {
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
                                     req.set_body(azure_openapi_core::EMPTY_BODY);
-                                    let rsp = client.send(&mut req).await?;
+                                    let rsp = client.send_raw(&mut req).await?;
                                     (rsp, next_url.clone())
                                 }
                             };
@@ -14188,40 +12700,6 @@ pub mod workload_networks {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-            pub fn headers(&self) -> Headers<'_> {
-                Headers(self.0.headers())
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
-        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
-        impl<'a> Headers<'a> {
-            #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
-            pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
-            }
-            #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
-            pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -14263,11 +12741,8 @@ pub mod workload_networks {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            #[doc = "Returns a future that sends the request and returns the raw HTTP response."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<azure_core::http::response::RawResponse>> {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -14280,7 +12755,7 @@ pub mod workload_networks {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        this.client.send_raw(&mut req).await
                     }
                 })
             }
@@ -14292,32 +12767,6 @@ pub mod workload_networks {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkDnsZonesList> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::WorkloadNetworkDnsZonesList = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -14359,11 +12808,15 @@ pub mod workload_networks {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<azure_core::http::response::Response<models::WorkloadNetworkDnsZonesList, azure_core::http::JsonFormat>>,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -14376,7 +12829,12 @@ pub mod workload_networks {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<
+                            models::WorkloadNetworkDnsZonesList,
+                            azure_core::http::JsonFormat,
+                        > = raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -14390,7 +12848,26 @@ pub mod workload_networks {
                         let initial = initial.clone();
                         async move {
                             let rsp = match state {
-                                azure_core::http::pager::PagerState::Initial => initial.clone().send().await?.into_raw_response(),
+                                azure_core::http::pager::PagerState::Initial => {
+                                    let url = initial.url()?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    let has_api_version_already = req
+                                        .url_mut()
+                                        .query_pairs()
+                                        .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                                    if !has_api_version_already {
+                                        req.url_mut()
+                                            .query_pairs_mut()
+                                            .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                                    }
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    client.send_raw(&mut req).await?
+                                }
                                 azure_core::http::pager::PagerState::More(next_url) => {
                                     let mut url = client.endpoint().clone();
                                     url.set_path("");
@@ -14411,7 +12888,7 @@ pub mod workload_networks {
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
                                     req.set_body(azure_openapi_core::EMPTY_BODY);
-                                    client.send(&mut req).await?
+                                    client.send_raw(&mut req).await?
                                 }
                             };
                             if !rsp.status().is_success() {
@@ -14449,32 +12926,6 @@ pub mod workload_networks {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkDnsZone> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::WorkloadNetworkDnsZone = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -14517,11 +12968,15 @@ pub mod workload_networks {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<azure_core::http::response::Response<models::WorkloadNetworkDnsZone, azure_core::http::JsonFormat>>,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -14534,7 +12989,10 @@ pub mod workload_networks {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::WorkloadNetworkDnsZone, azure_core::http::JsonFormat> =
+                            raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -14546,42 +13004,6 @@ pub mod workload_networks {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkDnsZone> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::WorkloadNetworkDnsZone = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-            pub fn headers(&self) -> Headers<'_> {
-                Headers(self.0.headers())
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
-        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
-        impl<'a> Headers<'a> {
-            #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
-            pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
-            }
-        }
         #[derive(Clone, Debug, serde :: Serialize, serde :: Deserialize)]
         #[serde(transparent)]
         pub struct Operation(pub models::WorkloadNetworkDnsZone);
@@ -14660,11 +13082,15 @@ pub mod workload_networks {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<azure_core::http::response::Response<models::WorkloadNetworkDnsZone, azure_core::http::JsonFormat>>,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -14678,7 +13104,10 @@ pub mod workload_networks {
                         req.insert_header("content-type", "application/json");
                         let req_body = azure_core::json::to_json(&this.workload_network_dns_zone)?;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::WorkloadNetworkDnsZone, azure_core::http::JsonFormat> =
+                            raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -14695,7 +13124,15 @@ pub mod workload_networks {
                             use azure_core::json;
                             let (rsp, next_link) = match state {
                                 PollerState::Initial => {
-                                    let rsp = initial.clone().send().await?.into_raw_response();
+                                    let url = initial.url()?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    let rsp = client.send_raw(&mut req).await?;
                                     let next = initial.clone().url()?;
                                     (rsp, next)
                                 }
@@ -14708,7 +13145,7 @@ pub mod workload_networks {
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
                                     req.set_body(azure_openapi_core::EMPTY_BODY);
-                                    let rsp = client.send(&mut req).await?;
+                                    let rsp = client.send_raw(&mut req).await?;
                                     (rsp, next_url.clone())
                                 }
                             };
@@ -14745,46 +13182,6 @@ pub mod workload_networks {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkDnsZone> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::WorkloadNetworkDnsZone = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-            pub fn headers(&self) -> Headers<'_> {
-                Headers(self.0.headers())
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
-        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
-        impl<'a> Headers<'a> {
-            #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
-            pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
-            }
-            #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
-            pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
-            }
-        }
         #[derive(Clone, Debug, serde :: Serialize, serde :: Deserialize)]
         #[serde(transparent)]
         pub struct Operation(pub models::WorkloadNetworkDnsZone);
@@ -14863,11 +13260,15 @@ pub mod workload_networks {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<azure_core::http::response::Response<models::WorkloadNetworkDnsZone, azure_core::http::JsonFormat>>,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -14881,7 +13282,10 @@ pub mod workload_networks {
                         req.insert_header("content-type", "application/json");
                         let req_body = azure_core::json::to_json(&this.workload_network_dns_zone)?;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::WorkloadNetworkDnsZone, azure_core::http::JsonFormat> =
+                            raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -14898,7 +13302,15 @@ pub mod workload_networks {
                             use azure_core::json;
                             let (rsp, next_link) = match state {
                                 PollerState::Initial => {
-                                    let rsp = initial.clone().send().await?.into_raw_response();
+                                    let url = initial.url()?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    let rsp = client.send_raw(&mut req).await?;
                                     let next = initial.clone().url()?;
                                     (rsp, next)
                                 }
@@ -14911,7 +13323,7 @@ pub mod workload_networks {
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
                                     req.set_body(azure_openapi_core::EMPTY_BODY);
-                                    let rsp = client.send(&mut req).await?;
+                                    let rsp = client.send_raw(&mut req).await?;
                                     (rsp, next_url.clone())
                                 }
                             };
@@ -14948,40 +13360,6 @@ pub mod workload_networks {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-            pub fn headers(&self) -> Headers<'_> {
-                Headers(self.0.headers())
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
-        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
-        impl<'a> Headers<'a> {
-            #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
-            pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
-            }
-            #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
-            pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -15023,11 +13401,8 @@ pub mod workload_networks {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            #[doc = "Returns a future that sends the request and returns the raw HTTP response."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<azure_core::http::response::RawResponse>> {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -15040,7 +13415,7 @@ pub mod workload_networks {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        this.client.send_raw(&mut req).await
                     }
                 })
             }
@@ -15052,32 +13427,6 @@ pub mod workload_networks {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkGatewayList> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::WorkloadNetworkGatewayList = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -15119,11 +13468,15 @@ pub mod workload_networks {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<azure_core::http::response::Response<models::WorkloadNetworkGatewayList, azure_core::http::JsonFormat>>,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -15136,7 +13489,12 @@ pub mod workload_networks {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<
+                            models::WorkloadNetworkGatewayList,
+                            azure_core::http::JsonFormat,
+                        > = raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -15150,7 +13508,26 @@ pub mod workload_networks {
                         let initial = initial.clone();
                         async move {
                             let rsp = match state {
-                                azure_core::http::pager::PagerState::Initial => initial.clone().send().await?.into_raw_response(),
+                                azure_core::http::pager::PagerState::Initial => {
+                                    let url = initial.url()?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    let has_api_version_already = req
+                                        .url_mut()
+                                        .query_pairs()
+                                        .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                                    if !has_api_version_already {
+                                        req.url_mut()
+                                            .query_pairs_mut()
+                                            .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                                    }
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    client.send_raw(&mut req).await?
+                                }
                                 azure_core::http::pager::PagerState::More(next_url) => {
                                     let mut url = client.endpoint().clone();
                                     url.set_path("");
@@ -15171,7 +13548,7 @@ pub mod workload_networks {
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
                                     req.set_body(azure_openapi_core::EMPTY_BODY);
-                                    client.send(&mut req).await?
+                                    client.send_raw(&mut req).await?
                                 }
                             };
                             if !rsp.status().is_success() {
@@ -15209,32 +13586,6 @@ pub mod workload_networks {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkGateway> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::WorkloadNetworkGateway = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -15277,11 +13628,15 @@ pub mod workload_networks {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<azure_core::http::response::Response<models::WorkloadNetworkGateway, azure_core::http::JsonFormat>>,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -15294,7 +13649,10 @@ pub mod workload_networks {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::WorkloadNetworkGateway, azure_core::http::JsonFormat> =
+                            raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -15306,32 +13664,6 @@ pub mod workload_networks {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkPortMirroringList> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::WorkloadNetworkPortMirroringList = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -15370,11 +13702,17 @@ pub mod workload_networks {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<
+                    azure_core::http::response::Response<models::WorkloadNetworkPortMirroringList, azure_core::http::JsonFormat>,
+                >,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -15387,7 +13725,12 @@ pub mod workload_networks {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<
+                            models::WorkloadNetworkPortMirroringList,
+                            azure_core::http::JsonFormat,
+                        > = raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -15401,7 +13744,26 @@ pub mod workload_networks {
                         let initial = initial.clone();
                         async move {
                             let rsp = match state {
-                                azure_core::http::pager::PagerState::Initial => initial.clone().send().await?.into_raw_response(),
+                                azure_core::http::pager::PagerState::Initial => {
+                                    let url = initial.url()?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    let has_api_version_already = req
+                                        .url_mut()
+                                        .query_pairs()
+                                        .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                                    if !has_api_version_already {
+                                        req.url_mut()
+                                            .query_pairs_mut()
+                                            .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                                    }
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    client.send_raw(&mut req).await?
+                                }
                                 azure_core::http::pager::PagerState::More(next_url) => {
                                     let mut url = client.endpoint().clone();
                                     url.set_path("");
@@ -15422,7 +13784,7 @@ pub mod workload_networks {
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
                                     req.set_body(azure_openapi_core::EMPTY_BODY);
-                                    client.send(&mut req).await?
+                                    client.send_raw(&mut req).await?
                                 }
                             };
                             if !rsp.status().is_success() {
@@ -15460,32 +13822,6 @@ pub mod workload_networks {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkPortMirroring> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::WorkloadNetworkPortMirroring = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -15525,11 +13861,17 @@ pub mod workload_networks {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<
+                    azure_core::http::response::Response<models::WorkloadNetworkPortMirroring, azure_core::http::JsonFormat>,
+                >,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -15542,7 +13884,12 @@ pub mod workload_networks {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<
+                            models::WorkloadNetworkPortMirroring,
+                            azure_core::http::JsonFormat,
+                        > = raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -15554,42 +13901,6 @@ pub mod workload_networks {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkPortMirroring> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::WorkloadNetworkPortMirroring = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-            pub fn headers(&self) -> Headers<'_> {
-                Headers(self.0.headers())
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
-        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
-        impl<'a> Headers<'a> {
-            #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
-            pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
-            }
-        }
         #[derive(Clone, Debug, serde :: Serialize, serde :: Deserialize)]
         #[serde(transparent)]
         pub struct Operation(pub models::WorkloadNetworkPortMirroring);
@@ -15665,11 +13976,17 @@ pub mod workload_networks {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<
+                    azure_core::http::response::Response<models::WorkloadNetworkPortMirroring, azure_core::http::JsonFormat>,
+                >,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -15683,7 +14000,12 @@ pub mod workload_networks {
                         req.insert_header("content-type", "application/json");
                         let req_body = azure_core::json::to_json(&this.workload_network_port_mirroring)?;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<
+                            models::WorkloadNetworkPortMirroring,
+                            azure_core::http::JsonFormat,
+                        > = raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -15700,7 +14022,15 @@ pub mod workload_networks {
                             use azure_core::json;
                             let (rsp, next_link) = match state {
                                 PollerState::Initial => {
-                                    let rsp = initial.clone().send().await?.into_raw_response();
+                                    let url = initial.url()?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    let rsp = client.send_raw(&mut req).await?;
                                     let next = initial.clone().url()?;
                                     (rsp, next)
                                 }
@@ -15713,7 +14043,7 @@ pub mod workload_networks {
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
                                     req.set_body(azure_openapi_core::EMPTY_BODY);
-                                    let rsp = client.send(&mut req).await?;
+                                    let rsp = client.send_raw(&mut req).await?;
                                     (rsp, next_url.clone())
                                 }
                             };
@@ -15750,46 +14080,6 @@ pub mod workload_networks {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkPortMirroring> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::WorkloadNetworkPortMirroring = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-            pub fn headers(&self) -> Headers<'_> {
-                Headers(self.0.headers())
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
-        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
-        impl<'a> Headers<'a> {
-            #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
-            pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
-            }
-            #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
-            pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
-            }
-        }
         #[derive(Clone, Debug, serde :: Serialize, serde :: Deserialize)]
         #[serde(transparent)]
         pub struct Operation(pub models::WorkloadNetworkPortMirroring);
@@ -15865,11 +14155,17 @@ pub mod workload_networks {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<
+                    azure_core::http::response::Response<models::WorkloadNetworkPortMirroring, azure_core::http::JsonFormat>,
+                >,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -15883,7 +14179,12 @@ pub mod workload_networks {
                         req.insert_header("content-type", "application/json");
                         let req_body = azure_core::json::to_json(&this.workload_network_port_mirroring)?;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<
+                            models::WorkloadNetworkPortMirroring,
+                            azure_core::http::JsonFormat,
+                        > = raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -15900,7 +14201,15 @@ pub mod workload_networks {
                             use azure_core::json;
                             let (rsp, next_link) = match state {
                                 PollerState::Initial => {
-                                    let rsp = initial.clone().send().await?.into_raw_response();
+                                    let url = initial.url()?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    let rsp = client.send_raw(&mut req).await?;
                                     let next = initial.clone().url()?;
                                     (rsp, next)
                                 }
@@ -15913,7 +14222,7 @@ pub mod workload_networks {
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
                                     req.set_body(azure_openapi_core::EMPTY_BODY);
-                                    let rsp = client.send(&mut req).await?;
+                                    let rsp = client.send_raw(&mut req).await?;
                                     (rsp, next_url.clone())
                                 }
                             };
@@ -15950,40 +14259,6 @@ pub mod workload_networks {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-            pub fn headers(&self) -> Headers<'_> {
-                Headers(self.0.headers())
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
-        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
-        impl<'a> Headers<'a> {
-            #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
-            pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
-            }
-            #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
-            pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -16022,11 +14297,8 @@ pub mod workload_networks {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            #[doc = "Returns a future that sends the request and returns the raw HTTP response."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<azure_core::http::response::RawResponse>> {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -16039,7 +14311,7 @@ pub mod workload_networks {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        this.client.send_raw(&mut req).await
                     }
                 })
             }
@@ -16051,32 +14323,6 @@ pub mod workload_networks {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkPublicIPsList> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::WorkloadNetworkPublicIPsList = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -16118,11 +14364,17 @@ pub mod workload_networks {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<
+                    azure_core::http::response::Response<models::WorkloadNetworkPublicIPsList, azure_core::http::JsonFormat>,
+                >,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -16135,7 +14387,12 @@ pub mod workload_networks {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<
+                            models::WorkloadNetworkPublicIPsList,
+                            azure_core::http::JsonFormat,
+                        > = raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -16149,7 +14406,26 @@ pub mod workload_networks {
                         let initial = initial.clone();
                         async move {
                             let rsp = match state {
-                                azure_core::http::pager::PagerState::Initial => initial.clone().send().await?.into_raw_response(),
+                                azure_core::http::pager::PagerState::Initial => {
+                                    let url = initial.url()?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    let has_api_version_already = req
+                                        .url_mut()
+                                        .query_pairs()
+                                        .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                                    if !has_api_version_already {
+                                        req.url_mut()
+                                            .query_pairs_mut()
+                                            .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                                    }
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    client.send_raw(&mut req).await?
+                                }
                                 azure_core::http::pager::PagerState::More(next_url) => {
                                     let mut url = client.endpoint().clone();
                                     url.set_path("");
@@ -16170,7 +14446,7 @@ pub mod workload_networks {
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
                                     req.set_body(azure_openapi_core::EMPTY_BODY);
-                                    client.send(&mut req).await?
+                                    client.send_raw(&mut req).await?
                                 }
                             };
                             if !rsp.status().is_success() {
@@ -16208,32 +14484,6 @@ pub mod workload_networks {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkPublicIp> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::WorkloadNetworkPublicIp = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -16276,11 +14526,15 @@ pub mod workload_networks {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<azure_core::http::response::Response<models::WorkloadNetworkPublicIp, azure_core::http::JsonFormat>>,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -16293,7 +14547,10 @@ pub mod workload_networks {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::WorkloadNetworkPublicIp, azure_core::http::JsonFormat> =
+                            raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -16305,42 +14562,6 @@ pub mod workload_networks {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkPublicIp> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::WorkloadNetworkPublicIp = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-            pub fn headers(&self) -> Headers<'_> {
-                Headers(self.0.headers())
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
-        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
-        impl<'a> Headers<'a> {
-            #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
-            pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
-            }
-        }
         #[derive(Clone, Debug, serde :: Serialize, serde :: Deserialize)]
         #[serde(transparent)]
         pub struct Operation(pub models::WorkloadNetworkPublicIp);
@@ -16419,11 +14640,15 @@ pub mod workload_networks {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<azure_core::http::response::Response<models::WorkloadNetworkPublicIp, azure_core::http::JsonFormat>>,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -16437,7 +14662,10 @@ pub mod workload_networks {
                         req.insert_header("content-type", "application/json");
                         let req_body = azure_core::json::to_json(&this.workload_network_public_ip)?;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::WorkloadNetworkPublicIp, azure_core::http::JsonFormat> =
+                            raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -16454,7 +14682,15 @@ pub mod workload_networks {
                             use azure_core::json;
                             let (rsp, next_link) = match state {
                                 PollerState::Initial => {
-                                    let rsp = initial.clone().send().await?.into_raw_response();
+                                    let url = initial.url()?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    let rsp = client.send_raw(&mut req).await?;
                                     let next = initial.clone().url()?;
                                     (rsp, next)
                                 }
@@ -16467,7 +14703,7 @@ pub mod workload_networks {
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
                                     req.set_body(azure_openapi_core::EMPTY_BODY);
-                                    let rsp = client.send(&mut req).await?;
+                                    let rsp = client.send_raw(&mut req).await?;
                                     (rsp, next_url.clone())
                                 }
                             };
@@ -16504,40 +14740,6 @@ pub mod workload_networks {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-            pub fn headers(&self) -> Headers<'_> {
-                Headers(self.0.headers())
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
-        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
-        impl<'a> Headers<'a> {
-            #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
-            pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
-            }
-            #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
-            pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -16579,11 +14781,8 @@ pub mod workload_networks {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            #[doc = "Returns a future that sends the request and returns the raw HTTP response."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<azure_core::http::response::RawResponse>> {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -16596,7 +14795,7 @@ pub mod workload_networks {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        this.client.send_raw(&mut req).await
                     }
                 })
             }
@@ -16608,32 +14807,6 @@ pub mod workload_networks {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkSegmentsList> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::WorkloadNetworkSegmentsList = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -16675,11 +14848,15 @@ pub mod workload_networks {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<azure_core::http::response::Response<models::WorkloadNetworkSegmentsList, azure_core::http::JsonFormat>>,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -16692,7 +14869,12 @@ pub mod workload_networks {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<
+                            models::WorkloadNetworkSegmentsList,
+                            azure_core::http::JsonFormat,
+                        > = raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -16706,7 +14888,26 @@ pub mod workload_networks {
                         let initial = initial.clone();
                         async move {
                             let rsp = match state {
-                                azure_core::http::pager::PagerState::Initial => initial.clone().send().await?.into_raw_response(),
+                                azure_core::http::pager::PagerState::Initial => {
+                                    let url = initial.url()?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    let has_api_version_already = req
+                                        .url_mut()
+                                        .query_pairs()
+                                        .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                                    if !has_api_version_already {
+                                        req.url_mut()
+                                            .query_pairs_mut()
+                                            .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                                    }
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    client.send_raw(&mut req).await?
+                                }
                                 azure_core::http::pager::PagerState::More(next_url) => {
                                     let mut url = client.endpoint().clone();
                                     url.set_path("");
@@ -16727,7 +14928,7 @@ pub mod workload_networks {
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
                                     req.set_body(azure_openapi_core::EMPTY_BODY);
-                                    client.send(&mut req).await?
+                                    client.send_raw(&mut req).await?
                                 }
                             };
                             if !rsp.status().is_success() {
@@ -16765,32 +14966,6 @@ pub mod workload_networks {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkSegment> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::WorkloadNetworkSegment = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -16833,11 +15008,15 @@ pub mod workload_networks {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<azure_core::http::response::Response<models::WorkloadNetworkSegment, azure_core::http::JsonFormat>>,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -16850,7 +15029,10 @@ pub mod workload_networks {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::WorkloadNetworkSegment, azure_core::http::JsonFormat> =
+                            raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -16862,42 +15044,6 @@ pub mod workload_networks {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkSegment> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::WorkloadNetworkSegment = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-            pub fn headers(&self) -> Headers<'_> {
-                Headers(self.0.headers())
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
-        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
-        impl<'a> Headers<'a> {
-            #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
-            pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
-            }
-        }
         #[derive(Clone, Debug, serde :: Serialize, serde :: Deserialize)]
         #[serde(transparent)]
         pub struct Operation(pub models::WorkloadNetworkSegment);
@@ -16976,11 +15122,15 @@ pub mod workload_networks {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<azure_core::http::response::Response<models::WorkloadNetworkSegment, azure_core::http::JsonFormat>>,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -16994,7 +15144,10 @@ pub mod workload_networks {
                         req.insert_header("content-type", "application/json");
                         let req_body = azure_core::json::to_json(&this.workload_network_segment)?;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::WorkloadNetworkSegment, azure_core::http::JsonFormat> =
+                            raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -17011,7 +15164,15 @@ pub mod workload_networks {
                             use azure_core::json;
                             let (rsp, next_link) = match state {
                                 PollerState::Initial => {
-                                    let rsp = initial.clone().send().await?.into_raw_response();
+                                    let url = initial.url()?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    let rsp = client.send_raw(&mut req).await?;
                                     let next = initial.clone().url()?;
                                     (rsp, next)
                                 }
@@ -17024,7 +15185,7 @@ pub mod workload_networks {
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
                                     req.set_body(azure_openapi_core::EMPTY_BODY);
-                                    let rsp = client.send(&mut req).await?;
+                                    let rsp = client.send_raw(&mut req).await?;
                                     (rsp, next_url.clone())
                                 }
                             };
@@ -17061,46 +15222,6 @@ pub mod workload_networks {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkSegment> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::WorkloadNetworkSegment = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-            pub fn headers(&self) -> Headers<'_> {
-                Headers(self.0.headers())
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
-        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
-        impl<'a> Headers<'a> {
-            #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
-            pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
-            }
-            #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
-            pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
-            }
-        }
         #[derive(Clone, Debug, serde :: Serialize, serde :: Deserialize)]
         #[serde(transparent)]
         pub struct Operation(pub models::WorkloadNetworkSegment);
@@ -17179,11 +15300,15 @@ pub mod workload_networks {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<azure_core::http::response::Response<models::WorkloadNetworkSegment, azure_core::http::JsonFormat>>,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -17197,7 +15322,10 @@ pub mod workload_networks {
                         req.insert_header("content-type", "application/json");
                         let req_body = azure_core::json::to_json(&this.workload_network_segment)?;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::WorkloadNetworkSegment, azure_core::http::JsonFormat> =
+                            raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -17214,7 +15342,15 @@ pub mod workload_networks {
                             use azure_core::json;
                             let (rsp, next_link) = match state {
                                 PollerState::Initial => {
-                                    let rsp = initial.clone().send().await?.into_raw_response();
+                                    let url = initial.url()?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    let rsp = client.send_raw(&mut req).await?;
                                     let next = initial.clone().url()?;
                                     (rsp, next)
                                 }
@@ -17227,7 +15363,7 @@ pub mod workload_networks {
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
                                     req.set_body(azure_openapi_core::EMPTY_BODY);
-                                    let rsp = client.send(&mut req).await?;
+                                    let rsp = client.send_raw(&mut req).await?;
                                     (rsp, next_url.clone())
                                 }
                             };
@@ -17264,40 +15400,6 @@ pub mod workload_networks {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-            pub fn headers(&self) -> Headers<'_> {
-                Headers(self.0.headers())
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
-        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
-        impl<'a> Headers<'a> {
-            #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
-            pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
-            }
-            #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
-            pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -17339,11 +15441,8 @@ pub mod workload_networks {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            #[doc = "Returns a future that sends the request and returns the raw HTTP response."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<azure_core::http::response::RawResponse>> {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -17356,7 +15455,7 @@ pub mod workload_networks {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        this.client.send_raw(&mut req).await
                     }
                 })
             }
@@ -17368,32 +15467,6 @@ pub mod workload_networks {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkVirtualMachinesList> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::WorkloadNetworkVirtualMachinesList = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -17435,11 +15508,17 @@ pub mod workload_networks {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<
+                    azure_core::http::response::Response<models::WorkloadNetworkVirtualMachinesList, azure_core::http::JsonFormat>,
+                >,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -17452,7 +15531,12 @@ pub mod workload_networks {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<
+                            models::WorkloadNetworkVirtualMachinesList,
+                            azure_core::http::JsonFormat,
+                        > = raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -17466,7 +15550,26 @@ pub mod workload_networks {
                         let initial = initial.clone();
                         async move {
                             let rsp = match state {
-                                azure_core::http::pager::PagerState::Initial => initial.clone().send().await?.into_raw_response(),
+                                azure_core::http::pager::PagerState::Initial => {
+                                    let url = initial.url()?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    let has_api_version_already = req
+                                        .url_mut()
+                                        .query_pairs()
+                                        .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                                    if !has_api_version_already {
+                                        req.url_mut()
+                                            .query_pairs_mut()
+                                            .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                                    }
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    client.send_raw(&mut req).await?
+                                }
                                 azure_core::http::pager::PagerState::More(next_url) => {
                                     let mut url = client.endpoint().clone();
                                     url.set_path("");
@@ -17487,7 +15590,7 @@ pub mod workload_networks {
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
                                     req.set_body(azure_openapi_core::EMPTY_BODY);
-                                    client.send(&mut req).await?
+                                    client.send_raw(&mut req).await?
                                 }
                             };
                             if !rsp.status().is_success() {
@@ -17525,32 +15628,6 @@ pub mod workload_networks {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkVirtualMachine> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::WorkloadNetworkVirtualMachine = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -17590,11 +15667,17 @@ pub mod workload_networks {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<
+                    azure_core::http::response::Response<models::WorkloadNetworkVirtualMachine, azure_core::http::JsonFormat>,
+                >,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -17607,7 +15690,12 @@ pub mod workload_networks {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<
+                            models::WorkloadNetworkVirtualMachine,
+                            azure_core::http::JsonFormat,
+                        > = raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -17619,32 +15707,6 @@ pub mod workload_networks {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkVmGroupsList> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::WorkloadNetworkVmGroupsList = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -17686,11 +15748,15 @@ pub mod workload_networks {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<azure_core::http::response::Response<models::WorkloadNetworkVmGroupsList, azure_core::http::JsonFormat>>,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -17703,7 +15769,12 @@ pub mod workload_networks {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<
+                            models::WorkloadNetworkVmGroupsList,
+                            azure_core::http::JsonFormat,
+                        > = raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -17717,7 +15788,26 @@ pub mod workload_networks {
                         let initial = initial.clone();
                         async move {
                             let rsp = match state {
-                                azure_core::http::pager::PagerState::Initial => initial.clone().send().await?.into_raw_response(),
+                                azure_core::http::pager::PagerState::Initial => {
+                                    let url = initial.url()?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    let has_api_version_already = req
+                                        .url_mut()
+                                        .query_pairs()
+                                        .any(|(k, _)| k == azure_core::http::headers::query_param::API_VERSION);
+                                    if !has_api_version_already {
+                                        req.url_mut()
+                                            .query_pairs_mut()
+                                            .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
+                                    }
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    client.send_raw(&mut req).await?
+                                }
                                 azure_core::http::pager::PagerState::More(next_url) => {
                                     let mut url = client.endpoint().clone();
                                     url.set_path("");
@@ -17738,7 +15828,7 @@ pub mod workload_networks {
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
                                     req.set_body(azure_openapi_core::EMPTY_BODY);
-                                    client.send(&mut req).await?
+                                    client.send_raw(&mut req).await?
                                 }
                             };
                             if !rsp.status().is_success() {
@@ -17776,32 +15866,6 @@ pub mod workload_networks {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkVmGroup> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::WorkloadNetworkVmGroup = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -17844,11 +15908,15 @@ pub mod workload_networks {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<azure_core::http::response::Response<models::WorkloadNetworkVmGroup, azure_core::http::JsonFormat>>,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -17861,7 +15929,10 @@ pub mod workload_networks {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::WorkloadNetworkVmGroup, azure_core::http::JsonFormat> =
+                            raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -17873,42 +15944,6 @@ pub mod workload_networks {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkVmGroup> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::WorkloadNetworkVmGroup = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-            pub fn headers(&self) -> Headers<'_> {
-                Headers(self.0.headers())
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
-        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
-        impl<'a> Headers<'a> {
-            #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
-            pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
-            }
-        }
         #[derive(Clone, Debug, serde :: Serialize, serde :: Deserialize)]
         #[serde(transparent)]
         pub struct Operation(pub models::WorkloadNetworkVmGroup);
@@ -17987,11 +16022,15 @@ pub mod workload_networks {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<azure_core::http::response::Response<models::WorkloadNetworkVmGroup, azure_core::http::JsonFormat>>,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -18005,7 +16044,10 @@ pub mod workload_networks {
                         req.insert_header("content-type", "application/json");
                         let req_body = azure_core::json::to_json(&this.workload_network_vm_group)?;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::WorkloadNetworkVmGroup, azure_core::http::JsonFormat> =
+                            raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -18022,7 +16064,15 @@ pub mod workload_networks {
                             use azure_core::json;
                             let (rsp, next_link) = match state {
                                 PollerState::Initial => {
-                                    let rsp = initial.clone().send().await?.into_raw_response();
+                                    let url = initial.url()?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    let rsp = client.send_raw(&mut req).await?;
                                     let next = initial.clone().url()?;
                                     (rsp, next)
                                 }
@@ -18035,7 +16085,7 @@ pub mod workload_networks {
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
                                     req.set_body(azure_openapi_core::EMPTY_BODY);
-                                    let rsp = client.send(&mut req).await?;
+                                    let rsp = client.send_raw(&mut req).await?;
                                     (rsp, next_url.clone())
                                 }
                             };
@@ -18072,46 +16122,6 @@ pub mod workload_networks {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub async fn into_body(self) -> azure_core::Result<models::WorkloadNetworkVmGroup> {
-                let (_, _, body) = self.0.deconstruct();
-                let bytes = body.collect().await?;
-                let body: models::WorkloadNetworkVmGroup = serde_json::from_slice(&bytes)?;
-                Ok(body)
-            }
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-            pub fn headers(&self) -> Headers<'_> {
-                Headers(self.0.headers())
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
-        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
-        impl<'a> Headers<'a> {
-            #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
-            pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
-            }
-            #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
-            pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
-            }
-        }
         #[derive(Clone, Debug, serde :: Serialize, serde :: Deserialize)]
         #[serde(transparent)]
         pub struct Operation(pub models::WorkloadNetworkVmGroup);
@@ -18190,11 +16200,15 @@ pub mod workload_networks {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
+            #[doc = "Returns a future that sends the request and returns a typed azure_core [`Response<T>`]."]
             #[doc = ""]
             #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            pub fn send(
+                self,
+            ) -> BoxFuture<
+                'static,
+                azure_core::Result<azure_core::http::response::Response<models::WorkloadNetworkVmGroup, azure_core::http::JsonFormat>>,
+            > {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -18208,7 +16222,10 @@ pub mod workload_networks {
                         req.insert_header("content-type", "application/json");
                         let req_body = azure_core::json::to_json(&this.workload_network_vm_group)?;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        let raw = this.client.send_raw(&mut req).await?;
+                        let response: azure_core::http::response::Response<models::WorkloadNetworkVmGroup, azure_core::http::JsonFormat> =
+                            raw.into();
+                        Ok(response)
                     }
                 })
             }
@@ -18225,7 +16242,15 @@ pub mod workload_networks {
                             use azure_core::json;
                             let (rsp, next_link) = match state {
                                 PollerState::Initial => {
-                                    let rsp = initial.clone().send().await?.into_raw_response();
+                                    let url = initial.url()?;
+                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                    let bearer_token = client.bearer_token().await?;
+                                    req.insert_header(
+                                        azure_core::http::headers::AUTHORIZATION,
+                                        format!("Bearer {}", bearer_token.secret()),
+                                    );
+                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                    let rsp = client.send_raw(&mut req).await?;
                                     let next = initial.clone().url()?;
                                     (rsp, next)
                                 }
@@ -18238,7 +16263,7 @@ pub mod workload_networks {
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
                                     req.set_body(azure_openapi_core::EMPTY_BODY);
-                                    let rsp = client.send(&mut req).await?;
+                                    let rsp = client.send_raw(&mut req).await?;
                                     (rsp, next_url.clone())
                                 }
                             };
@@ -18275,40 +16300,6 @@ pub mod workload_networks {
         use futures::future::BoxFuture;
         #[cfg(target_arch = "wasm32")]
         use futures::future::LocalBoxFuture as BoxFuture;
-        #[derive(Debug)]
-        pub struct Response(typespec_client_core::http::response::RawResponse);
-        impl Response {
-            pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                self.0
-            }
-            pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                &self.0
-            }
-            pub fn headers(&self) -> Headers<'_> {
-                Headers(self.0.headers())
-            }
-        }
-        impl From<Response> for typespec_client_core::http::response::RawResponse {
-            fn from(rsp: Response) -> Self {
-                rsp.into_raw_response()
-            }
-        }
-        impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-            fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                self.as_raw_response()
-            }
-        }
-        pub struct Headers<'a>(&'a azure_core::http::headers::Headers);
-        impl<'a> Headers<'a> {
-            #[doc = "The Location header contains the URL where the status of the long running operation can be checked."]
-            pub fn location(&self) -> azure_core::Result<&str> {
-                self.0.get_str(&azure_core::http::headers::HeaderName::from_static("location"))
-            }
-            #[doc = "The Retry-After header can indicate how long the client should wait before polling the operation status."]
-            pub fn retry_after(&self) -> azure_core::Result<i32> {
-                self.0.get_as(&azure_core::http::headers::HeaderName::from_static("retry-after"))
-            }
-        }
         #[derive(Clone)]
         #[doc = r" `RequestBuilder` provides a mechanism for setting optional parameters on a request."]
         #[doc = r""]
@@ -18350,11 +16341,8 @@ pub mod workload_networks {
                 }
                 Ok(url)
             }
-            #[doc = "Returns a future that sends the request and returns a [`Response`] object that provides low-level access to full response details."]
-            #[doc = ""]
-            #[doc = "You should typically use `.await` (which implicitly calls `IntoFuture::into_future()`) to finalize and send requests rather than `send()`."]
-            #[doc = "However, this function can provide more flexibility when required."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<Response>> {
+            #[doc = "Returns a future that sends the request and returns the raw HTTP response."]
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<azure_core::http::response::RawResponse>> {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -18367,7 +16355,7 @@ pub mod workload_networks {
                         );
                         let req_body = azure_openapi_core::EMPTY_BODY;
                         req.set_body(req_body);
-                        Ok(Response(this.client.send(&mut req).await?))
+                        this.client.send_raw(&mut req).await
                     }
                 })
             }

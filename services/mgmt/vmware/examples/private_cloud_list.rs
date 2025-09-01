@@ -36,12 +36,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     println!("  Resource Group: {resource_group_name}, Private Cloud: {private_cloud_name}");
 
                     // get cloud
-                    // let cloud:  = clouds_client
-                    //     .get(subscription_id, resource_group_name, private_cloud_name)
-                    //     .send()
-                    //     .await?
-                    //     .to_body()?;
-                    // println!("  Cloud: {cloud:?}");
+                    let cloud = clouds_client
+                        .get(subscription_id, resource_group_name, private_cloud_name)
+                        .send()
+                        .await?
+                        .into_body()
+                        .await?;
+                    println!("  Cloud: {cloud:?}");
 
                     // get clusters
                     // let mut cluster_pager = client

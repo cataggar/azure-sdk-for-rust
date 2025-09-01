@@ -1,7 +1,7 @@
 use autorust_openapi::Response;
 use indexmap::IndexMap;
 use proc_macro2::{Ident, TokenStream};
-use quote::{quote, ToTokens};
+use quote::ToTokens;
 
 use crate::spec::get_type_name_for_schema_ref;
 use crate::status_codes::get_status_code_ident;
@@ -85,67 +85,9 @@ impl ResponseCode {
 
 impl ToTokens for ResponseCode {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        tokens.extend(quote! {
-            #[derive(Debug)]
-            pub struct Response(typespec_client_core::http::response::RawResponse);
-        });
-        let body_fn = if let Some(response_type) = self.response_type() {
-            let deserialize_body = if response_type.is_bytes() {
-                quote! {
-                    let body = bytes;
-                }
-            } else if self.produces_xml() {
-                quote! {
-                    let body: #response_type = azure_core::xml::read_xml(&bytes)?;
-                }
-            } else {
-                quote! {
-                    let body: #response_type = serde_json::from_slice(&bytes)?;
-                }
-            };
-            let into_body = quote! {
-                pub async fn into_body(self) -> azure_core::Result<#response_type> {
-                    let (_, _, body) = self.0.deconstruct();
-                    let bytes = body.collect().await?;
-                    #deserialize_body
-                    Ok(body)
-                }
-            };
-            into_body
-        } else {
-            quote! {}
-        };
-
-        let headers_fn = if self.headers.has_headers() {
-            // Use explicit elided lifetime in return type to avoid mismatched_lifetime_syntaxes warnings.
-            quote! { pub fn headers(&self) -> Headers<'_> { Headers(self.0.headers()) } }
-        } else {
-            quote! {}
-        };
-
-        tokens.extend(quote! {
-            impl Response {
-                #body_fn
-                pub fn into_raw_response(self) -> typespec_client_core::http::response::RawResponse {
-                    self.0
-                }
-                pub fn as_raw_response(&self) -> &typespec_client_core::http::response::RawResponse {
-                    &self.0
-                }
-                #headers_fn
-            }
-            impl From<Response> for typespec_client_core::http::response::RawResponse {
-                fn from(rsp: Response) -> Self {
-                    rsp.into_raw_response()
-                }
-            }
-            impl AsRef<typespec_client_core::http::response::RawResponse> for Response {
-                fn as_ref(&self) -> &typespec_client_core::http::response::RawResponse {
-                    self.as_raw_response()
-                }
-            }
-        });
-        tokens.extend(self.headers.to_token_stream());
+        // Do not emit a per-operation custom Response wrapper anymore.
+        // Also omit header convenience accessors.
+        let _ = tokens;
     }
 }
 

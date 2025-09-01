@@ -62,7 +62,7 @@ impl ToTokens for RequestBuilderIntoFutureCode {
                                         let mut req = azure_core::http::Request::new(url.clone(), azure_core::http::Method::Get);
                                         let bearer_token = self.client.bearer_token().await?;
                                         req.insert_header(azure_core::http::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                        let response = self.client.send(&mut req).await?;
+                                        let response = self.client.send_raw(&mut req).await?;
                                         let headers = response.headers();
                                         let retry_after = get_retry_after(headers);
                                         let bytes = response.into_body().collect().await?;
@@ -75,8 +75,12 @@ impl ToTokens for RequestBuilderIntoFutureCode {
                                                 let mut req = azure_core::http::Request::new(self.url()?, azure_core::http::Method::Get);
                                                 let bearer_token = self.client.bearer_token().await?;
                                                 req.insert_header(azure_core::http::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                                let response = self.client.send(&mut req).await?;
-                                                return Response(response).into_body().await
+                                                let raw = self.client.send_raw(&mut req).await?;
+                                                let (status, headers, body) = raw.deconstruct();
+                                                let bytes = body.collect().await?;
+                                                let raw_back = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
+                                                let response: azure_core::http::response::Response<#response_type, azure_core::http::JsonFormat> = raw_back.into();
+                                                return response.into_body().collect().await.map_err(Into::into)
                                             }
                                             LroStatus::Failed => return Err(Error::message(ErrorKind::Other, "Long running operation failed".to_string())),
                                             LroStatus::Canceled => return Err(Error::message(ErrorKind::Other, "Long running operation canceled".to_string())),
@@ -121,9 +125,11 @@ impl ToTokens for RequestBuilderIntoFutureCode {
                             loop {
                                 let this = self.clone();
                                 let response = this.send().await?;
-                                let retry_after = get_retry_after(response.as_raw_response().headers());
-                                let status = response.as_raw_response().status();
-                                let body = response.into_body().await?;
+                                let raw: typespec_client_core::http::response::RawResponse = response.into();
+                                let retry_after = get_retry_after(raw.headers());
+                                let status = raw.status();
+                                let bytes = raw.into_body().collect().await?;
+                                let body = serde_json::from_slice(&bytes)?;
                                 let provisioning_state = get_provisioning_state(status, &body)?;
                                 log::trace!("current provisioning_state: {provisioning_state:?}");
                                 match provisioning_state {
