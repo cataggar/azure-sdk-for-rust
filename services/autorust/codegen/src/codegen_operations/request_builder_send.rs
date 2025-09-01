@@ -136,102 +136,102 @@ impl ToTokens for RequestBuilderSendCode {
                 if let Some(continuable_param) = get_continuable_param(next_link_name, request_builder) {
                     // Continuation token provided as a query parameter; build subsequent requests by reusing the builder and setting the token.
                     quote! {
-                        #[doc = "Return a Pager over pages"]
-                        fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<#response_type>> {
-                            let client = self.client.clone();
-                            let initial = self.clone();
-                            Ok(azure_core::http::pager::Pager::from_callback(move |state: azure_core::http::pager::PagerState<String>| {
-                                let client = client.clone();
-                                let initial = initial.clone();
-                                async move {
-                                    let rsp = match state {
-                                        azure_core::http::pager::PagerState::Initial => {
-                                            initial.clone().send().await?.into_raw_response()
+                                #[doc = "Return a Pager over pages"]
+                    pub fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<#response_type>> {
+                                    let client = self.client.clone();
+                                    let initial = self.clone();
+                                    Ok(azure_core::http::pager::Pager::from_callback(move |state: azure_core::http::pager::PagerState<String>| {
+                                        let client = client.clone();
+                                        let initial = initial.clone();
+                                        async move {
+                                            let rsp = match state {
+                                                azure_core::http::pager::PagerState::Initial => {
+                                                    initial.clone().send().await?.into_raw_response()
+                                                }
+                                                azure_core::http::pager::PagerState::More(token) => {
+                                                    let url = initial.url()?;
+                                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                                    let bearer_token = client.bearer_token().await?;
+                                                    req.insert_header(azure_core::http::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                                    #stream_api_version
+                                                    req.url_mut().query_pairs_mut().append_pair(#continuable_param, token.as_ref());
+                                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                                    client.send(&mut req).await?
+                                                }
+                                            };
+                                            if !rsp.status().is_success() {
+                                                return Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse { status: rsp.status(), error_code: None }));
+                                            }
+                                            let (status, headers, body) = rsp.deconstruct();
+                                            let bytes = body.collect().await?;
+                                            let page: #response_type = serde_json::from_slice(&bytes)?;
+                                            // Clone bytes before moving into RawResponse so we can parse continuation after.
+                                            let bytes_for_json = bytes.clone();
+                                            let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
+                                            let response: azure_core::http::response::Response<#response_type, azure_core::http::JsonFormat> = raw.into();
+                                            // Extract continuation from the JSON field specified by x-ms-pageable.nextLinkName
+                                            let continuation = serde_json::from_slice::<serde_json::Value>(&bytes_for_json)
+                                                .ok()
+                                                .and_then(|v| v.get(#next_link_name).and_then(|x| x.as_str()).map(|s| s.to_string()))
+                                                .filter(|s| !s.is_empty());
+                                            Ok(match continuation {
+                                                Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
+                                                None => azure_core::http::pager::PagerResult::Done { response },
+                                            })
                                         }
-                                        azure_core::http::pager::PagerState::More(token) => {
-                                            let url = initial.url()?;
-                                            let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
-                                            let bearer_token = client.bearer_token().await?;
-                                            req.insert_header(azure_core::http::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                            #stream_api_version
-                                            req.url_mut().query_pairs_mut().append_pair(#continuable_param, token.as_ref());
-                                            req.set_body(azure_openapi_core::EMPTY_BODY);
-                                            client.send(&mut req).await?
-                                        }
-                                    };
-                                    if !rsp.status().is_success() {
-                                        return Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse { status: rsp.status(), error_code: None }));
-                                    }
-                                    let (status, headers, body) = rsp.deconstruct();
-                                    let bytes = body.collect().await?;
-                                    let page: #response_type = serde_json::from_slice(&bytes)?;
-                                    // Clone bytes before moving into RawResponse so we can parse continuation after.
-                                    let bytes_for_json = bytes.clone();
-                                    let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
-                                    let response: azure_core::http::response::Response<#response_type, azure_core::http::JsonFormat> = raw.into();
-                                    // Extract continuation from the JSON field specified by x-ms-pageable.nextLinkName
-                                    let continuation = serde_json::from_slice::<serde_json::Value>(&bytes_for_json)
-                                        .ok()
-                                        .and_then(|v| v.get(#next_link_name).and_then(|x| x.as_str()).map(|s| s.to_string()))
-                                        .filter(|s| !s.is_empty());
-                                    Ok(match continuation {
-                                        Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
-                                        None => azure_core::http::pager::PagerResult::Done { response },
-                                    })
+                                    }))
                                 }
-                            }))
-                        }
-                    }
+                            }
                 } else {
                     // Continuation link provided as a URL in the response body (next link); build subsequent requests from the absolute/relative URL.
                     quote! {
-                        #[doc = "Return a Pager over pages"]
-                        fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<#response_type>> {
-                            let client = self.client.clone();
-                            let initial = self.clone();
-                            Ok(azure_core::http::pager::Pager::from_callback(move |state: azure_core::http::pager::PagerState<String>| {
-                                let client = client.clone();
-                                let initial = initial.clone();
-                                async move {
-                                    let rsp = match state {
-                                        azure_core::http::pager::PagerState::Initial => {
-                                            initial.clone().send().await?.into_raw_response()
+                                #[doc = "Return a Pager over pages"]
+                    pub fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<#response_type>> {
+                                    let client = self.client.clone();
+                                    let initial = self.clone();
+                                    Ok(azure_core::http::pager::Pager::from_callback(move |state: azure_core::http::pager::PagerState<String>| {
+                                        let client = client.clone();
+                                        let initial = initial.clone();
+                                        async move {
+                                            let rsp = match state {
+                                                azure_core::http::pager::PagerState::Initial => {
+                                                    initial.clone().send().await?.into_raw_response()
+                                                }
+                                                azure_core::http::pager::PagerState::More(next_url) => {
+                                                    let mut url = client.endpoint().clone();
+                                                    url.set_path("");
+                                                    let url = url.join(next_url.as_ref())?;
+                                                    let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
+                                                    let bearer_token = client.bearer_token().await?;
+                                                    req.insert_header(azure_core::http::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
+                                                    #stream_api_version
+                                                    req.set_body(azure_openapi_core::EMPTY_BODY);
+                                                    client.send(&mut req).await?
+                                                }
+                                            };
+                                            if !rsp.status().is_success() {
+                                                return Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse { status: rsp.status(), error_code: None }));
+                                            }
+                                            let (status, headers, body) = rsp.deconstruct();
+                                            let bytes = body.collect().await?;
+                                            let page: #response_type = serde_json::from_slice(&bytes)?;
+                                            // Clone bytes before moving into RawResponse so we can parse continuation after.
+                                            let bytes_for_json = bytes.clone();
+                                            let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
+                                            let response: azure_core::http::response::Response<#response_type, azure_core::http::JsonFormat> = raw.into();
+                                            // Extract continuation from the JSON field specified by x-ms-pageable.nextLinkName
+                                            let continuation = serde_json::from_slice::<serde_json::Value>(&bytes_for_json)
+                                                .ok()
+                                                .and_then(|v| v.get(#next_link_name).and_then(|x| x.as_str()).map(|s| s.to_string()))
+                                                .filter(|s| !s.is_empty());
+                                            Ok(match continuation {
+                                                Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
+                                                None => azure_core::http::pager::PagerResult::Done { response },
+                                            })
                                         }
-                                        azure_core::http::pager::PagerState::More(next_url) => {
-                                            let mut url = client.endpoint().clone();
-                                            url.set_path("");
-                                            let url = url.join(next_url.as_ref())?;
-                                            let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
-                                            let bearer_token = client.bearer_token().await?;
-                                            req.insert_header(azure_core::http::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                            #stream_api_version
-                                            req.set_body(azure_openapi_core::EMPTY_BODY);
-                                            client.send(&mut req).await?
-                                        }
-                                    };
-                                    if !rsp.status().is_success() {
-                                        return Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse { status: rsp.status(), error_code: None }));
-                                    }
-                                    let (status, headers, body) = rsp.deconstruct();
-                                    let bytes = body.collect().await?;
-                                    let page: #response_type = serde_json::from_slice(&bytes)?;
-                                    // Clone bytes before moving into RawResponse so we can parse continuation after.
-                                    let bytes_for_json = bytes.clone();
-                                    let raw = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes);
-                                    let response: azure_core::http::response::Response<#response_type, azure_core::http::JsonFormat> = raw.into();
-                                    // Extract continuation from the JSON field specified by x-ms-pageable.nextLinkName
-                                    let continuation = serde_json::from_slice::<serde_json::Value>(&bytes_for_json)
-                                        .ok()
-                                        .and_then(|v| v.get(#next_link_name).and_then(|x| x.as_str()).map(|s| s.to_string()))
-                                        .filter(|s| !s.is_empty());
-                                    Ok(match continuation {
-                                        Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
-                                        None => azure_core::http::pager::PagerResult::Done { response },
-                                    })
+                                    }))
                                 }
-                            }))
-                        }
-                    }
+                            }
                 }
             } else {
                 // most often when this happens, the continuation token is provided

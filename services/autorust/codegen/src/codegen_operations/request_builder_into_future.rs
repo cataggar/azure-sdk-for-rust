@@ -24,25 +24,10 @@ impl RequestBuilderIntoFutureCode {
 /// Adds the `IntoFuture` implementation to the `RequestBuilder` struct.
 impl ToTokens for RequestBuilderIntoFutureCode {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        // If response is pageable, implement IntoFuture to produce a Pager.
+        // Avoid unused variable warnings when we early-return without generating tokens
+        let _ = tokens;
+        // If response is pageable, do not emit IntoFuture. Users should call `.pager()` explicitly.
         if let Some(_pageable) = &self.response_code.pageable {
-            if let Some(response_type) = self.response_code.response_type() {
-                let into_future = quote! {
-                    impl std::future::IntoFuture for RequestBuilder {
-                        type Output = azure_core::Result<azure_core::http::pager::Pager<#response_type>>;
-                        type IntoFuture = BoxFuture<'static, azure_core::Result<azure_core::http::pager::Pager<#response_type>>>;
-                        #[doc = "Returns a future that builds and returns a Pager for this request."]
-                        #[doc = ""]
-                        #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
-                        #[doc = ""]
-                        #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
-                        fn into_future(self) -> Self::IntoFuture {
-                            Box::pin(async move { self.pager() })
-                        }
-                    }
-                };
-                tokens.extend(into_future);
-            }
             return;
         }
 

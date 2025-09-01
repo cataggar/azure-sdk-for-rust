@@ -20,7 +20,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let client = azure_mgmt_vmware::Client::builder(credential).build()?;
 
     let mut count = 0;
-    let mut pager = client.private_clouds_client().list_in_subscription(subscription_id).await?;
+    let mut pager = client.private_clouds_client().list_in_subscription(subscription_id).pager()?;
     while let Some(cloud) = pager.try_next().await? {
         count += 1;
         let resource_id = cloud.tracked_resource.resource.id;
