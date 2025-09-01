@@ -267,8 +267,8 @@ pub mod operations {
                     }
                 })
             }
-            #[doc = "Return a Pager over pages (experimental)"]
-            pub fn into_pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::OperationListResult>> {
+            #[doc = "Return a Pager over pages"]
+            fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::OperationListResult>> {
                 let client = self.client.clone();
                 let initial = self.clone();
                 Ok(azure_core::http::pager::Pager::from_callback(
@@ -325,6 +325,18 @@ pub mod operations {
                         }
                     },
                 ))
+            }
+        }
+        impl std::future::IntoFuture for RequestBuilder {
+            type Output = azure_core::Result<azure_core::http::pager::Pager<models::OperationListResult>>;
+            type IntoFuture = BoxFuture<'static, azure_core::Result<azure_core::http::pager::Pager<models::OperationListResult>>>;
+            #[doc = "Returns a future that builds and returns a Pager for this request."]
+            #[doc = ""]
+            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
+            #[doc = ""]
+            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
+            fn into_future(self) -> Self::IntoFuture {
+                Box::pin(async move { self.pager() })
             }
         }
     }
@@ -836,8 +848,8 @@ pub mod private_clouds {
                     }
                 })
             }
-            #[doc = "Return a Pager over pages (experimental)"]
-            pub fn into_pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::PrivateCloudList>> {
+            #[doc = "Return a Pager over pages"]
+            fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::PrivateCloudList>> {
                 let client = self.client.clone();
                 let initial = self.clone();
                 Ok(azure_core::http::pager::Pager::from_callback(
@@ -894,6 +906,18 @@ pub mod private_clouds {
                         }
                     },
                 ))
+            }
+        }
+        impl std::future::IntoFuture for RequestBuilder {
+            type Output = azure_core::Result<azure_core::http::pager::Pager<models::PrivateCloudList>>;
+            type IntoFuture = BoxFuture<'static, azure_core::Result<azure_core::http::pager::Pager<models::PrivateCloudList>>>;
+            #[doc = "Returns a future that builds and returns a Pager for this request."]
+            #[doc = ""]
+            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
+            #[doc = ""]
+            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
+            fn into_future(self) -> Self::IntoFuture {
+                Box::pin(async move { self.pager() })
             }
         }
     }
@@ -990,8 +1014,8 @@ pub mod private_clouds {
                     }
                 })
             }
-            #[doc = "Return a Pager over pages (experimental)"]
-            pub fn into_pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::PrivateCloudList>> {
+            #[doc = "Return a Pager over pages"]
+            fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::PrivateCloudList>> {
                 let client = self.client.clone();
                 let initial = self.clone();
                 Ok(azure_core::http::pager::Pager::from_callback(
@@ -1048,6 +1072,18 @@ pub mod private_clouds {
                         }
                     },
                 ))
+            }
+        }
+        impl std::future::IntoFuture for RequestBuilder {
+            type Output = azure_core::Result<azure_core::http::pager::Pager<models::PrivateCloudList>>;
+            type IntoFuture = BoxFuture<'static, azure_core::Result<azure_core::http::pager::Pager<models::PrivateCloudList>>>;
+            #[doc = "Returns a future that builds and returns a Pager for this request."]
+            #[doc = ""]
+            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
+            #[doc = ""]
+            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
+            fn into_future(self) -> Self::IntoFuture {
+                Box::pin(async move { self.pager() })
             }
         }
     }
@@ -1882,8 +1918,8 @@ pub mod skus {
                     }
                 })
             }
-            #[doc = "Return a Pager over pages (experimental)"]
-            pub fn into_pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::PagedResourceSku>> {
+            #[doc = "Return a Pager over pages"]
+            fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::PagedResourceSku>> {
                 let client = self.client.clone();
                 let initial = self.clone();
                 Ok(azure_core::http::pager::Pager::from_callback(
@@ -1940,6 +1976,18 @@ pub mod skus {
                         }
                     },
                 ))
+            }
+        }
+        impl std::future::IntoFuture for RequestBuilder {
+            type Output = azure_core::Result<azure_core::http::pager::Pager<models::PagedResourceSku>>;
+            type IntoFuture = BoxFuture<'static, azure_core::Result<azure_core::http::pager::Pager<models::PagedResourceSku>>>;
+            #[doc = "Returns a future that builds and returns a Pager for this request."]
+            #[doc = ""]
+            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
+            #[doc = ""]
+            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
+            fn into_future(self) -> Self::IntoFuture {
+                Box::pin(async move { self.pager() })
             }
         }
     }
@@ -2135,8 +2183,8 @@ pub mod addons {
                     }
                 })
             }
-            #[doc = "Return a Pager over pages (experimental)"]
-            pub fn into_pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::AddonList>> {
+            #[doc = "Return a Pager over pages"]
+            fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::AddonList>> {
                 let client = self.client.clone();
                 let initial = self.clone();
                 Ok(azure_core::http::pager::Pager::from_callback(
@@ -2193,6 +2241,18 @@ pub mod addons {
                         }
                     },
                 ))
+            }
+        }
+        impl std::future::IntoFuture for RequestBuilder {
+            type Output = azure_core::Result<azure_core::http::pager::Pager<models::AddonList>>;
+            type IntoFuture = BoxFuture<'static, azure_core::Result<azure_core::http::pager::Pager<models::AddonList>>>;
+            #[doc = "Returns a future that builds and returns a Pager for this request."]
+            #[doc = ""]
+            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
+            #[doc = ""]
+            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
+            fn into_future(self) -> Self::IntoFuture {
+                Box::pin(async move { self.pager() })
             }
         }
     }
@@ -2697,8 +2757,8 @@ pub mod authorizations {
                     }
                 })
             }
-            #[doc = "Return a Pager over pages (experimental)"]
-            pub fn into_pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::ExpressRouteAuthorizationList>> {
+            #[doc = "Return a Pager over pages"]
+            fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::ExpressRouteAuthorizationList>> {
                 let client = self.client.clone();
                 let initial = self.clone();
                 Ok(azure_core::http::pager::Pager::from_callback(
@@ -2757,6 +2817,18 @@ pub mod authorizations {
                         }
                     },
                 ))
+            }
+        }
+        impl std::future::IntoFuture for RequestBuilder {
+            type Output = azure_core::Result<azure_core::http::pager::Pager<models::ExpressRouteAuthorizationList>>;
+            type IntoFuture = BoxFuture<'static, azure_core::Result<azure_core::http::pager::Pager<models::ExpressRouteAuthorizationList>>>;
+            #[doc = "Returns a future that builds and returns a Pager for this request."]
+            #[doc = ""]
+            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
+            #[doc = ""]
+            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
+            fn into_future(self) -> Self::IntoFuture {
+                Box::pin(async move { self.pager() })
             }
         }
     }
@@ -3261,8 +3333,8 @@ pub mod cloud_links {
                     }
                 })
             }
-            #[doc = "Return a Pager over pages (experimental)"]
-            pub fn into_pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::CloudLinkList>> {
+            #[doc = "Return a Pager over pages"]
+            fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::CloudLinkList>> {
                 let client = self.client.clone();
                 let initial = self.clone();
                 Ok(azure_core::http::pager::Pager::from_callback(
@@ -3319,6 +3391,18 @@ pub mod cloud_links {
                         }
                     },
                 ))
+            }
+        }
+        impl std::future::IntoFuture for RequestBuilder {
+            type Output = azure_core::Result<azure_core::http::pager::Pager<models::CloudLinkList>>;
+            type IntoFuture = BoxFuture<'static, azure_core::Result<azure_core::http::pager::Pager<models::CloudLinkList>>>;
+            #[doc = "Returns a future that builds and returns a Pager for this request."]
+            #[doc = ""]
+            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
+            #[doc = ""]
+            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
+            fn into_future(self) -> Self::IntoFuture {
+                Box::pin(async move { self.pager() })
             }
         }
     }
@@ -3870,8 +3954,8 @@ pub mod clusters {
                     }
                 })
             }
-            #[doc = "Return a Pager over pages (experimental)"]
-            pub fn into_pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::ClusterList>> {
+            #[doc = "Return a Pager over pages"]
+            fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::ClusterList>> {
                 let client = self.client.clone();
                 let initial = self.clone();
                 Ok(azure_core::http::pager::Pager::from_callback(
@@ -3928,6 +4012,18 @@ pub mod clusters {
                         }
                     },
                 ))
+            }
+        }
+        impl std::future::IntoFuture for RequestBuilder {
+            type Output = azure_core::Result<azure_core::http::pager::Pager<models::ClusterList>>;
+            type IntoFuture = BoxFuture<'static, azure_core::Result<azure_core::http::pager::Pager<models::ClusterList>>>;
+            #[doc = "Returns a future that builds and returns a Pager for this request."]
+            #[doc = ""]
+            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
+            #[doc = ""]
+            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
+            fn into_future(self) -> Self::IntoFuture {
+                Box::pin(async move { self.pager() })
             }
         }
     }
@@ -4655,8 +4751,8 @@ pub mod datastores {
                     }
                 })
             }
-            #[doc = "Return a Pager over pages (experimental)"]
-            pub fn into_pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::DatastoreList>> {
+            #[doc = "Return a Pager over pages"]
+            fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::DatastoreList>> {
                 let client = self.client.clone();
                 let initial = self.clone();
                 Ok(azure_core::http::pager::Pager::from_callback(
@@ -4713,6 +4809,18 @@ pub mod datastores {
                         }
                     },
                 ))
+            }
+        }
+        impl std::future::IntoFuture for RequestBuilder {
+            type Output = azure_core::Result<azure_core::http::pager::Pager<models::DatastoreList>>;
+            type IntoFuture = BoxFuture<'static, azure_core::Result<azure_core::http::pager::Pager<models::DatastoreList>>>;
+            #[doc = "Returns a future that builds and returns a Pager for this request."]
+            #[doc = ""]
+            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
+            #[doc = ""]
+            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
+            fn into_future(self) -> Self::IntoFuture {
+                Box::pin(async move { self.pager() })
             }
         }
     }
@@ -5180,8 +5288,8 @@ pub mod hosts {
                     }
                 })
             }
-            #[doc = "Return a Pager over pages (experimental)"]
-            pub fn into_pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::HostListResult>> {
+            #[doc = "Return a Pager over pages"]
+            fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::HostListResult>> {
                 let client = self.client.clone();
                 let initial = self.clone();
                 Ok(azure_core::http::pager::Pager::from_callback(
@@ -5238,6 +5346,18 @@ pub mod hosts {
                         }
                     },
                 ))
+            }
+        }
+        impl std::future::IntoFuture for RequestBuilder {
+            type Output = azure_core::Result<azure_core::http::pager::Pager<models::HostListResult>>;
+            type IntoFuture = BoxFuture<'static, azure_core::Result<azure_core::http::pager::Pager<models::HostListResult>>>;
+            #[doc = "Returns a future that builds and returns a Pager for this request."]
+            #[doc = ""]
+            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
+            #[doc = ""]
+            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
+            fn into_future(self) -> Self::IntoFuture {
+                Box::pin(async move { self.pager() })
             }
         }
     }
@@ -5572,8 +5692,8 @@ pub mod placement_policies {
                     }
                 })
             }
-            #[doc = "Return a Pager over pages (experimental)"]
-            pub fn into_pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::PlacementPoliciesList>> {
+            #[doc = "Return a Pager over pages"]
+            fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::PlacementPoliciesList>> {
                 let client = self.client.clone();
                 let initial = self.clone();
                 Ok(azure_core::http::pager::Pager::from_callback(
@@ -5632,6 +5752,18 @@ pub mod placement_policies {
                         }
                     },
                 ))
+            }
+        }
+        impl std::future::IntoFuture for RequestBuilder {
+            type Output = azure_core::Result<azure_core::http::pager::Pager<models::PlacementPoliciesList>>;
+            type IntoFuture = BoxFuture<'static, azure_core::Result<azure_core::http::pager::Pager<models::PlacementPoliciesList>>>;
+            #[doc = "Returns a future that builds and returns a Pager for this request."]
+            #[doc = ""]
+            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
+            #[doc = ""]
+            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
+            fn into_future(self) -> Self::IntoFuture {
+                Box::pin(async move { self.pager() })
             }
         }
     }
@@ -6256,8 +6388,8 @@ pub mod virtual_machines {
                     }
                 })
             }
-            #[doc = "Return a Pager over pages (experimental)"]
-            pub fn into_pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::VirtualMachinesList>> {
+            #[doc = "Return a Pager over pages"]
+            fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::VirtualMachinesList>> {
                 let client = self.client.clone();
                 let initial = self.clone();
                 Ok(azure_core::http::pager::Pager::from_callback(
@@ -6314,6 +6446,18 @@ pub mod virtual_machines {
                         }
                     },
                 ))
+            }
+        }
+        impl std::future::IntoFuture for RequestBuilder {
+            type Output = azure_core::Result<azure_core::http::pager::Pager<models::VirtualMachinesList>>;
+            type IntoFuture = BoxFuture<'static, azure_core::Result<azure_core::http::pager::Pager<models::VirtualMachinesList>>>;
+            #[doc = "Returns a future that builds and returns a Pager for this request."]
+            #[doc = ""]
+            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
+            #[doc = ""]
+            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
+            fn into_future(self) -> Self::IntoFuture {
+                Box::pin(async move { self.pager() })
             }
         }
     }
@@ -6715,8 +6859,8 @@ pub mod global_reach_connections {
                     }
                 })
             }
-            #[doc = "Return a Pager over pages (experimental)"]
-            pub fn into_pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::GlobalReachConnectionList>> {
+            #[doc = "Return a Pager over pages"]
+            fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::GlobalReachConnectionList>> {
                 let client = self.client.clone();
                 let initial = self.clone();
                 Ok(azure_core::http::pager::Pager::from_callback(
@@ -6775,6 +6919,18 @@ pub mod global_reach_connections {
                         }
                     },
                 ))
+            }
+        }
+        impl std::future::IntoFuture for RequestBuilder {
+            type Output = azure_core::Result<azure_core::http::pager::Pager<models::GlobalReachConnectionList>>;
+            type IntoFuture = BoxFuture<'static, azure_core::Result<azure_core::http::pager::Pager<models::GlobalReachConnectionList>>>;
+            #[doc = "Returns a future that builds and returns a Pager for this request."]
+            #[doc = ""]
+            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
+            #[doc = ""]
+            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
+            fn into_future(self) -> Self::IntoFuture {
+                Box::pin(async move { self.pager() })
             }
         }
     }
@@ -7279,8 +7435,8 @@ pub mod hcx_enterprise_sites {
                     }
                 })
             }
-            #[doc = "Return a Pager over pages (experimental)"]
-            pub fn into_pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::HcxEnterpriseSiteList>> {
+            #[doc = "Return a Pager over pages"]
+            fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::HcxEnterpriseSiteList>> {
                 let client = self.client.clone();
                 let initial = self.clone();
                 Ok(azure_core::http::pager::Pager::from_callback(
@@ -7339,6 +7495,18 @@ pub mod hcx_enterprise_sites {
                         }
                     },
                 ))
+            }
+        }
+        impl std::future::IntoFuture for RequestBuilder {
+            type Output = azure_core::Result<azure_core::http::pager::Pager<models::HcxEnterpriseSiteList>>;
+            type IntoFuture = BoxFuture<'static, azure_core::Result<azure_core::http::pager::Pager<models::HcxEnterpriseSiteList>>>;
+            #[doc = "Returns a future that builds and returns a Pager for this request."]
+            #[doc = ""]
+            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
+            #[doc = ""]
+            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
+            fn into_future(self) -> Self::IntoFuture {
+                Box::pin(async move { self.pager() })
             }
         }
     }
@@ -7812,8 +7980,8 @@ pub mod iscsi_paths {
                     }
                 })
             }
-            #[doc = "Return a Pager over pages (experimental)"]
-            pub fn into_pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::IscsiPathListResult>> {
+            #[doc = "Return a Pager over pages"]
+            fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::IscsiPathListResult>> {
                 let client = self.client.clone();
                 let initial = self.clone();
                 Ok(azure_core::http::pager::Pager::from_callback(
@@ -7870,6 +8038,18 @@ pub mod iscsi_paths {
                         }
                     },
                 ))
+            }
+        }
+        impl std::future::IntoFuture for RequestBuilder {
+            type Output = azure_core::Result<azure_core::http::pager::Pager<models::IscsiPathListResult>>;
+            type IntoFuture = BoxFuture<'static, azure_core::Result<azure_core::http::pager::Pager<models::IscsiPathListResult>>>;
+            #[doc = "Returns a future that builds and returns a Pager for this request."]
+            #[doc = ""]
+            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
+            #[doc = ""]
+            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
+            fn into_future(self) -> Self::IntoFuture {
+                Box::pin(async move { self.pager() })
             }
         }
     }
@@ -8324,8 +8504,8 @@ pub mod provisioned_networks {
                     }
                 })
             }
-            #[doc = "Return a Pager over pages (experimental)"]
-            pub fn into_pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::ProvisionedNetworkListResult>> {
+            #[doc = "Return a Pager over pages"]
+            fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::ProvisionedNetworkListResult>> {
                 let client = self.client.clone();
                 let initial = self.clone();
                 Ok(azure_core::http::pager::Pager::from_callback(
@@ -8384,6 +8564,18 @@ pub mod provisioned_networks {
                         }
                     },
                 ))
+            }
+        }
+        impl std::future::IntoFuture for RequestBuilder {
+            type Output = azure_core::Result<azure_core::http::pager::Pager<models::ProvisionedNetworkListResult>>;
+            type IntoFuture = BoxFuture<'static, azure_core::Result<azure_core::http::pager::Pager<models::ProvisionedNetworkListResult>>>;
+            #[doc = "Returns a future that builds and returns a Pager for this request."]
+            #[doc = ""]
+            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
+            #[doc = ""]
+            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
+            fn into_future(self) -> Self::IntoFuture {
+                Box::pin(async move { self.pager() })
             }
         }
     }
@@ -8676,8 +8868,8 @@ pub mod pure_storage_policies {
                     }
                 })
             }
-            #[doc = "Return a Pager over pages (experimental)"]
-            pub fn into_pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::PureStoragePolicyListResult>> {
+            #[doc = "Return a Pager over pages"]
+            fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::PureStoragePolicyListResult>> {
                 let client = self.client.clone();
                 let initial = self.clone();
                 Ok(azure_core::http::pager::Pager::from_callback(
@@ -8736,6 +8928,18 @@ pub mod pure_storage_policies {
                         }
                     },
                 ))
+            }
+        }
+        impl std::future::IntoFuture for RequestBuilder {
+            type Output = azure_core::Result<azure_core::http::pager::Pager<models::PureStoragePolicyListResult>>;
+            type IntoFuture = BoxFuture<'static, azure_core::Result<azure_core::http::pager::Pager<models::PureStoragePolicyListResult>>>;
+            #[doc = "Returns a future that builds and returns a Pager for this request."]
+            #[doc = ""]
+            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
+            #[doc = ""]
+            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
+            fn into_future(self) -> Self::IntoFuture {
+                Box::pin(async move { self.pager() })
             }
         }
     }
@@ -9268,8 +9472,8 @@ pub mod script_executions {
                     }
                 })
             }
-            #[doc = "Return a Pager over pages (experimental)"]
-            pub fn into_pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::ScriptExecutionsList>> {
+            #[doc = "Return a Pager over pages"]
+            fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::ScriptExecutionsList>> {
                 let client = self.client.clone();
                 let initial = self.clone();
                 Ok(azure_core::http::pager::Pager::from_callback(
@@ -9326,6 +9530,18 @@ pub mod script_executions {
                         }
                     },
                 ))
+            }
+        }
+        impl std::future::IntoFuture for RequestBuilder {
+            type Output = azure_core::Result<azure_core::http::pager::Pager<models::ScriptExecutionsList>>;
+            type IntoFuture = BoxFuture<'static, azure_core::Result<azure_core::http::pager::Pager<models::ScriptExecutionsList>>>;
+            #[doc = "Returns a future that builds and returns a Pager for this request."]
+            #[doc = ""]
+            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
+            #[doc = ""]
+            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
+            fn into_future(self) -> Self::IntoFuture {
+                Box::pin(async move { self.pager() })
             }
         }
     }
@@ -9887,8 +10103,8 @@ pub mod script_packages {
                     }
                 })
             }
-            #[doc = "Return a Pager over pages (experimental)"]
-            pub fn into_pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::ScriptPackagesList>> {
+            #[doc = "Return a Pager over pages"]
+            fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::ScriptPackagesList>> {
                 let client = self.client.clone();
                 let initial = self.clone();
                 Ok(azure_core::http::pager::Pager::from_callback(
@@ -9945,6 +10161,18 @@ pub mod script_packages {
                         }
                     },
                 ))
+            }
+        }
+        impl std::future::IntoFuture for RequestBuilder {
+            type Output = azure_core::Result<azure_core::http::pager::Pager<models::ScriptPackagesList>>;
+            type IntoFuture = BoxFuture<'static, azure_core::Result<azure_core::http::pager::Pager<models::ScriptPackagesList>>>;
+            #[doc = "Returns a future that builds and returns a Pager for this request."]
+            #[doc = ""]
+            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
+            #[doc = ""]
+            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
+            fn into_future(self) -> Self::IntoFuture {
+                Box::pin(async move { self.pager() })
             }
         }
     }
@@ -10197,8 +10425,8 @@ pub mod script_cmdlets {
                     }
                 })
             }
-            #[doc = "Return a Pager over pages (experimental)"]
-            pub fn into_pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::ScriptCmdletsList>> {
+            #[doc = "Return a Pager over pages"]
+            fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::ScriptCmdletsList>> {
                 let client = self.client.clone();
                 let initial = self.clone();
                 Ok(azure_core::http::pager::Pager::from_callback(
@@ -10255,6 +10483,18 @@ pub mod script_cmdlets {
                         }
                     },
                 ))
+            }
+        }
+        impl std::future::IntoFuture for RequestBuilder {
+            type Output = azure_core::Result<azure_core::http::pager::Pager<models::ScriptCmdletsList>>;
+            type IntoFuture = BoxFuture<'static, azure_core::Result<azure_core::http::pager::Pager<models::ScriptCmdletsList>>>;
+            #[doc = "Returns a future that builds and returns a Pager for this request."]
+            #[doc = ""]
+            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
+            #[doc = ""]
+            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
+            fn into_future(self) -> Self::IntoFuture {
+                Box::pin(async move { self.pager() })
             }
         }
     }
@@ -11350,8 +11590,8 @@ pub mod workload_networks {
                     }
                 })
             }
-            #[doc = "Return a Pager over pages (experimental)"]
-            pub fn into_pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::WorkloadNetworkList>> {
+            #[doc = "Return a Pager over pages"]
+            fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::WorkloadNetworkList>> {
                 let client = self.client.clone();
                 let initial = self.clone();
                 Ok(azure_core::http::pager::Pager::from_callback(
@@ -11408,6 +11648,18 @@ pub mod workload_networks {
                         }
                     },
                 ))
+            }
+        }
+        impl std::future::IntoFuture for RequestBuilder {
+            type Output = azure_core::Result<azure_core::http::pager::Pager<models::WorkloadNetworkList>>;
+            type IntoFuture = BoxFuture<'static, azure_core::Result<azure_core::http::pager::Pager<models::WorkloadNetworkList>>>;
+            #[doc = "Returns a future that builds and returns a Pager for this request."]
+            #[doc = ""]
+            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
+            #[doc = ""]
+            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
+            fn into_future(self) -> Self::IntoFuture {
+                Box::pin(async move { self.pager() })
             }
         }
     }
@@ -11598,8 +11850,8 @@ pub mod workload_networks {
                     }
                 })
             }
-            #[doc = "Return a Pager over pages (experimental)"]
-            pub fn into_pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::WorkloadNetworkDhcpList>> {
+            #[doc = "Return a Pager over pages"]
+            fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::WorkloadNetworkDhcpList>> {
                 let client = self.client.clone();
                 let initial = self.clone();
                 Ok(azure_core::http::pager::Pager::from_callback(
@@ -11658,6 +11910,18 @@ pub mod workload_networks {
                         }
                     },
                 ))
+            }
+        }
+        impl std::future::IntoFuture for RequestBuilder {
+            type Output = azure_core::Result<azure_core::http::pager::Pager<models::WorkloadNetworkDhcpList>>;
+            type IntoFuture = BoxFuture<'static, azure_core::Result<azure_core::http::pager::Pager<models::WorkloadNetworkDhcpList>>>;
+            #[doc = "Returns a future that builds and returns a Pager for this request."]
+            #[doc = ""]
+            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
+            #[doc = ""]
+            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
+            fn into_future(self) -> Self::IntoFuture {
+                Box::pin(async move { self.pager() })
             }
         }
     }
@@ -12164,8 +12428,8 @@ pub mod workload_networks {
                     }
                 })
             }
-            #[doc = "Return a Pager over pages (experimental)"]
-            pub fn into_pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::WorkloadNetworkDnsServicesList>> {
+            #[doc = "Return a Pager over pages"]
+            fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::WorkloadNetworkDnsServicesList>> {
                 let client = self.client.clone();
                 let initial = self.clone();
                 Ok(azure_core::http::pager::Pager::from_callback(
@@ -12224,6 +12488,19 @@ pub mod workload_networks {
                         }
                     },
                 ))
+            }
+        }
+        impl std::future::IntoFuture for RequestBuilder {
+            type Output = azure_core::Result<azure_core::http::pager::Pager<models::WorkloadNetworkDnsServicesList>>;
+            type IntoFuture =
+                BoxFuture<'static, azure_core::Result<azure_core::http::pager::Pager<models::WorkloadNetworkDnsServicesList>>>;
+            #[doc = "Returns a future that builds and returns a Pager for this request."]
+            #[doc = ""]
+            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
+            #[doc = ""]
+            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
+            fn into_future(self) -> Self::IntoFuture {
+                Box::pin(async move { self.pager() })
             }
         }
     }
@@ -12742,8 +13019,8 @@ pub mod workload_networks {
                     }
                 })
             }
-            #[doc = "Return a Pager over pages (experimental)"]
-            pub fn into_pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::WorkloadNetworkDnsZonesList>> {
+            #[doc = "Return a Pager over pages"]
+            fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::WorkloadNetworkDnsZonesList>> {
                 let client = self.client.clone();
                 let initial = self.clone();
                 Ok(azure_core::http::pager::Pager::from_callback(
@@ -12802,6 +13079,18 @@ pub mod workload_networks {
                         }
                     },
                 ))
+            }
+        }
+        impl std::future::IntoFuture for RequestBuilder {
+            type Output = azure_core::Result<azure_core::http::pager::Pager<models::WorkloadNetworkDnsZonesList>>;
+            type IntoFuture = BoxFuture<'static, azure_core::Result<azure_core::http::pager::Pager<models::WorkloadNetworkDnsZonesList>>>;
+            #[doc = "Returns a future that builds and returns a Pager for this request."]
+            #[doc = ""]
+            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
+            #[doc = ""]
+            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
+            fn into_future(self) -> Self::IntoFuture {
+                Box::pin(async move { self.pager() })
             }
         }
     }
@@ -13320,8 +13609,8 @@ pub mod workload_networks {
                     }
                 })
             }
-            #[doc = "Return a Pager over pages (experimental)"]
-            pub fn into_pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::WorkloadNetworkGatewayList>> {
+            #[doc = "Return a Pager over pages"]
+            fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::WorkloadNetworkGatewayList>> {
                 let client = self.client.clone();
                 let initial = self.clone();
                 Ok(azure_core::http::pager::Pager::from_callback(
@@ -13380,6 +13669,18 @@ pub mod workload_networks {
                         }
                     },
                 ))
+            }
+        }
+        impl std::future::IntoFuture for RequestBuilder {
+            type Output = azure_core::Result<azure_core::http::pager::Pager<models::WorkloadNetworkGatewayList>>;
+            type IntoFuture = BoxFuture<'static, azure_core::Result<azure_core::http::pager::Pager<models::WorkloadNetworkGatewayList>>>;
+            #[doc = "Returns a future that builds and returns a Pager for this request."]
+            #[doc = ""]
+            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
+            #[doc = ""]
+            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
+            fn into_future(self) -> Self::IntoFuture {
+                Box::pin(async move { self.pager() })
             }
         }
     }
@@ -13571,8 +13872,8 @@ pub mod workload_networks {
                     }
                 })
             }
-            #[doc = "Return a Pager over pages (experimental)"]
-            pub fn into_pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::WorkloadNetworkPortMirroringList>> {
+            #[doc = "Return a Pager over pages"]
+            fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::WorkloadNetworkPortMirroringList>> {
                 let client = self.client.clone();
                 let initial = self.clone();
                 Ok(azure_core::http::pager::Pager::from_callback(
@@ -13631,6 +13932,19 @@ pub mod workload_networks {
                         }
                     },
                 ))
+            }
+        }
+        impl std::future::IntoFuture for RequestBuilder {
+            type Output = azure_core::Result<azure_core::http::pager::Pager<models::WorkloadNetworkPortMirroringList>>;
+            type IntoFuture =
+                BoxFuture<'static, azure_core::Result<azure_core::http::pager::Pager<models::WorkloadNetworkPortMirroringList>>>;
+            #[doc = "Returns a future that builds and returns a Pager for this request."]
+            #[doc = ""]
+            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
+            #[doc = ""]
+            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
+            fn into_future(self) -> Self::IntoFuture {
+                Box::pin(async move { self.pager() })
             }
         }
     }
@@ -14137,8 +14451,8 @@ pub mod workload_networks {
                     }
                 })
             }
-            #[doc = "Return a Pager over pages (experimental)"]
-            pub fn into_pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::WorkloadNetworkPublicIPsList>> {
+            #[doc = "Return a Pager over pages"]
+            fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::WorkloadNetworkPublicIPsList>> {
                 let client = self.client.clone();
                 let initial = self.clone();
                 Ok(azure_core::http::pager::Pager::from_callback(
@@ -14197,6 +14511,18 @@ pub mod workload_networks {
                         }
                     },
                 ))
+            }
+        }
+        impl std::future::IntoFuture for RequestBuilder {
+            type Output = azure_core::Result<azure_core::http::pager::Pager<models::WorkloadNetworkPublicIPsList>>;
+            type IntoFuture = BoxFuture<'static, azure_core::Result<azure_core::http::pager::Pager<models::WorkloadNetworkPublicIPsList>>>;
+            #[doc = "Returns a future that builds and returns a Pager for this request."]
+            #[doc = ""]
+            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
+            #[doc = ""]
+            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
+            fn into_future(self) -> Self::IntoFuture {
+                Box::pin(async move { self.pager() })
             }
         }
     }
@@ -14603,8 +14929,8 @@ pub mod workload_networks {
                     }
                 })
             }
-            #[doc = "Return a Pager over pages (experimental)"]
-            pub fn into_pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::WorkloadNetworkSegmentsList>> {
+            #[doc = "Return a Pager over pages"]
+            fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::WorkloadNetworkSegmentsList>> {
                 let client = self.client.clone();
                 let initial = self.clone();
                 Ok(azure_core::http::pager::Pager::from_callback(
@@ -14663,6 +14989,18 @@ pub mod workload_networks {
                         }
                     },
                 ))
+            }
+        }
+        impl std::future::IntoFuture for RequestBuilder {
+            type Output = azure_core::Result<azure_core::http::pager::Pager<models::WorkloadNetworkSegmentsList>>;
+            type IntoFuture = BoxFuture<'static, azure_core::Result<azure_core::http::pager::Pager<models::WorkloadNetworkSegmentsList>>>;
+            #[doc = "Returns a future that builds and returns a Pager for this request."]
+            #[doc = ""]
+            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
+            #[doc = ""]
+            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
+            fn into_future(self) -> Self::IntoFuture {
+                Box::pin(async move { self.pager() })
             }
         }
     }
@@ -15181,8 +15519,8 @@ pub mod workload_networks {
                     }
                 })
             }
-            #[doc = "Return a Pager over pages (experimental)"]
-            pub fn into_pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::WorkloadNetworkVirtualMachinesList>> {
+            #[doc = "Return a Pager over pages"]
+            fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::WorkloadNetworkVirtualMachinesList>> {
                 let client = self.client.clone();
                 let initial = self.clone();
                 Ok(azure_core::http::pager::Pager::from_callback(
@@ -15241,6 +15579,19 @@ pub mod workload_networks {
                         }
                     },
                 ))
+            }
+        }
+        impl std::future::IntoFuture for RequestBuilder {
+            type Output = azure_core::Result<azure_core::http::pager::Pager<models::WorkloadNetworkVirtualMachinesList>>;
+            type IntoFuture =
+                BoxFuture<'static, azure_core::Result<azure_core::http::pager::Pager<models::WorkloadNetworkVirtualMachinesList>>>;
+            #[doc = "Returns a future that builds and returns a Pager for this request."]
+            #[doc = ""]
+            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
+            #[doc = ""]
+            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
+            fn into_future(self) -> Self::IntoFuture {
+                Box::pin(async move { self.pager() })
             }
         }
     }
@@ -15432,8 +15783,8 @@ pub mod workload_networks {
                     }
                 })
             }
-            #[doc = "Return a Pager over pages (experimental)"]
-            pub fn into_pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::WorkloadNetworkVmGroupsList>> {
+            #[doc = "Return a Pager over pages"]
+            fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::WorkloadNetworkVmGroupsList>> {
                 let client = self.client.clone();
                 let initial = self.clone();
                 Ok(azure_core::http::pager::Pager::from_callback(
@@ -15492,6 +15843,18 @@ pub mod workload_networks {
                         }
                     },
                 ))
+            }
+        }
+        impl std::future::IntoFuture for RequestBuilder {
+            type Output = azure_core::Result<azure_core::http::pager::Pager<models::WorkloadNetworkVmGroupsList>>;
+            type IntoFuture = BoxFuture<'static, azure_core::Result<azure_core::http::pager::Pager<models::WorkloadNetworkVmGroupsList>>>;
+            #[doc = "Returns a future that builds and returns a Pager for this request."]
+            #[doc = ""]
+            #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
+            #[doc = ""]
+            #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
+            fn into_future(self) -> Self::IntoFuture {
+                Box::pin(async move { self.pager() })
             }
         }
     }

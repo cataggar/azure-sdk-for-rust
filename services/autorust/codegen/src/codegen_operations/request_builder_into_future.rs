@@ -23,9 +23,26 @@ impl RequestBuilderIntoFutureCode {
 
 /// Adds the `IntoFuture` implementation to the `RequestBuilder` struct.
 impl ToTokens for RequestBuilderIntoFutureCode {
-    fn to_tokens(&self, _tokens: &mut TokenStream) {
-        // Skip generating IntoFuture if response is pageable
-        if self.response_code.pageable.is_some() {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        // If response is pageable, implement IntoFuture to produce a Pager.
+        if let Some(_pageable) = &self.response_code.pageable {
+            if let Some(response_type) = self.response_code.response_type() {
+                let into_future = quote! {
+                    impl std::future::IntoFuture for RequestBuilder {
+                        type Output = azure_core::Result<azure_core::http::pager::Pager<#response_type>>;
+                        type IntoFuture = BoxFuture<'static, azure_core::Result<azure_core::http::pager::Pager<#response_type>>>;
+                        #[doc = "Returns a future that builds and returns a Pager for this request."]
+                        #[doc = ""]
+                        #[doc = "You should not normally call this method directly, simply invoke `.await` which implicitly calls `IntoFuture::into_future`."]
+                        #[doc = ""]
+                        #[doc = "See [IntoFuture documentation](https://doc.rust-lang.org/std/future/trait.IntoFuture.html) for more details."]
+                        fn into_future(self) -> Self::IntoFuture {
+                            Box::pin(async move { self.pager() })
+                        }
+                    }
+                };
+                tokens.extend(into_future);
+            }
             return;
         }
 
@@ -174,7 +191,7 @@ impl ToTokens for RequestBuilderIntoFutureCode {
             quote! {}
         };
 
-        // Disabled: do not emit IntoFuture for now (pending azure_core::lro alignment).
+        // Do not emit IntoFuture for non-pageable operations (pending azure_core LRO alignment).
         // Keep `_into_future` to avoid unused variable warnings.
     }
 }

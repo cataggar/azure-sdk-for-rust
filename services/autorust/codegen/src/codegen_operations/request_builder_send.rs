@@ -136,8 +136,8 @@ impl ToTokens for RequestBuilderSendCode {
                 if let Some(continuable_param) = get_continuable_param(next_link_name, request_builder) {
                     // Continuation token provided as a query parameter; build subsequent requests by reusing the builder and setting the token.
                     quote! {
-                        #[doc = "Return a Pager over pages (experimental)"]
-                        pub fn into_pager(self) -> azure_core::Result<azure_core::http::pager::Pager<#response_type>> {
+                        #[doc = "Return a Pager over pages"]
+                        fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<#response_type>> {
                             let client = self.client.clone();
                             let initial = self.clone();
                             Ok(azure_core::http::pager::Pager::from_callback(move |state: azure_core::http::pager::PagerState<String>| {
@@ -185,8 +185,8 @@ impl ToTokens for RequestBuilderSendCode {
                 } else {
                     // Continuation link provided as a URL in the response body (next link); build subsequent requests from the absolute/relative URL.
                     quote! {
-                        #[doc = "Return a Pager over pages (experimental)"]
-                        pub fn into_pager(self) -> azure_core::Result<azure_core::http::pager::Pager<#response_type>> {
+                        #[doc = "Return a Pager over pages"]
+                        fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<#response_type>> {
                             let client = self.client.clone();
                             let initial = self.clone();
                             Ok(azure_core::http::pager::Pager::from_callback(move |state: azure_core::http::pager::PagerState<String>| {
@@ -246,7 +246,7 @@ impl ToTokens for RequestBuilderSendCode {
         } else {
             quote! {}
         };
-        // Emit url(), send(), and optionally into_pager()
+        // Emit url(), send(), and optionally pager()
         tokens.extend(urlfn);
         tokens.extend(send_future);
         tokens.extend(pager_tokens);
