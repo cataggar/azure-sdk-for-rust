@@ -89,7 +89,6 @@ impl ToTokens for RequestBuilderSendCode {
                             let url = this.url()?;
                             #new_request_code
                             #request_builder
-                            req.set_body(req_body);
                             let raw = this.client.send_raw(&mut req).await?;
                             let response: azure_core::http::response::Response<#response_type, azure_core::http::JsonFormat> = raw.into();
                             Ok(response)
@@ -101,15 +100,15 @@ impl ToTokens for RequestBuilderSendCode {
             // No typed body: return the raw response directly
             quote! {
                 #[doc = "Returns a future that sends the request and returns the raw HTTP response."]
-                pub fn send(self) -> BoxFuture<'static, azure_core::Result<azure_core::http::response::RawResponse>> {
+                pub fn send(self) -> BoxFuture<'static, azure_core::Result<()>> {
                     Box::pin({
                         let this = self.clone();
                         async move {
                             let url = this.url()?;
                             #new_request_code
                             #request_builder
-                            req.set_body(req_body);
-                            this.client.send_raw(&mut req).await
+                            this.client.send_raw(&mut req).await?;
+                            Ok(())
                         }
                     })
                 }
@@ -166,7 +165,6 @@ impl ToTokens for RequestBuilderSendCode {
                                                     let bearer_token = client.bearer_token().await?;
                                                     req.insert_header(azure_core::http::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
                                                     #stream_api_version
-                                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                                     client.send_raw(&mut req).await?
                                                 }
                                                 azure_core::http::pager::PagerState::More(token) => {
@@ -176,7 +174,6 @@ impl ToTokens for RequestBuilderSendCode {
                                                     req.insert_header(azure_core::http::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
                                                     #stream_api_version
                                                     req.url_mut().query_pairs_mut().append_pair(#continuable_param, token.as_ref());
-                                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                                     client.send_raw(&mut req).await?
                                                 }
                                             };
@@ -222,7 +219,6 @@ impl ToTokens for RequestBuilderSendCode {
                                                     let bearer_token = client.bearer_token().await?;
                                                     req.insert_header(azure_core::http::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
                                                     #stream_api_version
-                                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                                     client.send_raw(&mut req).await?
                                                 }
                                                 azure_core::http::pager::PagerState::More(next_url) => {
@@ -233,7 +229,6 @@ impl ToTokens for RequestBuilderSendCode {
                                                     let bearer_token = client.bearer_token().await?;
                                                     req.insert_header(azure_core::http::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
                                                     #stream_api_version
-                                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                                     client.send_raw(&mut req).await?
                                                 }
                                             };
@@ -302,7 +297,6 @@ impl ToTokens for RequestBuilderSendCode {
                                                        let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
                                                        let bearer_token = client.bearer_token().await?;
                                                        req.insert_header(azure_core::http::headers::AUTHORIZATION, format!("Bearer {}", bearer_token.secret()));
-                                                       req.set_body(azure_openapi_core::EMPTY_BODY);
                                                        let rsp = client.send_raw(&mut req).await?;
                                                        let next = initial.clone().url()?;
                                                        (rsp, next)
@@ -317,7 +311,6 @@ impl ToTokens for RequestBuilderSendCode {
                                                 azure_core::http::headers::AUTHORIZATION,
                                                 format!("Bearer {}", bearer_token.secret()),
                                             );
-                                            req.set_body(azure_openapi_core::EMPTY_BODY);
                                             let rsp = client.send_raw(&mut req).await?;
                                             (rsp, next_url.clone())
                                         }

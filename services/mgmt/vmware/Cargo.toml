@@ -16,7 +16,6 @@ rust-version = "1.64.0"
 doctest = false
 
 [dependencies]
-azure_openapi_core = { path = "../../../sdk/azure_openapi_core", features = [] }
 # azure_core = { path = "../../../sdk/core", version = "0.21", features = [] }
 # azure_core = { version = "0.22.0", features = [] }
 azure_core = { git = "https://github.com/Azure/azure-sdk-for-rust", branch = "main" }

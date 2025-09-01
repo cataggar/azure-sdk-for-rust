@@ -46,12 +46,6 @@ impl ToTokens for SetRequestCode {
         };
         tokens.extend(build_request_params.into_token_stream());
 
-        if !self.has_body_parameter {
-            tokens.extend(quote! {
-                let req_body = azure_openapi_core::EMPTY_BODY;
-            });
-        }
-
         // if it is a post and there is no body, set the Content-Length to 0
         if self.is_post && !self.has_body_parameter {
             tokens.extend(quote! {

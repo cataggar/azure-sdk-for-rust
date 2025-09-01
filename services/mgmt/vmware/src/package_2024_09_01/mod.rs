@@ -250,8 +250,6 @@ pub mod operations {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::OperationListResult, azure_core::http::JsonFormat> =
                             raw.into();
@@ -286,7 +284,6 @@ pub mod operations {
                                             .query_pairs_mut()
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     client.send_raw(&mut req).await?
                                 }
                                 azure_core::http::pager::PagerState::More(next_url) => {
@@ -308,7 +305,6 @@ pub mod operations {
                                             .query_pairs_mut()
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     client.send_raw(&mut req).await?
                                 }
                             };
@@ -445,9 +441,7 @@ pub mod locations {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
                         req.insert_header(azure_core::http::headers::CONTENT_LENGTH, "0");
-                        req.set_body(req_body);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::Quota, azure_core::http::JsonFormat> = raw.into();
                         Ok(response)
@@ -539,11 +533,8 @@ pub mod locations {
                         );
                         let req_body = if let Some(sku) = &this.sku {
                             req.insert_header("content-type", "application/json");
-                            azure_core::json::to_json(sku)?
-                        } else {
-                            azure_openapi_core::EMPTY_BODY
+                            req.set_body(azure_core::json::to_json(sku)?);
                         };
-                        req.set_body(req_body);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::Trial, azure_core::http::JsonFormat> = raw.into();
                         Ok(response)
@@ -799,8 +790,6 @@ pub mod private_clouds {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::PrivateCloudList, azure_core::http::JsonFormat> =
                             raw.into();
@@ -835,7 +824,6 @@ pub mod private_clouds {
                                             .query_pairs_mut()
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     client.send_raw(&mut req).await?
                                 }
                                 azure_core::http::pager::PagerState::More(next_url) => {
@@ -857,7 +845,6 @@ pub mod private_clouds {
                                             .query_pairs_mut()
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     client.send_raw(&mut req).await?
                                 }
                             };
@@ -953,8 +940,6 @@ pub mod private_clouds {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::PrivateCloudList, azure_core::http::JsonFormat> =
                             raw.into();
@@ -989,7 +974,6 @@ pub mod private_clouds {
                                             .query_pairs_mut()
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     client.send_raw(&mut req).await?
                                 }
                                 azure_core::http::pager::PagerState::More(next_url) => {
@@ -1011,7 +995,6 @@ pub mod private_clouds {
                                             .query_pairs_mut()
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     client.send_raw(&mut req).await?
                                 }
                             };
@@ -1108,8 +1091,6 @@ pub mod private_clouds {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::PrivateCloud, azure_core::http::JsonFormat> = raw.into();
                         Ok(response)
@@ -1233,8 +1214,7 @@ pub mod private_clouds {
                             format!("Bearer {}", bearer_token.secret()),
                         );
                         req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::json::to_json(&this.private_cloud)?;
-                        req.set_body(req_body);
+                        req.set_body(azure_core::json::to_json(&this.private_cloud)?);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::PrivateCloud, azure_core::http::JsonFormat> = raw.into();
                         Ok(response)
@@ -1261,7 +1241,6 @@ pub mod private_clouds {
                                         azure_core::http::headers::AUTHORIZATION,
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     let rsp = client.send_raw(&mut req).await?;
                                     let next = initial.clone().url()?;
                                     (rsp, next)
@@ -1274,7 +1253,6 @@ pub mod private_clouds {
                                         azure_core::http::headers::AUTHORIZATION,
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     let rsp = client.send_raw(&mut req).await?;
                                     (rsp, next_url.clone())
                                 }
@@ -1409,8 +1387,7 @@ pub mod private_clouds {
                             format!("Bearer {}", bearer_token.secret()),
                         );
                         req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::json::to_json(&this.private_cloud_update)?;
-                        req.set_body(req_body);
+                        req.set_body(azure_core::json::to_json(&this.private_cloud_update)?);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::PrivateCloud, azure_core::http::JsonFormat> = raw.into();
                         Ok(response)
@@ -1437,7 +1414,6 @@ pub mod private_clouds {
                                         azure_core::http::headers::AUTHORIZATION,
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     let rsp = client.send_raw(&mut req).await?;
                                     let next = initial.clone().url()?;
                                     (rsp, next)
@@ -1450,7 +1426,6 @@ pub mod private_clouds {
                                         azure_core::http::headers::AUTHORIZATION,
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     let rsp = client.send_raw(&mut req).await?;
                                     (rsp, next_url.clone())
                                 }
@@ -1529,7 +1504,7 @@ pub mod private_clouds {
                 Ok(url)
             }
             #[doc = "Returns a future that sends the request and returns the raw HTTP response."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<azure_core::http::response::RawResponse>> {
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<()>> {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -1540,9 +1515,8 @@ pub mod private_clouds {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
-                        this.client.send_raw(&mut req).await
+                        this.client.send_raw(&mut req).await?;
+                        Ok(())
                     }
                 })
             }
@@ -1614,9 +1588,7 @@ pub mod private_clouds {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
                         req.insert_header(azure_core::http::headers::CONTENT_LENGTH, "0");
-                        req.set_body(req_body);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::AdminCredentials, azure_core::http::JsonFormat> =
                             raw.into();
@@ -1685,7 +1657,7 @@ pub mod private_clouds {
                 Ok(url)
             }
             #[doc = "Returns a future that sends the request and returns the raw HTTP response."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<azure_core::http::response::RawResponse>> {
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<()>> {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -1696,10 +1668,9 @@ pub mod private_clouds {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
                         req.insert_header(azure_core::http::headers::CONTENT_LENGTH, "0");
-                        req.set_body(req_body);
-                        this.client.send_raw(&mut req).await
+                        this.client.send_raw(&mut req).await?;
+                        Ok(())
                     }
                 })
             }
@@ -1752,7 +1723,7 @@ pub mod private_clouds {
                 Ok(url)
             }
             #[doc = "Returns a future that sends the request and returns the raw HTTP response."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<azure_core::http::response::RawResponse>> {
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<()>> {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -1763,10 +1734,9 @@ pub mod private_clouds {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
                         req.insert_header(azure_core::http::headers::CONTENT_LENGTH, "0");
-                        req.set_body(req_body);
-                        this.client.send_raw(&mut req).await
+                        this.client.send_raw(&mut req).await?;
+                        Ok(())
                     }
                 })
             }
@@ -1853,8 +1823,6 @@ pub mod skus {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::PagedResourceSku, azure_core::http::JsonFormat> =
                             raw.into();
@@ -1889,7 +1857,6 @@ pub mod skus {
                                             .query_pairs_mut()
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     client.send_raw(&mut req).await?
                                 }
                                 azure_core::http::pager::PagerState::More(next_url) => {
@@ -1911,7 +1878,6 @@ pub mod skus {
                                             .query_pairs_mut()
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     client.send_raw(&mut req).await?
                                 }
                             };
@@ -2104,8 +2070,6 @@ pub mod addons {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::AddonList, azure_core::http::JsonFormat> = raw.into();
                         Ok(response)
@@ -2139,7 +2103,6 @@ pub mod addons {
                                             .query_pairs_mut()
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     client.send_raw(&mut req).await?
                                 }
                                 azure_core::http::pager::PagerState::More(next_url) => {
@@ -2161,7 +2124,6 @@ pub mod addons {
                                             .query_pairs_mut()
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     client.send_raw(&mut req).await?
                                 }
                             };
@@ -2257,8 +2219,6 @@ pub mod addons {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::Addon, azure_core::http::JsonFormat> = raw.into();
                         Ok(response)
@@ -2381,8 +2341,7 @@ pub mod addons {
                             format!("Bearer {}", bearer_token.secret()),
                         );
                         req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::json::to_json(&this.addon)?;
-                        req.set_body(req_body);
+                        req.set_body(azure_core::json::to_json(&this.addon)?);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::Addon, azure_core::http::JsonFormat> = raw.into();
                         Ok(response)
@@ -2409,7 +2368,6 @@ pub mod addons {
                                         azure_core::http::headers::AUTHORIZATION,
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     let rsp = client.send_raw(&mut req).await?;
                                     let next = initial.clone().url()?;
                                     (rsp, next)
@@ -2422,7 +2380,6 @@ pub mod addons {
                                         azure_core::http::headers::AUTHORIZATION,
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     let rsp = client.send_raw(&mut req).await?;
                                     (rsp, next_url.clone())
                                 }
@@ -2502,7 +2459,7 @@ pub mod addons {
                 Ok(url)
             }
             #[doc = "Returns a future that sends the request and returns the raw HTTP response."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<azure_core::http::response::RawResponse>> {
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<()>> {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -2513,9 +2470,8 @@ pub mod addons {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
-                        this.client.send_raw(&mut req).await
+                        this.client.send_raw(&mut req).await?;
+                        Ok(())
                     }
                 })
             }
@@ -2687,8 +2643,6 @@ pub mod authorizations {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<
                             models::ExpressRouteAuthorizationList,
@@ -2725,7 +2679,6 @@ pub mod authorizations {
                                             .query_pairs_mut()
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     client.send_raw(&mut req).await?
                                 }
                                 azure_core::http::pager::PagerState::More(next_url) => {
@@ -2747,7 +2700,6 @@ pub mod authorizations {
                                             .query_pairs_mut()
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     client.send_raw(&mut req).await?
                                 }
                             };
@@ -2847,8 +2799,6 @@ pub mod authorizations {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<
                             models::ExpressRouteAuthorization,
@@ -2976,8 +2926,7 @@ pub mod authorizations {
                             format!("Bearer {}", bearer_token.secret()),
                         );
                         req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::json::to_json(&this.authorization)?;
-                        req.set_body(req_body);
+                        req.set_body(azure_core::json::to_json(&this.authorization)?);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<
                             models::ExpressRouteAuthorization,
@@ -3007,7 +2956,6 @@ pub mod authorizations {
                                         azure_core::http::headers::AUTHORIZATION,
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     let rsp = client.send_raw(&mut req).await?;
                                     let next = initial.clone().url()?;
                                     (rsp, next)
@@ -3020,7 +2968,6 @@ pub mod authorizations {
                                         azure_core::http::headers::AUTHORIZATION,
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     let rsp = client.send_raw(&mut req).await?;
                                     (rsp, next_url.clone())
                                 }
@@ -3100,7 +3047,7 @@ pub mod authorizations {
                 Ok(url)
             }
             #[doc = "Returns a future that sends the request and returns the raw HTTP response."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<azure_core::http::response::RawResponse>> {
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<()>> {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -3111,9 +3058,8 @@ pub mod authorizations {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
-                        this.client.send_raw(&mut req).await
+                        this.client.send_raw(&mut req).await?;
+                        Ok(())
                     }
                 })
             }
@@ -3283,8 +3229,6 @@ pub mod cloud_links {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::CloudLinkList, azure_core::http::JsonFormat> =
                             raw.into();
@@ -3319,7 +3263,6 @@ pub mod cloud_links {
                                             .query_pairs_mut()
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     client.send_raw(&mut req).await?
                                 }
                                 azure_core::http::pager::PagerState::More(next_url) => {
@@ -3341,7 +3284,6 @@ pub mod cloud_links {
                                             .query_pairs_mut()
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     client.send_raw(&mut req).await?
                                 }
                             };
@@ -3437,8 +3379,6 @@ pub mod cloud_links {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::CloudLink, azure_core::http::JsonFormat> = raw.into();
                         Ok(response)
@@ -3561,8 +3501,7 @@ pub mod cloud_links {
                             format!("Bearer {}", bearer_token.secret()),
                         );
                         req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::json::to_json(&this.cloud_link)?;
-                        req.set_body(req_body);
+                        req.set_body(azure_core::json::to_json(&this.cloud_link)?);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::CloudLink, azure_core::http::JsonFormat> = raw.into();
                         Ok(response)
@@ -3589,7 +3528,6 @@ pub mod cloud_links {
                                         azure_core::http::headers::AUTHORIZATION,
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     let rsp = client.send_raw(&mut req).await?;
                                     let next = initial.clone().url()?;
                                     (rsp, next)
@@ -3602,7 +3540,6 @@ pub mod cloud_links {
                                         azure_core::http::headers::AUTHORIZATION,
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     let rsp = client.send_raw(&mut req).await?;
                                     (rsp, next_url.clone())
                                 }
@@ -3682,7 +3619,7 @@ pub mod cloud_links {
                 Ok(url)
             }
             #[doc = "Returns a future that sends the request and returns the raw HTTP response."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<azure_core::http::response::RawResponse>> {
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<()>> {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -3693,9 +3630,8 @@ pub mod cloud_links {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
-                        this.client.send_raw(&mut req).await
+                        this.client.send_raw(&mut req).await?;
+                        Ok(())
                     }
                 })
             }
@@ -3912,8 +3848,6 @@ pub mod clusters {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::ClusterList, azure_core::http::JsonFormat> = raw.into();
                         Ok(response)
@@ -3947,7 +3881,6 @@ pub mod clusters {
                                             .query_pairs_mut()
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     client.send_raw(&mut req).await?
                                 }
                                 azure_core::http::pager::PagerState::More(next_url) => {
@@ -3969,7 +3902,6 @@ pub mod clusters {
                                             .query_pairs_mut()
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     client.send_raw(&mut req).await?
                                 }
                             };
@@ -4065,8 +3997,6 @@ pub mod clusters {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::Cluster, azure_core::http::JsonFormat> = raw.into();
                         Ok(response)
@@ -4189,8 +4119,7 @@ pub mod clusters {
                             format!("Bearer {}", bearer_token.secret()),
                         );
                         req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::json::to_json(&this.cluster)?;
-                        req.set_body(req_body);
+                        req.set_body(azure_core::json::to_json(&this.cluster)?);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::Cluster, azure_core::http::JsonFormat> = raw.into();
                         Ok(response)
@@ -4217,7 +4146,6 @@ pub mod clusters {
                                         azure_core::http::headers::AUTHORIZATION,
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     let rsp = client.send_raw(&mut req).await?;
                                     let next = initial.clone().url()?;
                                     (rsp, next)
@@ -4230,7 +4158,6 @@ pub mod clusters {
                                         azure_core::http::headers::AUTHORIZATION,
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     let rsp = client.send_raw(&mut req).await?;
                                     (rsp, next_url.clone())
                                 }
@@ -4364,8 +4291,7 @@ pub mod clusters {
                             format!("Bearer {}", bearer_token.secret()),
                         );
                         req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::json::to_json(&this.cluster_update)?;
-                        req.set_body(req_body);
+                        req.set_body(azure_core::json::to_json(&this.cluster_update)?);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::Cluster, azure_core::http::JsonFormat> = raw.into();
                         Ok(response)
@@ -4392,7 +4318,6 @@ pub mod clusters {
                                         azure_core::http::headers::AUTHORIZATION,
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     let rsp = client.send_raw(&mut req).await?;
                                     let next = initial.clone().url()?;
                                     (rsp, next)
@@ -4405,7 +4330,6 @@ pub mod clusters {
                                         azure_core::http::headers::AUTHORIZATION,
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     let rsp = client.send_raw(&mut req).await?;
                                     (rsp, next_url.clone())
                                 }
@@ -4485,7 +4409,7 @@ pub mod clusters {
                 Ok(url)
             }
             #[doc = "Returns a future that sends the request and returns the raw HTTP response."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<azure_core::http::response::RawResponse>> {
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<()>> {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -4496,9 +4420,8 @@ pub mod clusters {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
-                        this.client.send_raw(&mut req).await
+                        this.client.send_raw(&mut req).await?;
+                        Ok(())
                     }
                 })
             }
@@ -4571,9 +4494,7 @@ pub mod clusters {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
                         req.insert_header(azure_core::http::headers::CONTENT_LENGTH, "0");
-                        req.set_body(req_body);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::ClusterZoneList, azure_core::http::JsonFormat> =
                             raw.into();
@@ -4772,8 +4693,6 @@ pub mod datastores {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::DatastoreList, azure_core::http::JsonFormat> =
                             raw.into();
@@ -4808,7 +4727,6 @@ pub mod datastores {
                                             .query_pairs_mut()
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     client.send_raw(&mut req).await?
                                 }
                                 azure_core::http::pager::PagerState::More(next_url) => {
@@ -4830,7 +4748,6 @@ pub mod datastores {
                                             .query_pairs_mut()
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     client.send_raw(&mut req).await?
                                 }
                             };
@@ -4927,8 +4844,6 @@ pub mod datastores {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::Datastore, azure_core::http::JsonFormat> = raw.into();
                         Ok(response)
@@ -5052,8 +4967,7 @@ pub mod datastores {
                             format!("Bearer {}", bearer_token.secret()),
                         );
                         req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::json::to_json(&this.datastore)?;
-                        req.set_body(req_body);
+                        req.set_body(azure_core::json::to_json(&this.datastore)?);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::Datastore, azure_core::http::JsonFormat> = raw.into();
                         Ok(response)
@@ -5080,7 +4994,6 @@ pub mod datastores {
                                         azure_core::http::headers::AUTHORIZATION,
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     let rsp = client.send_raw(&mut req).await?;
                                     let next = initial.clone().url()?;
                                     (rsp, next)
@@ -5093,7 +5006,6 @@ pub mod datastores {
                                         azure_core::http::headers::AUTHORIZATION,
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     let rsp = client.send_raw(&mut req).await?;
                                     (rsp, next_url.clone())
                                 }
@@ -5174,7 +5086,7 @@ pub mod datastores {
                 Ok(url)
             }
             #[doc = "Returns a future that sends the request and returns the raw HTTP response."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<azure_core::http::response::RawResponse>> {
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<()>> {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -5185,9 +5097,8 @@ pub mod datastores {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
-                        this.client.send_raw(&mut req).await
+                        this.client.send_raw(&mut req).await?;
+                        Ok(())
                     }
                 })
             }
@@ -5317,8 +5228,6 @@ pub mod hosts {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::HostListResult, azure_core::http::JsonFormat> =
                             raw.into();
@@ -5353,7 +5262,6 @@ pub mod hosts {
                                             .query_pairs_mut()
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     client.send_raw(&mut req).await?
                                 }
                                 azure_core::http::pager::PagerState::More(next_url) => {
@@ -5375,7 +5283,6 @@ pub mod hosts {
                                             .query_pairs_mut()
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     client.send_raw(&mut req).await?
                                 }
                             };
@@ -5472,8 +5379,6 @@ pub mod hosts {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::Host, azure_core::http::JsonFormat> = raw.into();
                         Ok(response)
@@ -5699,8 +5604,6 @@ pub mod placement_policies {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::PlacementPoliciesList, azure_core::http::JsonFormat> =
                             raw.into();
@@ -5735,7 +5638,6 @@ pub mod placement_policies {
                                             .query_pairs_mut()
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     client.send_raw(&mut req).await?
                                 }
                                 azure_core::http::pager::PagerState::More(next_url) => {
@@ -5757,7 +5659,6 @@ pub mod placement_policies {
                                             .query_pairs_mut()
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     client.send_raw(&mut req).await?
                                 }
                             };
@@ -5862,8 +5763,6 @@ pub mod placement_policies {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::PlacementPolicy, azure_core::http::JsonFormat> =
                             raw.into();
@@ -5994,8 +5893,7 @@ pub mod placement_policies {
                             format!("Bearer {}", bearer_token.secret()),
                         );
                         req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::json::to_json(&this.placement_policy)?;
-                        req.set_body(req_body);
+                        req.set_body(azure_core::json::to_json(&this.placement_policy)?);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::PlacementPolicy, azure_core::http::JsonFormat> =
                             raw.into();
@@ -6023,7 +5921,6 @@ pub mod placement_policies {
                                         azure_core::http::headers::AUTHORIZATION,
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     let rsp = client.send_raw(&mut req).await?;
                                     let next = initial.clone().url()?;
                                     (rsp, next)
@@ -6036,7 +5933,6 @@ pub mod placement_policies {
                                         azure_core::http::headers::AUTHORIZATION,
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     let rsp = client.send_raw(&mut req).await?;
                                     (rsp, next_url.clone())
                                 }
@@ -6177,8 +6073,7 @@ pub mod placement_policies {
                             format!("Bearer {}", bearer_token.secret()),
                         );
                         req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::json::to_json(&this.placement_policy_update)?;
-                        req.set_body(req_body);
+                        req.set_body(azure_core::json::to_json(&this.placement_policy_update)?);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::PlacementPolicy, azure_core::http::JsonFormat> =
                             raw.into();
@@ -6206,7 +6101,6 @@ pub mod placement_policies {
                                         azure_core::http::headers::AUTHORIZATION,
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     let rsp = client.send_raw(&mut req).await?;
                                     let next = initial.clone().url()?;
                                     (rsp, next)
@@ -6219,7 +6113,6 @@ pub mod placement_policies {
                                         azure_core::http::headers::AUTHORIZATION,
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     let rsp = client.send_raw(&mut req).await?;
                                     (rsp, next_url.clone())
                                 }
@@ -6304,7 +6197,7 @@ pub mod placement_policies {
                 Ok(url)
             }
             #[doc = "Returns a future that sends the request and returns the raw HTTP response."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<azure_core::http::response::RawResponse>> {
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<()>> {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -6315,9 +6208,8 @@ pub mod placement_policies {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
-                        this.client.send_raw(&mut req).await
+                        this.client.send_raw(&mut req).await?;
+                        Ok(())
                     }
                 })
             }
@@ -6475,8 +6367,6 @@ pub mod virtual_machines {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::VirtualMachinesList, azure_core::http::JsonFormat> =
                             raw.into();
@@ -6511,7 +6401,6 @@ pub mod virtual_machines {
                                             .query_pairs_mut()
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     client.send_raw(&mut req).await?
                                 }
                                 azure_core::http::pager::PagerState::More(next_url) => {
@@ -6533,7 +6422,6 @@ pub mod virtual_machines {
                                             .query_pairs_mut()
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     client.send_raw(&mut req).await?
                                 }
                             };
@@ -6636,8 +6524,6 @@ pub mod virtual_machines {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::VirtualMachine, azure_core::http::JsonFormat> =
                             raw.into();
@@ -6706,7 +6592,7 @@ pub mod virtual_machines {
                 Ok(url)
             }
             #[doc = "Returns a future that sends the request and returns the raw HTTP response."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<azure_core::http::response::RawResponse>> {
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<()>> {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -6718,9 +6604,9 @@ pub mod virtual_machines {
                             format!("Bearer {}", bearer_token.secret()),
                         );
                         req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::json::to_json(&this.restrict_movement)?;
-                        req.set_body(req_body);
-                        this.client.send_raw(&mut req).await
+                        req.set_body(azure_core::json::to_json(&this.restrict_movement)?);
+                        this.client.send_raw(&mut req).await?;
+                        Ok(())
                     }
                 })
             }
@@ -6890,8 +6776,6 @@ pub mod global_reach_connections {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<
                             models::GlobalReachConnectionList,
@@ -6928,7 +6812,6 @@ pub mod global_reach_connections {
                                             .query_pairs_mut()
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     client.send_raw(&mut req).await?
                                 }
                                 azure_core::http::pager::PagerState::More(next_url) => {
@@ -6950,7 +6833,6 @@ pub mod global_reach_connections {
                                             .query_pairs_mut()
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     client.send_raw(&mut req).await?
                                 }
                             };
@@ -7050,8 +6932,6 @@ pub mod global_reach_connections {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::GlobalReachConnection, azure_core::http::JsonFormat> =
                             raw.into();
@@ -7177,8 +7057,7 @@ pub mod global_reach_connections {
                             format!("Bearer {}", bearer_token.secret()),
                         );
                         req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::json::to_json(&this.global_reach_connection)?;
-                        req.set_body(req_body);
+                        req.set_body(azure_core::json::to_json(&this.global_reach_connection)?);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::GlobalReachConnection, azure_core::http::JsonFormat> =
                             raw.into();
@@ -7206,7 +7085,6 @@ pub mod global_reach_connections {
                                         azure_core::http::headers::AUTHORIZATION,
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     let rsp = client.send_raw(&mut req).await?;
                                     let next = initial.clone().url()?;
                                     (rsp, next)
@@ -7219,7 +7097,6 @@ pub mod global_reach_connections {
                                         azure_core::http::headers::AUTHORIZATION,
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     let rsp = client.send_raw(&mut req).await?;
                                     (rsp, next_url.clone())
                                 }
@@ -7299,7 +7176,7 @@ pub mod global_reach_connections {
                 Ok(url)
             }
             #[doc = "Returns a future that sends the request and returns the raw HTTP response."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<azure_core::http::response::RawResponse>> {
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<()>> {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -7310,9 +7187,8 @@ pub mod global_reach_connections {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
-                        this.client.send_raw(&mut req).await
+                        this.client.send_raw(&mut req).await?;
+                        Ok(())
                     }
                 })
             }
@@ -7482,8 +7358,6 @@ pub mod hcx_enterprise_sites {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::HcxEnterpriseSiteList, azure_core::http::JsonFormat> =
                             raw.into();
@@ -7518,7 +7392,6 @@ pub mod hcx_enterprise_sites {
                                             .query_pairs_mut()
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     client.send_raw(&mut req).await?
                                 }
                                 azure_core::http::pager::PagerState::More(next_url) => {
@@ -7540,7 +7413,6 @@ pub mod hcx_enterprise_sites {
                                             .query_pairs_mut()
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     client.send_raw(&mut req).await?
                                 }
                             };
@@ -7640,8 +7512,6 @@ pub mod hcx_enterprise_sites {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::HcxEnterpriseSite, azure_core::http::JsonFormat> =
                             raw.into();
@@ -7732,8 +7602,7 @@ pub mod hcx_enterprise_sites {
                             format!("Bearer {}", bearer_token.secret()),
                         );
                         req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::json::to_json(&this.hcx_enterprise_site)?;
-                        req.set_body(req_body);
+                        req.set_body(azure_core::json::to_json(&this.hcx_enterprise_site)?);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::HcxEnterpriseSite, azure_core::http::JsonFormat> =
                             raw.into();
@@ -7804,7 +7673,7 @@ pub mod hcx_enterprise_sites {
                 Ok(url)
             }
             #[doc = "Returns a future that sends the request and returns the raw HTTP response."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<azure_core::http::response::RawResponse>> {
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<()>> {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -7815,9 +7684,8 @@ pub mod hcx_enterprise_sites {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
-                        this.client.send_raw(&mut req).await
+                        this.client.send_raw(&mut req).await?;
+                        Ok(())
                     }
                 })
             }
@@ -7978,8 +7846,6 @@ pub mod iscsi_paths {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::IscsiPathListResult, azure_core::http::JsonFormat> =
                             raw.into();
@@ -8014,7 +7880,6 @@ pub mod iscsi_paths {
                                             .query_pairs_mut()
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     client.send_raw(&mut req).await?
                                 }
                                 azure_core::http::pager::PagerState::More(next_url) => {
@@ -8036,7 +7901,6 @@ pub mod iscsi_paths {
                                             .query_pairs_mut()
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     client.send_raw(&mut req).await?
                                 }
                             };
@@ -8131,8 +7995,6 @@ pub mod iscsi_paths {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::IscsiPath, azure_core::http::JsonFormat> = raw.into();
                         Ok(response)
@@ -8254,8 +8116,7 @@ pub mod iscsi_paths {
                             format!("Bearer {}", bearer_token.secret()),
                         );
                         req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::json::to_json(&this.resource)?;
-                        req.set_body(req_body);
+                        req.set_body(azure_core::json::to_json(&this.resource)?);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::IscsiPath, azure_core::http::JsonFormat> = raw.into();
                         Ok(response)
@@ -8282,7 +8143,6 @@ pub mod iscsi_paths {
                                         azure_core::http::headers::AUTHORIZATION,
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     let rsp = client.send_raw(&mut req).await?;
                                     let next = initial.clone().url()?;
                                     (rsp, next)
@@ -8295,7 +8155,6 @@ pub mod iscsi_paths {
                                         azure_core::http::headers::AUTHORIZATION,
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     let rsp = client.send_raw(&mut req).await?;
                                     (rsp, next_url.clone())
                                 }
@@ -8374,7 +8233,7 @@ pub mod iscsi_paths {
                 Ok(url)
             }
             #[doc = "Returns a future that sends the request and returns the raw HTTP response."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<azure_core::http::response::RawResponse>> {
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<()>> {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -8385,9 +8244,8 @@ pub mod iscsi_paths {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
-                        this.client.send_raw(&mut req).await
+                        this.client.send_raw(&mut req).await?;
+                        Ok(())
                     }
                 })
             }
@@ -8512,8 +8370,6 @@ pub mod provisioned_networks {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<
                             models::ProvisionedNetworkListResult,
@@ -8550,7 +8406,6 @@ pub mod provisioned_networks {
                                             .query_pairs_mut()
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     client.send_raw(&mut req).await?
                                 }
                                 azure_core::http::pager::PagerState::More(next_url) => {
@@ -8572,7 +8427,6 @@ pub mod provisioned_networks {
                                             .query_pairs_mut()
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     client.send_raw(&mut req).await?
                                 }
                             };
@@ -8672,8 +8526,6 @@ pub mod provisioned_networks {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::ProvisionedNetwork, azure_core::http::JsonFormat> =
                             raw.into();
@@ -8859,8 +8711,6 @@ pub mod pure_storage_policies {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<
                             models::PureStoragePolicyListResult,
@@ -8897,7 +8747,6 @@ pub mod pure_storage_policies {
                                             .query_pairs_mut()
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     client.send_raw(&mut req).await?
                                 }
                                 azure_core::http::pager::PagerState::More(next_url) => {
@@ -8919,7 +8768,6 @@ pub mod pure_storage_policies {
                                             .query_pairs_mut()
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     client.send_raw(&mut req).await?
                                 }
                             };
@@ -9019,8 +8867,6 @@ pub mod pure_storage_policies {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::PureStoragePolicy, azure_core::http::JsonFormat> =
                             raw.into();
@@ -9146,8 +8992,7 @@ pub mod pure_storage_policies {
                             format!("Bearer {}", bearer_token.secret()),
                         );
                         req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::json::to_json(&this.resource)?;
-                        req.set_body(req_body);
+                        req.set_body(azure_core::json::to_json(&this.resource)?);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::PureStoragePolicy, azure_core::http::JsonFormat> =
                             raw.into();
@@ -9175,7 +9020,6 @@ pub mod pure_storage_policies {
                                         azure_core::http::headers::AUTHORIZATION,
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     let rsp = client.send_raw(&mut req).await?;
                                     let next = initial.clone().url()?;
                                     (rsp, next)
@@ -9188,7 +9032,6 @@ pub mod pure_storage_policies {
                                         azure_core::http::headers::AUTHORIZATION,
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     let rsp = client.send_raw(&mut req).await?;
                                     (rsp, next_url.clone())
                                 }
@@ -9268,7 +9111,7 @@ pub mod pure_storage_policies {
                 Ok(url)
             }
             #[doc = "Returns a future that sends the request and returns the raw HTTP response."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<azure_core::http::response::RawResponse>> {
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<()>> {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -9279,9 +9122,8 @@ pub mod pure_storage_policies {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
-                        this.client.send_raw(&mut req).await
+                        this.client.send_raw(&mut req).await?;
+                        Ok(())
                     }
                 })
             }
@@ -9474,8 +9316,6 @@ pub mod script_executions {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::ScriptExecutionsList, azure_core::http::JsonFormat> =
                             raw.into();
@@ -9510,7 +9350,6 @@ pub mod script_executions {
                                             .query_pairs_mut()
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     client.send_raw(&mut req).await?
                                 }
                                 azure_core::http::pager::PagerState::More(next_url) => {
@@ -9532,7 +9371,6 @@ pub mod script_executions {
                                             .query_pairs_mut()
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     client.send_raw(&mut req).await?
                                 }
                             };
@@ -9630,8 +9468,6 @@ pub mod script_executions {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::ScriptExecution, azure_core::http::JsonFormat> =
                             raw.into();
@@ -9757,8 +9593,7 @@ pub mod script_executions {
                             format!("Bearer {}", bearer_token.secret()),
                         );
                         req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::json::to_json(&this.script_execution)?;
-                        req.set_body(req_body);
+                        req.set_body(azure_core::json::to_json(&this.script_execution)?);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::ScriptExecution, azure_core::http::JsonFormat> =
                             raw.into();
@@ -9786,7 +9621,6 @@ pub mod script_executions {
                                         azure_core::http::headers::AUTHORIZATION,
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     let rsp = client.send_raw(&mut req).await?;
                                     let next = initial.clone().url()?;
                                     (rsp, next)
@@ -9799,7 +9633,6 @@ pub mod script_executions {
                                         azure_core::http::headers::AUTHORIZATION,
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     let rsp = client.send_raw(&mut req).await?;
                                     (rsp, next_url.clone())
                                 }
@@ -9879,7 +9712,7 @@ pub mod script_executions {
                 Ok(url)
             }
             #[doc = "Returns a future that sends the request and returns the raw HTTP response."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<azure_core::http::response::RawResponse>> {
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<()>> {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -9890,9 +9723,8 @@ pub mod script_executions {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
-                        this.client.send_raw(&mut req).await
+                        this.client.send_raw(&mut req).await?;
+                        Ok(())
                     }
                 })
             }
@@ -9972,8 +9804,7 @@ pub mod script_executions {
                             format!("Bearer {}", bearer_token.secret()),
                         );
                         req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::json::to_json(&this.script_output_stream_type)?;
-                        req.set_body(req_body);
+                        req.set_body(azure_core::json::to_json(&this.script_output_stream_type)?);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::ScriptExecution, azure_core::http::JsonFormat> =
                             raw.into();
@@ -10112,8 +9943,6 @@ pub mod script_packages {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::ScriptPackagesList, azure_core::http::JsonFormat> =
                             raw.into();
@@ -10148,7 +9977,6 @@ pub mod script_packages {
                                             .query_pairs_mut()
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     client.send_raw(&mut req).await?
                                 }
                                 azure_core::http::pager::PagerState::More(next_url) => {
@@ -10170,7 +9998,6 @@ pub mod script_packages {
                                             .query_pairs_mut()
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     client.send_raw(&mut req).await?
                                 }
                             };
@@ -10268,8 +10095,6 @@ pub mod script_packages {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::ScriptPackage, azure_core::http::JsonFormat> =
                             raw.into();
@@ -10415,8 +10240,6 @@ pub mod script_cmdlets {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::ScriptCmdletsList, azure_core::http::JsonFormat> =
                             raw.into();
@@ -10451,7 +10274,6 @@ pub mod script_cmdlets {
                                             .query_pairs_mut()
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     client.send_raw(&mut req).await?
                                 }
                                 azure_core::http::pager::PagerState::More(next_url) => {
@@ -10473,7 +10295,6 @@ pub mod script_cmdlets {
                                             .query_pairs_mut()
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     client.send_raw(&mut req).await?
                                 }
                             };
@@ -10576,8 +10397,6 @@ pub mod script_cmdlets {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::ScriptCmdlet, azure_core::http::JsonFormat> = raw.into();
                         Ok(response)
@@ -11560,8 +11379,6 @@ pub mod workload_networks {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::WorkloadNetworkList, azure_core::http::JsonFormat> =
                             raw.into();
@@ -11596,7 +11413,6 @@ pub mod workload_networks {
                                             .query_pairs_mut()
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     client.send_raw(&mut req).await?
                                 }
                                 azure_core::http::pager::PagerState::More(next_url) => {
@@ -11618,7 +11434,6 @@ pub mod workload_networks {
                                             .query_pairs_mut()
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     client.send_raw(&mut req).await?
                                 }
                             };
@@ -11715,8 +11530,6 @@ pub mod workload_networks {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::WorkloadNetwork, azure_core::http::JsonFormat> =
                             raw.into();
@@ -11801,8 +11614,6 @@ pub mod workload_networks {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::WorkloadNetworkDhcpList, azure_core::http::JsonFormat> =
                             raw.into();
@@ -11837,7 +11648,6 @@ pub mod workload_networks {
                                             .query_pairs_mut()
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     client.send_raw(&mut req).await?
                                 }
                                 azure_core::http::pager::PagerState::More(next_url) => {
@@ -11859,7 +11669,6 @@ pub mod workload_networks {
                                             .query_pairs_mut()
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     client.send_raw(&mut req).await?
                                 }
                             };
@@ -11956,8 +11765,6 @@ pub mod workload_networks {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::WorkloadNetworkDhcp, azure_core::http::JsonFormat> =
                             raw.into();
@@ -12080,8 +11887,7 @@ pub mod workload_networks {
                             format!("Bearer {}", bearer_token.secret()),
                         );
                         req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::json::to_json(&this.workload_network_dhcp)?;
-                        req.set_body(req_body);
+                        req.set_body(azure_core::json::to_json(&this.workload_network_dhcp)?);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::WorkloadNetworkDhcp, azure_core::http::JsonFormat> =
                             raw.into();
@@ -12109,7 +11915,6 @@ pub mod workload_networks {
                                         azure_core::http::headers::AUTHORIZATION,
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     let rsp = client.send_raw(&mut req).await?;
                                     let next = initial.clone().url()?;
                                     (rsp, next)
@@ -12122,7 +11927,6 @@ pub mod workload_networks {
                                         azure_core::http::headers::AUTHORIZATION,
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     let rsp = client.send_raw(&mut req).await?;
                                     (rsp, next_url.clone())
                                 }
@@ -12255,8 +12059,7 @@ pub mod workload_networks {
                             format!("Bearer {}", bearer_token.secret()),
                         );
                         req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::json::to_json(&this.workload_network_dhcp)?;
-                        req.set_body(req_body);
+                        req.set_body(azure_core::json::to_json(&this.workload_network_dhcp)?);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::WorkloadNetworkDhcp, azure_core::http::JsonFormat> =
                             raw.into();
@@ -12284,7 +12087,6 @@ pub mod workload_networks {
                                         azure_core::http::headers::AUTHORIZATION,
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     let rsp = client.send_raw(&mut req).await?;
                                     let next = initial.clone().url()?;
                                     (rsp, next)
@@ -12297,7 +12099,6 @@ pub mod workload_networks {
                                         azure_core::http::headers::AUTHORIZATION,
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     let rsp = client.send_raw(&mut req).await?;
                                     (rsp, next_url.clone())
                                 }
@@ -12374,7 +12175,7 @@ pub mod workload_networks {
                 Ok(url)
             }
             #[doc = "Returns a future that sends the request and returns the raw HTTP response."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<azure_core::http::response::RawResponse>> {
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<()>> {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -12385,9 +12186,8 @@ pub mod workload_networks {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
-                        this.client.send_raw(&mut req).await
+                        this.client.send_raw(&mut req).await?;
+                        Ok(())
                     }
                 })
             }
@@ -12461,8 +12261,6 @@ pub mod workload_networks {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<
                             models::WorkloadNetworkDnsServicesList,
@@ -12499,7 +12297,6 @@ pub mod workload_networks {
                                             .query_pairs_mut()
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     client.send_raw(&mut req).await?
                                 }
                                 azure_core::http::pager::PagerState::More(next_url) => {
@@ -12521,7 +12318,6 @@ pub mod workload_networks {
                                             .query_pairs_mut()
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     client.send_raw(&mut req).await?
                                 }
                             };
@@ -12621,8 +12417,6 @@ pub mod workload_networks {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<
                             models::WorkloadNetworkDnsService,
@@ -12750,8 +12544,7 @@ pub mod workload_networks {
                             format!("Bearer {}", bearer_token.secret()),
                         );
                         req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::json::to_json(&this.workload_network_dns_service)?;
-                        req.set_body(req_body);
+                        req.set_body(azure_core::json::to_json(&this.workload_network_dns_service)?);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<
                             models::WorkloadNetworkDnsService,
@@ -12781,7 +12574,6 @@ pub mod workload_networks {
                                         azure_core::http::headers::AUTHORIZATION,
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     let rsp = client.send_raw(&mut req).await?;
                                     let next = initial.clone().url()?;
                                     (rsp, next)
@@ -12794,7 +12586,6 @@ pub mod workload_networks {
                                         azure_core::http::headers::AUTHORIZATION,
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     let rsp = client.send_raw(&mut req).await?;
                                     (rsp, next_url.clone())
                                 }
@@ -12930,8 +12721,7 @@ pub mod workload_networks {
                             format!("Bearer {}", bearer_token.secret()),
                         );
                         req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::json::to_json(&this.workload_network_dns_service)?;
-                        req.set_body(req_body);
+                        req.set_body(azure_core::json::to_json(&this.workload_network_dns_service)?);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<
                             models::WorkloadNetworkDnsService,
@@ -12961,7 +12751,6 @@ pub mod workload_networks {
                                         azure_core::http::headers::AUTHORIZATION,
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     let rsp = client.send_raw(&mut req).await?;
                                     let next = initial.clone().url()?;
                                     (rsp, next)
@@ -12974,7 +12763,6 @@ pub mod workload_networks {
                                         azure_core::http::headers::AUTHORIZATION,
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     let rsp = client.send_raw(&mut req).await?;
                                     (rsp, next_url.clone())
                                 }
@@ -13054,7 +12842,7 @@ pub mod workload_networks {
                 Ok(url)
             }
             #[doc = "Returns a future that sends the request and returns the raw HTTP response."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<azure_core::http::response::RawResponse>> {
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<()>> {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -13065,9 +12853,8 @@ pub mod workload_networks {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
-                        this.client.send_raw(&mut req).await
+                        this.client.send_raw(&mut req).await?;
+                        Ok(())
                     }
                 })
             }
@@ -13139,8 +12926,6 @@ pub mod workload_networks {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<
                             models::WorkloadNetworkDnsZonesList,
@@ -13177,7 +12962,6 @@ pub mod workload_networks {
                                             .query_pairs_mut()
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     client.send_raw(&mut req).await?
                                 }
                                 azure_core::http::pager::PagerState::More(next_url) => {
@@ -13199,7 +12983,6 @@ pub mod workload_networks {
                                             .query_pairs_mut()
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     client.send_raw(&mut req).await?
                                 }
                             };
@@ -13299,8 +13082,6 @@ pub mod workload_networks {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::WorkloadNetworkDnsZone, azure_core::http::JsonFormat> =
                             raw.into();
@@ -13426,8 +13207,7 @@ pub mod workload_networks {
                             format!("Bearer {}", bearer_token.secret()),
                         );
                         req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::json::to_json(&this.workload_network_dns_zone)?;
-                        req.set_body(req_body);
+                        req.set_body(azure_core::json::to_json(&this.workload_network_dns_zone)?);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::WorkloadNetworkDnsZone, azure_core::http::JsonFormat> =
                             raw.into();
@@ -13455,7 +13235,6 @@ pub mod workload_networks {
                                         azure_core::http::headers::AUTHORIZATION,
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     let rsp = client.send_raw(&mut req).await?;
                                     let next = initial.clone().url()?;
                                     (rsp, next)
@@ -13468,7 +13247,6 @@ pub mod workload_networks {
                                         azure_core::http::headers::AUTHORIZATION,
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     let rsp = client.send_raw(&mut req).await?;
                                     (rsp, next_url.clone())
                                 }
@@ -13604,8 +13382,7 @@ pub mod workload_networks {
                             format!("Bearer {}", bearer_token.secret()),
                         );
                         req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::json::to_json(&this.workload_network_dns_zone)?;
-                        req.set_body(req_body);
+                        req.set_body(azure_core::json::to_json(&this.workload_network_dns_zone)?);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::WorkloadNetworkDnsZone, azure_core::http::JsonFormat> =
                             raw.into();
@@ -13633,7 +13410,6 @@ pub mod workload_networks {
                                         azure_core::http::headers::AUTHORIZATION,
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     let rsp = client.send_raw(&mut req).await?;
                                     let next = initial.clone().url()?;
                                     (rsp, next)
@@ -13646,7 +13422,6 @@ pub mod workload_networks {
                                         azure_core::http::headers::AUTHORIZATION,
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     let rsp = client.send_raw(&mut req).await?;
                                     (rsp, next_url.clone())
                                 }
@@ -13726,7 +13501,7 @@ pub mod workload_networks {
                 Ok(url)
             }
             #[doc = "Returns a future that sends the request and returns the raw HTTP response."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<azure_core::http::response::RawResponse>> {
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<()>> {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -13737,9 +13512,8 @@ pub mod workload_networks {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
-                        this.client.send_raw(&mut req).await
+                        this.client.send_raw(&mut req).await?;
+                        Ok(())
                     }
                 })
             }
@@ -13811,8 +13585,6 @@ pub mod workload_networks {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<
                             models::WorkloadNetworkGatewayList,
@@ -13849,7 +13621,6 @@ pub mod workload_networks {
                                             .query_pairs_mut()
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     client.send_raw(&mut req).await?
                                 }
                                 azure_core::http::pager::PagerState::More(next_url) => {
@@ -13871,7 +13642,6 @@ pub mod workload_networks {
                                             .query_pairs_mut()
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     client.send_raw(&mut req).await?
                                 }
                             };
@@ -13971,8 +13741,6 @@ pub mod workload_networks {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::WorkloadNetworkGateway, azure_core::http::JsonFormat> =
                             raw.into();
@@ -14059,8 +13827,6 @@ pub mod workload_networks {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<
                             models::WorkloadNetworkPortMirroringList,
@@ -14097,7 +13863,6 @@ pub mod workload_networks {
                                             .query_pairs_mut()
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     client.send_raw(&mut req).await?
                                 }
                                 azure_core::http::pager::PagerState::More(next_url) => {
@@ -14119,7 +13884,6 @@ pub mod workload_networks {
                                             .query_pairs_mut()
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     client.send_raw(&mut req).await?
                                 }
                             };
@@ -14218,8 +13982,6 @@ pub mod workload_networks {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<
                             models::WorkloadNetworkPortMirroring,
@@ -14346,8 +14108,7 @@ pub mod workload_networks {
                             format!("Bearer {}", bearer_token.secret()),
                         );
                         req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::json::to_json(&this.workload_network_port_mirroring)?;
-                        req.set_body(req_body);
+                        req.set_body(azure_core::json::to_json(&this.workload_network_port_mirroring)?);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<
                             models::WorkloadNetworkPortMirroring,
@@ -14377,7 +14138,6 @@ pub mod workload_networks {
                                         azure_core::http::headers::AUTHORIZATION,
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     let rsp = client.send_raw(&mut req).await?;
                                     let next = initial.clone().url()?;
                                     (rsp, next)
@@ -14390,7 +14150,6 @@ pub mod workload_networks {
                                         azure_core::http::headers::AUTHORIZATION,
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     let rsp = client.send_raw(&mut req).await?;
                                     (rsp, next_url.clone())
                                 }
@@ -14525,8 +14284,7 @@ pub mod workload_networks {
                             format!("Bearer {}", bearer_token.secret()),
                         );
                         req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::json::to_json(&this.workload_network_port_mirroring)?;
-                        req.set_body(req_body);
+                        req.set_body(azure_core::json::to_json(&this.workload_network_port_mirroring)?);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<
                             models::WorkloadNetworkPortMirroring,
@@ -14556,7 +14314,6 @@ pub mod workload_networks {
                                         azure_core::http::headers::AUTHORIZATION,
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     let rsp = client.send_raw(&mut req).await?;
                                     let next = initial.clone().url()?;
                                     (rsp, next)
@@ -14569,7 +14326,6 @@ pub mod workload_networks {
                                         azure_core::http::headers::AUTHORIZATION,
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     let rsp = client.send_raw(&mut req).await?;
                                     (rsp, next_url.clone())
                                 }
@@ -14646,7 +14402,7 @@ pub mod workload_networks {
                 Ok(url)
             }
             #[doc = "Returns a future that sends the request and returns the raw HTTP response."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<azure_core::http::response::RawResponse>> {
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<()>> {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -14657,9 +14413,8 @@ pub mod workload_networks {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
-                        this.client.send_raw(&mut req).await
+                        this.client.send_raw(&mut req).await?;
+                        Ok(())
                     }
                 })
             }
@@ -14733,8 +14488,6 @@ pub mod workload_networks {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<
                             models::WorkloadNetworkPublicIPsList,
@@ -14771,7 +14524,6 @@ pub mod workload_networks {
                                             .query_pairs_mut()
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     client.send_raw(&mut req).await?
                                 }
                                 azure_core::http::pager::PagerState::More(next_url) => {
@@ -14793,7 +14545,6 @@ pub mod workload_networks {
                                             .query_pairs_mut()
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     client.send_raw(&mut req).await?
                                 }
                             };
@@ -14893,8 +14644,6 @@ pub mod workload_networks {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::WorkloadNetworkPublicIp, azure_core::http::JsonFormat> =
                             raw.into();
@@ -15020,8 +14769,7 @@ pub mod workload_networks {
                             format!("Bearer {}", bearer_token.secret()),
                         );
                         req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::json::to_json(&this.workload_network_public_ip)?;
-                        req.set_body(req_body);
+                        req.set_body(azure_core::json::to_json(&this.workload_network_public_ip)?);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::WorkloadNetworkPublicIp, azure_core::http::JsonFormat> =
                             raw.into();
@@ -15049,7 +14797,6 @@ pub mod workload_networks {
                                         azure_core::http::headers::AUTHORIZATION,
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     let rsp = client.send_raw(&mut req).await?;
                                     let next = initial.clone().url()?;
                                     (rsp, next)
@@ -15062,7 +14809,6 @@ pub mod workload_networks {
                                         azure_core::http::headers::AUTHORIZATION,
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     let rsp = client.send_raw(&mut req).await?;
                                     (rsp, next_url.clone())
                                 }
@@ -15142,7 +14888,7 @@ pub mod workload_networks {
                 Ok(url)
             }
             #[doc = "Returns a future that sends the request and returns the raw HTTP response."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<azure_core::http::response::RawResponse>> {
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<()>> {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -15153,9 +14899,8 @@ pub mod workload_networks {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
-                        this.client.send_raw(&mut req).await
+                        this.client.send_raw(&mut req).await?;
+                        Ok(())
                     }
                 })
             }
@@ -15227,8 +14972,6 @@ pub mod workload_networks {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<
                             models::WorkloadNetworkSegmentsList,
@@ -15265,7 +15008,6 @@ pub mod workload_networks {
                                             .query_pairs_mut()
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     client.send_raw(&mut req).await?
                                 }
                                 azure_core::http::pager::PagerState::More(next_url) => {
@@ -15287,7 +15029,6 @@ pub mod workload_networks {
                                             .query_pairs_mut()
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     client.send_raw(&mut req).await?
                                 }
                             };
@@ -15387,8 +15128,6 @@ pub mod workload_networks {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::WorkloadNetworkSegment, azure_core::http::JsonFormat> =
                             raw.into();
@@ -15514,8 +15253,7 @@ pub mod workload_networks {
                             format!("Bearer {}", bearer_token.secret()),
                         );
                         req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::json::to_json(&this.workload_network_segment)?;
-                        req.set_body(req_body);
+                        req.set_body(azure_core::json::to_json(&this.workload_network_segment)?);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::WorkloadNetworkSegment, azure_core::http::JsonFormat> =
                             raw.into();
@@ -15543,7 +15281,6 @@ pub mod workload_networks {
                                         azure_core::http::headers::AUTHORIZATION,
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     let rsp = client.send_raw(&mut req).await?;
                                     let next = initial.clone().url()?;
                                     (rsp, next)
@@ -15556,7 +15293,6 @@ pub mod workload_networks {
                                         azure_core::http::headers::AUTHORIZATION,
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     let rsp = client.send_raw(&mut req).await?;
                                     (rsp, next_url.clone())
                                 }
@@ -15692,8 +15428,7 @@ pub mod workload_networks {
                             format!("Bearer {}", bearer_token.secret()),
                         );
                         req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::json::to_json(&this.workload_network_segment)?;
-                        req.set_body(req_body);
+                        req.set_body(azure_core::json::to_json(&this.workload_network_segment)?);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::WorkloadNetworkSegment, azure_core::http::JsonFormat> =
                             raw.into();
@@ -15721,7 +15456,6 @@ pub mod workload_networks {
                                         azure_core::http::headers::AUTHORIZATION,
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     let rsp = client.send_raw(&mut req).await?;
                                     let next = initial.clone().url()?;
                                     (rsp, next)
@@ -15734,7 +15468,6 @@ pub mod workload_networks {
                                         azure_core::http::headers::AUTHORIZATION,
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     let rsp = client.send_raw(&mut req).await?;
                                     (rsp, next_url.clone())
                                 }
@@ -15814,7 +15547,7 @@ pub mod workload_networks {
                 Ok(url)
             }
             #[doc = "Returns a future that sends the request and returns the raw HTTP response."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<azure_core::http::response::RawResponse>> {
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<()>> {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -15825,9 +15558,8 @@ pub mod workload_networks {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
-                        this.client.send_raw(&mut req).await
+                        this.client.send_raw(&mut req).await?;
+                        Ok(())
                     }
                 })
             }
@@ -15901,8 +15633,6 @@ pub mod workload_networks {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<
                             models::WorkloadNetworkVirtualMachinesList,
@@ -15939,7 +15669,6 @@ pub mod workload_networks {
                                             .query_pairs_mut()
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     client.send_raw(&mut req).await?
                                 }
                                 azure_core::http::pager::PagerState::More(next_url) => {
@@ -15961,7 +15690,6 @@ pub mod workload_networks {
                                             .query_pairs_mut()
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     client.send_raw(&mut req).await?
                                 }
                             };
@@ -16060,8 +15788,6 @@ pub mod workload_networks {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<
                             models::WorkloadNetworkVirtualMachine,
@@ -16151,8 +15877,6 @@ pub mod workload_networks {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<
                             models::WorkloadNetworkVmGroupsList,
@@ -16189,7 +15913,6 @@ pub mod workload_networks {
                                             .query_pairs_mut()
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     client.send_raw(&mut req).await?
                                 }
                                 azure_core::http::pager::PagerState::More(next_url) => {
@@ -16211,7 +15934,6 @@ pub mod workload_networks {
                                             .query_pairs_mut()
                                             .append_pair(azure_core::http::headers::query_param::API_VERSION, "2024-09-01");
                                     }
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     client.send_raw(&mut req).await?
                                 }
                             };
@@ -16311,8 +16033,6 @@ pub mod workload_networks {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::WorkloadNetworkVmGroup, azure_core::http::JsonFormat> =
                             raw.into();
@@ -16438,8 +16158,7 @@ pub mod workload_networks {
                             format!("Bearer {}", bearer_token.secret()),
                         );
                         req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::json::to_json(&this.workload_network_vm_group)?;
-                        req.set_body(req_body);
+                        req.set_body(azure_core::json::to_json(&this.workload_network_vm_group)?);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::WorkloadNetworkVmGroup, azure_core::http::JsonFormat> =
                             raw.into();
@@ -16467,7 +16186,6 @@ pub mod workload_networks {
                                         azure_core::http::headers::AUTHORIZATION,
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     let rsp = client.send_raw(&mut req).await?;
                                     let next = initial.clone().url()?;
                                     (rsp, next)
@@ -16480,7 +16198,6 @@ pub mod workload_networks {
                                         azure_core::http::headers::AUTHORIZATION,
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     let rsp = client.send_raw(&mut req).await?;
                                     (rsp, next_url.clone())
                                 }
@@ -16616,8 +16333,7 @@ pub mod workload_networks {
                             format!("Bearer {}", bearer_token.secret()),
                         );
                         req.insert_header("content-type", "application/json");
-                        let req_body = azure_core::json::to_json(&this.workload_network_vm_group)?;
-                        req.set_body(req_body);
+                        req.set_body(azure_core::json::to_json(&this.workload_network_vm_group)?);
                         let raw = this.client.send_raw(&mut req).await?;
                         let response: azure_core::http::response::Response<models::WorkloadNetworkVmGroup, azure_core::http::JsonFormat> =
                             raw.into();
@@ -16645,7 +16361,6 @@ pub mod workload_networks {
                                         azure_core::http::headers::AUTHORIZATION,
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     let rsp = client.send_raw(&mut req).await?;
                                     let next = initial.clone().url()?;
                                     (rsp, next)
@@ -16658,7 +16373,6 @@ pub mod workload_networks {
                                         azure_core::http::headers::AUTHORIZATION,
                                         format!("Bearer {}", bearer_token.secret()),
                                     );
-                                    req.set_body(azure_openapi_core::EMPTY_BODY);
                                     let rsp = client.send_raw(&mut req).await?;
                                     (rsp, next_url.clone())
                                 }
@@ -16738,7 +16452,7 @@ pub mod workload_networks {
                 Ok(url)
             }
             #[doc = "Returns a future that sends the request and returns the raw HTTP response."]
-            pub fn send(self) -> BoxFuture<'static, azure_core::Result<azure_core::http::response::RawResponse>> {
+            pub fn send(self) -> BoxFuture<'static, azure_core::Result<()>> {
                 Box::pin({
                     let this = self.clone();
                     async move {
@@ -16749,9 +16463,8 @@ pub mod workload_networks {
                             azure_core::http::headers::AUTHORIZATION,
                             format!("Bearer {}", bearer_token.secret()),
                         );
-                        let req_body = azure_openapi_core::EMPTY_BODY;
-                        req.set_body(req_body);
-                        this.client.send_raw(&mut req).await
+                        this.client.send_raw(&mut req).await?;
+                        Ok(())
                     }
                 })
             }

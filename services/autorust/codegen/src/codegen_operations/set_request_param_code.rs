@@ -120,16 +120,14 @@ impl ToTokens for SetRequestParamsCode {
                     if !param.is_optional() || is_vec {
                         tokens.extend(quote! {
                             #set_content_type
-                            let req_body = #encoder(&this.#param_name_var)?;
+                            req.set_body(#encoder(&this.#param_name_var)?);
                         });
                     } else {
                         tokens.extend(quote! {
                             let req_body =
                                 if let Some(#param_name_var) = &this.#param_name_var {
                                     #set_content_type
-                                    #encoder(#param_name_var)?
-                                } else {
-                                    azure_openapi_core::EMPTY_BODY
+                                    req.set_body(#encoder(#param_name_var)?);
                                 };
                         });
                     }

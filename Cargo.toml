@@ -1,7 +1,6 @@
 [workspace]
 resolver = "2"
 members = [
-	"sdk/azure_openapi_core",
 	"services/autorust/azure-autorust",
 	"services/autorust/codegen",
 	"services/autorust/openapi",

@@ -1095,22 +1095,22 @@ fn create_struct(
         #[allow(clippy::collapsible_else_if)]
         if is_required {
             if type_name.is_date_time() {
-                serde.add_with("azure_openapi_core::date::rfc3339");
+                serde.add_with("azure_core::time::rfc3339");
             } else if type_name.is_date_time_rfc1123() {
-                serde.add_with("azure_openapi_core::date::rfc1123");
+                serde.add_with("azure_core::time::rfc1123");
             }
         } else {
             if type_name.is_date_time() {
                 // Must specify `default` when using `with` for `Option`
                 serde.add_default();
-                serde.add_with("azure_openapi_core::date::rfc3339::option");
+                serde.add_with("azure_core::time::rfc3339::option");
             } else if type_name.is_date_time_rfc1123() {
                 // Must specify `default` when using `with` for `Option`
                 serde.add_default();
-                serde.add_with("azure_openapi_core::date::rfc1123::option");
+                serde.add_with("azure_core::time::rfc1123::option");
             } else if type_name.is_vec() {
                 serde.add_default();
-                serde.add_deserialize_with("azure_openapi_core::util::deserialize_null_as_default");
+                // serde.add_deserialize_with("azure_openapi_core::util::deserialize_null_as_default"); // TODO
                 serde.add_skip_serializing_if("Vec::is_empty");
             } else {
                 serde.add_default();
