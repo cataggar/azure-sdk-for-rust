@@ -69,7 +69,7 @@ pub struct AddonList {
 }
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 # [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
-impl azure_core::http::pager::Page for AddonList {
+impl azure_core::http::Page for AddonList {
     type Item = <Vec<Addon> as IntoIterator>::Item;
     type IntoIter = <Vec<Addon> as IntoIterator>::IntoIter;
     async fn into_items(self) -> azure_core::Result<Self::IntoIter> {
@@ -464,7 +464,7 @@ pub struct CloudLinkList {
 }
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 # [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
-impl azure_core::http::pager::Page for CloudLinkList {
+impl azure_core::http::Page for CloudLinkList {
     type Item = <Vec<CloudLink> as IntoIterator>::Item;
     type IntoIter = <Vec<CloudLink> as IntoIterator>::IntoIter;
     async fn into_items(self) -> azure_core::Result<Self::IntoIter> {
@@ -607,7 +607,7 @@ pub struct ClusterList {
 }
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 # [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
-impl azure_core::http::pager::Page for ClusterList {
+impl azure_core::http::Page for ClusterList {
     type Item = <Vec<Cluster> as IntoIterator>::Item;
     type IntoIter = <Vec<Cluster> as IntoIterator>::IntoIter;
     async fn into_items(self) -> azure_core::Result<Self::IntoIter> {
@@ -770,7 +770,7 @@ pub struct DatastoreList {
 }
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 # [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
-impl azure_core::http::pager::Page for DatastoreList {
+impl azure_core::http::Page for DatastoreList {
     type Item = <Vec<Datastore> as IntoIterator>::Item;
     type IntoIter = <Vec<Datastore> as IntoIterator>::IntoIter;
     async fn into_items(self) -> azure_core::Result<Self::IntoIter> {
@@ -1409,7 +1409,7 @@ pub struct ExpressRouteAuthorizationList {
 }
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 # [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
-impl azure_core::http::pager::Page for ExpressRouteAuthorizationList {
+impl azure_core::http::Page for ExpressRouteAuthorizationList {
     type Item = <Vec<ExpressRouteAuthorization> as IntoIterator>::Item;
     type IntoIter = <Vec<ExpressRouteAuthorization> as IntoIterator>::IntoIter;
     async fn into_items(self) -> azure_core::Result<Self::IntoIter> {
@@ -1519,7 +1519,7 @@ pub struct GlobalReachConnectionList {
 }
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 # [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
-impl azure_core::http::pager::Page for GlobalReachConnectionList {
+impl azure_core::http::Page for GlobalReachConnectionList {
     type Item = <Vec<GlobalReachConnection> as IntoIterator>::Item;
     type IntoIter = <Vec<GlobalReachConnection> as IntoIterator>::IntoIter;
     async fn into_items(self) -> azure_core::Result<Self::IntoIter> {
@@ -1663,7 +1663,7 @@ pub struct HcxEnterpriseSiteList {
 }
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 # [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
-impl azure_core::http::pager::Page for HcxEnterpriseSiteList {
+impl azure_core::http::Page for HcxEnterpriseSiteList {
     type Item = <Vec<HcxEnterpriseSite> as IntoIterator>::Item;
     type IntoIter = <Vec<HcxEnterpriseSite> as IntoIterator>::IntoIter;
     async fn into_items(self) -> azure_core::Result<Self::IntoIter> {
@@ -1841,7 +1841,7 @@ pub struct HostListResult {
 }
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 # [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
-impl azure_core::http::pager::Page for HostListResult {
+impl azure_core::http::Page for HostListResult {
     type Item = <Vec<Host> as IntoIterator>::Item;
     type IntoIter = <Vec<Host> as IntoIterator>::IntoIter;
     async fn into_items(self) -> azure_core::Result<Self::IntoIter> {
@@ -2070,7 +2070,7 @@ pub struct IscsiPathListResult {
 }
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 # [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
-impl azure_core::http::pager::Page for IscsiPathListResult {
+impl azure_core::http::Page for IscsiPathListResult {
     type Item = <Vec<IscsiPath> as IntoIterator>::Item;
     type IntoIter = <Vec<IscsiPath> as IntoIterator>::IntoIter;
     async fn into_items(self) -> azure_core::Result<Self::IntoIter> {
@@ -2356,7 +2356,7 @@ pub struct OperationListResult {
 }
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 # [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
-impl azure_core::http::pager::Page for OperationListResult {
+impl azure_core::http::Page for OperationListResult {
     type Item = <Vec<Operation> as IntoIterator>::Item;
     type IntoIter = <Vec<Operation> as IntoIterator>::IntoIter;
     async fn into_items(self) -> azure_core::Result<Self::IntoIter> {
@@ -2437,7 +2437,7 @@ pub struct PagedResourceSku {
 }
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 # [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
-impl azure_core::http::pager::Page for PagedResourceSku {
+impl azure_core::http::Page for PagedResourceSku {
     type Item = <Vec<ResourceSku> as IntoIterator>::Item;
     type IntoIter = <Vec<ResourceSku> as IntoIterator>::IntoIter;
     async fn into_items(self) -> azure_core::Result<Self::IntoIter> {
@@ -2460,7 +2460,7 @@ pub struct PlacementPoliciesList {
 }
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 # [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
-impl azure_core::http::pager::Page for PlacementPoliciesList {
+impl azure_core::http::Page for PlacementPoliciesList {
     type Item = <Vec<PlacementPolicy> as IntoIterator>::Item;
     type IntoIter = <Vec<PlacementPolicy> as IntoIterator>::IntoIter;
     async fn into_items(self) -> azure_core::Result<Self::IntoIter> {
@@ -2790,7 +2790,7 @@ pub struct PrivateCloudList {
 }
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 # [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
-impl azure_core::http::pager::Page for PrivateCloudList {
+impl azure_core::http::Page for PrivateCloudList {
     type Item = <Vec<PrivateCloud> as IntoIterator>::Item;
     type IntoIter = <Vec<PrivateCloud> as IntoIterator>::IntoIter;
     async fn into_items(self) -> azure_core::Result<Self::IntoIter> {
@@ -3070,7 +3070,7 @@ pub struct ProvisionedNetworkListResult {
 }
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 # [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
-impl azure_core::http::pager::Page for ProvisionedNetworkListResult {
+impl azure_core::http::Page for ProvisionedNetworkListResult {
     type Item = <Vec<ProvisionedNetwork> as IntoIterator>::Item;
     type IntoIter = <Vec<ProvisionedNetwork> as IntoIterator>::IntoIter;
     async fn into_items(self) -> azure_core::Result<Self::IntoIter> {
@@ -3229,7 +3229,7 @@ pub struct PureStoragePolicyListResult {
 }
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 # [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
-impl azure_core::http::pager::Page for PureStoragePolicyListResult {
+impl azure_core::http::Page for PureStoragePolicyListResult {
     type Item = <Vec<PureStoragePolicy> as IntoIterator>::Item;
     type IntoIter = <Vec<PureStoragePolicy> as IntoIterator>::IntoIter;
     async fn into_items(self) -> azure_core::Result<Self::IntoIter> {
@@ -3769,7 +3769,7 @@ pub struct ScriptCmdletsList {
 }
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 # [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
-impl azure_core::http::pager::Page for ScriptCmdletsList {
+impl azure_core::http::Page for ScriptCmdletsList {
     type Item = <Vec<ScriptCmdlet> as IntoIterator>::Item;
     type IntoIter = <Vec<ScriptCmdlet> as IntoIterator>::IntoIter;
     async fn into_items(self) -> azure_core::Result<Self::IntoIter> {
@@ -3875,13 +3875,13 @@ pub struct ScriptExecutionProperties {
     pub retention: Option<String>,
     #[doc = "Time the script execution was submitted"]
     #[serde(rename = "submittedAt", default, with = "azure_core::time::rfc3339::option")]
-    pub submitted_at: Option<::time::OffsetDateTime>,
+    pub submitted_at: Option<azure_core::time::OffsetDateTime>,
     #[doc = "Time the script execution was started"]
     #[serde(rename = "startedAt", default, with = "azure_core::time::rfc3339::option")]
-    pub started_at: Option<::time::OffsetDateTime>,
+    pub started_at: Option<azure_core::time::OffsetDateTime>,
     #[doc = "Time the script execution was finished"]
     #[serde(rename = "finishedAt", default, with = "azure_core::time::rfc3339::option")]
-    pub finished_at: Option<::time::OffsetDateTime>,
+    pub finished_at: Option<azure_core::time::OffsetDateTime>,
     #[doc = "Script Execution provisioning state"]
     #[serde(rename = "provisioningState", default, skip_serializing_if = "Option::is_none")]
     pub provisioning_state: Option<ScriptExecutionProvisioningState>,
@@ -3982,7 +3982,7 @@ pub struct ScriptExecutionsList {
 }
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 # [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
-impl azure_core::http::pager::Page for ScriptExecutionsList {
+impl azure_core::http::Page for ScriptExecutionsList {
     type Item = <Vec<ScriptExecution> as IntoIterator>::Item;
     type IntoIter = <Vec<ScriptExecution> as IntoIterator>::IntoIter;
     async fn into_items(self) -> azure_core::Result<Self::IntoIter> {
@@ -4123,7 +4123,7 @@ pub struct ScriptPackagesList {
 }
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 # [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
-impl azure_core::http::pager::Page for ScriptPackagesList {
+impl azure_core::http::Page for ScriptPackagesList {
     type Item = <Vec<ScriptPackage> as IntoIterator>::Item;
     type IntoIter = <Vec<ScriptPackage> as IntoIterator>::IntoIter;
     async fn into_items(self) -> azure_core::Result<Self::IntoIter> {
@@ -4713,7 +4713,7 @@ pub struct VirtualMachinesList {
 }
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 # [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
-impl azure_core::http::pager::Page for VirtualMachinesList {
+impl azure_core::http::Page for VirtualMachinesList {
     type Item = <Vec<VirtualMachine> as IntoIterator>::Item;
     type IntoIter = <Vec<VirtualMachine> as IntoIterator>::IntoIter;
     async fn into_items(self) -> azure_core::Result<Self::IntoIter> {
@@ -4895,7 +4895,7 @@ pub struct WorkloadNetworkDhcpList {
 }
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 # [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
-impl azure_core::http::pager::Page for WorkloadNetworkDhcpList {
+impl azure_core::http::Page for WorkloadNetworkDhcpList {
     type Item = <Vec<WorkloadNetworkDhcp> as IntoIterator>::Item;
     type IntoIter = <Vec<WorkloadNetworkDhcp> as IntoIterator>::IntoIter;
     async fn into_items(self) -> azure_core::Result<Self::IntoIter> {
@@ -5093,7 +5093,7 @@ pub struct WorkloadNetworkDnsServicesList {
 }
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 # [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
-impl azure_core::http::pager::Page for WorkloadNetworkDnsServicesList {
+impl azure_core::http::Page for WorkloadNetworkDnsServicesList {
     type Item = <Vec<WorkloadNetworkDnsService> as IntoIterator>::Item;
     type IntoIter = <Vec<WorkloadNetworkDnsService> as IntoIterator>::IntoIter;
     async fn into_items(self) -> azure_core::Result<Self::IntoIter> {
@@ -5205,7 +5205,7 @@ pub struct WorkloadNetworkDnsZonesList {
 }
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 # [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
-impl azure_core::http::pager::Page for WorkloadNetworkDnsZonesList {
+impl azure_core::http::Page for WorkloadNetworkDnsZonesList {
     type Item = <Vec<WorkloadNetworkDnsZone> as IntoIterator>::Item;
     type IntoIter = <Vec<WorkloadNetworkDnsZone> as IntoIterator>::IntoIter;
     async fn into_items(self) -> azure_core::Result<Self::IntoIter> {
@@ -5242,7 +5242,7 @@ pub struct WorkloadNetworkGatewayList {
 }
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 # [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
-impl azure_core::http::pager::Page for WorkloadNetworkGatewayList {
+impl azure_core::http::Page for WorkloadNetworkGatewayList {
     type Item = <Vec<WorkloadNetworkGateway> as IntoIterator>::Item;
     type IntoIter = <Vec<WorkloadNetworkGateway> as IntoIterator>::IntoIter;
     async fn into_items(self) -> azure_core::Result<Self::IntoIter> {
@@ -5283,7 +5283,7 @@ pub struct WorkloadNetworkList {
 }
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 # [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
-impl azure_core::http::pager::Page for WorkloadNetworkList {
+impl azure_core::http::Page for WorkloadNetworkList {
     type Item = <Vec<WorkloadNetwork> as IntoIterator>::Item;
     type IntoIter = <Vec<WorkloadNetwork> as IntoIterator>::IntoIter;
     async fn into_items(self) -> azure_core::Result<Self::IntoIter> {
@@ -5320,7 +5320,7 @@ pub struct WorkloadNetworkPortMirroringList {
 }
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 # [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
-impl azure_core::http::pager::Page for WorkloadNetworkPortMirroringList {
+impl azure_core::http::Page for WorkloadNetworkPortMirroringList {
     type Item = <Vec<WorkloadNetworkPortMirroring> as IntoIterator>::Item;
     type IntoIter = <Vec<WorkloadNetworkPortMirroring> as IntoIterator>::IntoIter;
     async fn into_items(self) -> azure_core::Result<Self::IntoIter> {
@@ -5555,7 +5555,7 @@ pub struct WorkloadNetworkPublicIPsList {
 }
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 # [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
-impl azure_core::http::pager::Page for WorkloadNetworkPublicIPsList {
+impl azure_core::http::Page for WorkloadNetworkPublicIPsList {
     type Item = <Vec<WorkloadNetworkPublicIp> as IntoIterator>::Item;
     type IntoIter = <Vec<WorkloadNetworkPublicIp> as IntoIterator>::IntoIter;
     async fn into_items(self) -> azure_core::Result<Self::IntoIter> {
@@ -5694,7 +5694,7 @@ pub struct WorkloadNetworkSegmentsList {
 }
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 # [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
-impl azure_core::http::pager::Page for WorkloadNetworkSegmentsList {
+impl azure_core::http::Page for WorkloadNetworkSegmentsList {
     type Item = <Vec<WorkloadNetworkSegment> as IntoIterator>::Item;
     type IntoIter = <Vec<WorkloadNetworkSegment> as IntoIterator>::IntoIter;
     async fn into_items(self) -> azure_core::Result<Self::IntoIter> {
@@ -5800,7 +5800,7 @@ pub struct WorkloadNetworkVmGroupsList {
 }
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 # [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
-impl azure_core::http::pager::Page for WorkloadNetworkVmGroupsList {
+impl azure_core::http::Page for WorkloadNetworkVmGroupsList {
     type Item = <Vec<WorkloadNetworkVmGroup> as IntoIterator>::Item;
     type IntoIter = <Vec<WorkloadNetworkVmGroup> as IntoIterator>::IntoIter;
     async fn into_items(self) -> azure_core::Result<Self::IntoIter> {
@@ -5855,7 +5855,7 @@ pub struct WorkloadNetworkVirtualMachinesList {
 }
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 # [cfg_attr (target_arch = "wasm32" , async_trait :: async_trait (? Send))]
-impl azure_core::http::pager::Page for WorkloadNetworkVirtualMachinesList {
+impl azure_core::http::Page for WorkloadNetworkVirtualMachinesList {
     type Item = <Vec<WorkloadNetworkVirtualMachine> as IntoIterator>::Item;
     type IntoIter = <Vec<WorkloadNetworkVirtualMachine> as IntoIterator>::IntoIter;
     async fn into_items(self) -> azure_core::Result<Self::IntoIter> {
@@ -5878,7 +5878,7 @@ pub struct SystemData {
     pub created_by_type: Option<system_data::CreatedByType>,
     #[doc = "The timestamp of resource creation (UTC)."]
     #[serde(rename = "createdAt", default, with = "azure_core::time::rfc3339::option")]
-    pub created_at: Option<::time::OffsetDateTime>,
+    pub created_at: Option<azure_core::time::OffsetDateTime>,
     #[doc = "The identity that last modified the resource."]
     #[serde(rename = "lastModifiedBy", default, skip_serializing_if = "Option::is_none")]
     pub last_modified_by: Option<String>,
@@ -5887,7 +5887,7 @@ pub struct SystemData {
     pub last_modified_by_type: Option<system_data::LastModifiedByType>,
     #[doc = "The timestamp of resource last modification (UTC)"]
     #[serde(rename = "lastModifiedAt", default, with = "azure_core::time::rfc3339::option")]
-    pub last_modified_at: Option<::time::OffsetDateTime>,
+    pub last_modified_at: Option<azure_core::time::OffsetDateTime>,
 }
 impl SystemData {
     pub fn new() -> Self {

@@ -893,7 +893,7 @@ pub struct StructCode {
     struct_name_code: Ident,
     default_code: TokenStream,
     props: Vec<StructPropCode>,
-    // When set, also emit an impl of azure_core::http::pager::Page for this struct
+    // When set, also emit an impl of azure_core::http::Page for this struct
     pager_code: Option<PagerCode>,
     implement_default: bool,
     new_fn_params: Vec<TokenStream>,
@@ -980,7 +980,7 @@ impl ToTokens for PagerCode {
         tokens.extend(quote! {
             #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
             #[cfg_attr(target_arch = "wasm32", async_trait::async_trait(?Send))]
-            impl azure_core::http::pager::Page for #struct_name {
+            impl azure_core::http::Page for #struct_name {
                 type Item = <#field_type as IntoIterator>::Item;
                 type IntoIter = <#field_type as IntoIterator>::IntoIter;
                 async fn into_items(self) -> azure_core::Result<Self::IntoIter> {

@@ -502,7 +502,7 @@ fn tp_str() -> TypePath {
 
 fn tp_date_time() -> TypePath {
     // always reference time crate
-    parse_type_path("::time::OffsetDateTime").unwrap()
+    parse_type_path("azure_core::time::OffsetDateTime").unwrap()
 }
 
 #[cfg(test)]
