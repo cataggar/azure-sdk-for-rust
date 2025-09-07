@@ -1,10 +1,17 @@
 [workspace]
 resolver = "2"
 members = [
-	"services/autorust/azure-autorust",
-	"services/autorust/codegen",
-	"services/autorust/openapi",
+	# "services/autorust/azure-autorust",
+	# "services/autorust/codegen",
+	# "services/autorust/openapi",
 	"services/mgmt/vmware",
 ]
+
+# [patch.crates-io]
+# # Override crates.io versions of azure_core and its macros with local development copies.
+# # This removes ambiguity when multiple versions (e.g., 0.27.x and 0.28.x) would otherwise coexist.
+# azure_core = { path = "../azure-sdk-for-rust2/sdk/core/azure_core" }
+# azure_core_macros = { path = "../azure-sdk-for-rust2/sdk/core/azure_core_macros" }
+# azure_identity = { path = "../azure-sdk-for-rust2/sdk/identity/azure_identity" }
 
 [workspace.lints]
