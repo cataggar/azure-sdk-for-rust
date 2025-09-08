@@ -140,6 +140,7 @@ pub fn create_client(modules: &[String], endpoint: Option<&str>) -> Result<Token
                     options,
                     Vec::new(),
                     Vec::new(),
+                    None,
                 );
                 Self {
                     endpoint,

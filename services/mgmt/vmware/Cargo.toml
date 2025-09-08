@@ -18,14 +18,12 @@ doctest = false
 # typespec_client_core = { version = "0.6", features = ["derive"] }
 azure_core = { path = "../../../../azure-sdk-for-rust2/sdk/core/azure_core", features = ["spin"] }
 typespec_client_core = { path = "../../../../azure-sdk-for-rust2/sdk/typespec/typespec_client_core", features = ["derive", "spin"] }
-
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 futures = "0.3"
 async-trait = "0.1"
 
 [dev-dependencies]
-# Temporarily disable azure_identity to avoid pulling in azure_core 0.27 alongside patched 0.28 version.
 # azure_identity = { version = "0.27", features = [] }
 azure_identity = { path = "../../../../azure-sdk-for-rust2/sdk/identity/azure_identity", features = [] }
 tokio = { version = "1.23", features = ["macros", "rt-multi-thread"] }

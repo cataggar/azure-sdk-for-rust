@@ -1265,8 +1265,15 @@ pub mod private_clouds {
                                 }));
                             }
                             let (status, headers, body) = rsp.deconstruct();
-                            let retry_after =
-                                azure_core::http::poller::get_retry_after(&headers, &[], &azure_core::http::poller::PollerOptions::default());
+                            let retry_after = azure_core::http::poller::get_retry_after(
+                                &headers,
+                                &[
+                                    azure_core::http::headers::RETRY_AFTER_MS,
+                                    azure_core::http::headers::X_MS_RETRY_AFTER_MS,
+                                    azure_core::http::headers::RETRY_AFTER,
+                                ],
+                                &azure_core::http::poller::PollerOptions::default(),
+                            );
                             let bytes = body.collect().await?;
                             let op: Operation = json::from_json(&bytes)?;
                             let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
@@ -1438,8 +1445,15 @@ pub mod private_clouds {
                                 }));
                             }
                             let (status, headers, body) = rsp.deconstruct();
-                            let retry_after =
-                                azure_core::http::poller::get_retry_after(&headers, &[], &azure_core::http::poller::PollerOptions::default());
+                            let retry_after = azure_core::http::poller::get_retry_after(
+                                &headers,
+                                &[
+                                    azure_core::http::headers::RETRY_AFTER_MS,
+                                    azure_core::http::headers::X_MS_RETRY_AFTER_MS,
+                                    azure_core::http::headers::RETRY_AFTER,
+                                ],
+                                &azure_core::http::poller::PollerOptions::default(),
+                            );
                             let bytes = body.collect().await?;
                             let op: Operation = json::from_json(&bytes)?;
                             let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
@@ -2392,8 +2406,15 @@ pub mod addons {
                                 }));
                             }
                             let (status, headers, body) = rsp.deconstruct();
-                            let retry_after =
-                                azure_core::http::poller::get_retry_after(&headers, &[], &azure_core::http::poller::PollerOptions::default());
+                            let retry_after = azure_core::http::poller::get_retry_after(
+                                &headers,
+                                &[
+                                    azure_core::http::headers::RETRY_AFTER_MS,
+                                    azure_core::http::headers::X_MS_RETRY_AFTER_MS,
+                                    azure_core::http::headers::RETRY_AFTER,
+                                ],
+                                &azure_core::http::poller::PollerOptions::default(),
+                            );
                             let bytes = body.collect().await?;
                             let op: Operation = json::from_json(&bytes)?;
                             let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
@@ -2980,8 +3001,15 @@ pub mod authorizations {
                                 }));
                             }
                             let (status, headers, body) = rsp.deconstruct();
-                            let retry_after =
-                                azure_core::http::poller::get_retry_after(&headers, &[], &azure_core::http::poller::PollerOptions::default());
+                            let retry_after = azure_core::http::poller::get_retry_after(
+                                &headers,
+                                &[
+                                    azure_core::http::headers::RETRY_AFTER_MS,
+                                    azure_core::http::headers::X_MS_RETRY_AFTER_MS,
+                                    azure_core::http::headers::RETRY_AFTER,
+                                ],
+                                &azure_core::http::poller::PollerOptions::default(),
+                            );
                             let bytes = body.collect().await?;
                             let op: Operation = json::from_json(&bytes)?;
                             let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
@@ -3552,8 +3580,15 @@ pub mod cloud_links {
                                 }));
                             }
                             let (status, headers, body) = rsp.deconstruct();
-                            let retry_after =
-                                azure_core::http::poller::get_retry_after(&headers, &[], &azure_core::http::poller::PollerOptions::default());
+                            let retry_after = azure_core::http::poller::get_retry_after(
+                                &headers,
+                                &[
+                                    azure_core::http::headers::RETRY_AFTER_MS,
+                                    azure_core::http::headers::X_MS_RETRY_AFTER_MS,
+                                    azure_core::http::headers::RETRY_AFTER,
+                                ],
+                                &azure_core::http::poller::PollerOptions::default(),
+                            );
                             let bytes = body.collect().await?;
                             let op: Operation = json::from_json(&bytes)?;
                             let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
@@ -4170,8 +4205,15 @@ pub mod clusters {
                                 }));
                             }
                             let (status, headers, body) = rsp.deconstruct();
-                            let retry_after =
-                                azure_core::http::poller::get_retry_after(&headers, &[], &azure_core::http::poller::PollerOptions::default());
+                            let retry_after = azure_core::http::poller::get_retry_after(
+                                &headers,
+                                &[
+                                    azure_core::http::headers::RETRY_AFTER_MS,
+                                    azure_core::http::headers::X_MS_RETRY_AFTER_MS,
+                                    azure_core::http::headers::RETRY_AFTER,
+                                ],
+                                &azure_core::http::poller::PollerOptions::default(),
+                            );
                             let bytes = body.collect().await?;
                             let op: Operation = json::from_json(&bytes)?;
                             let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
@@ -4342,8 +4384,15 @@ pub mod clusters {
                                 }));
                             }
                             let (status, headers, body) = rsp.deconstruct();
-                            let retry_after =
-                                azure_core::http::poller::get_retry_after(&headers, &[], &azure_core::http::poller::PollerOptions::default());
+                            let retry_after = azure_core::http::poller::get_retry_after(
+                                &headers,
+                                &[
+                                    azure_core::http::headers::RETRY_AFTER_MS,
+                                    azure_core::http::headers::X_MS_RETRY_AFTER_MS,
+                                    azure_core::http::headers::RETRY_AFTER,
+                                ],
+                                &azure_core::http::poller::PollerOptions::default(),
+                            );
                             let bytes = body.collect().await?;
                             let op: Operation = json::from_json(&bytes)?;
                             let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
@@ -5018,8 +5067,15 @@ pub mod datastores {
                                 }));
                             }
                             let (status, headers, body) = rsp.deconstruct();
-                            let retry_after =
-                                azure_core::http::poller::get_retry_after(&headers, &[], &azure_core::http::poller::PollerOptions::default());
+                            let retry_after = azure_core::http::poller::get_retry_after(
+                                &headers,
+                                &[
+                                    azure_core::http::headers::RETRY_AFTER_MS,
+                                    azure_core::http::headers::X_MS_RETRY_AFTER_MS,
+                                    azure_core::http::headers::RETRY_AFTER,
+                                ],
+                                &azure_core::http::poller::PollerOptions::default(),
+                            );
                             let bytes = body.collect().await?;
                             let op: Operation = json::from_json(&bytes)?;
                             let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
@@ -5945,8 +6001,15 @@ pub mod placement_policies {
                                 }));
                             }
                             let (status, headers, body) = rsp.deconstruct();
-                            let retry_after =
-                                azure_core::http::poller::get_retry_after(&headers, &[], &azure_core::http::poller::PollerOptions::default());
+                            let retry_after = azure_core::http::poller::get_retry_after(
+                                &headers,
+                                &[
+                                    azure_core::http::headers::RETRY_AFTER_MS,
+                                    azure_core::http::headers::X_MS_RETRY_AFTER_MS,
+                                    azure_core::http::headers::RETRY_AFTER,
+                                ],
+                                &azure_core::http::poller::PollerOptions::default(),
+                            );
                             let bytes = body.collect().await?;
                             let op: Operation = json::from_json(&bytes)?;
                             let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
@@ -6125,8 +6188,15 @@ pub mod placement_policies {
                                 }));
                             }
                             let (status, headers, body) = rsp.deconstruct();
-                            let retry_after =
-                                azure_core::http::poller::get_retry_after(&headers, &[], &azure_core::http::poller::PollerOptions::default());
+                            let retry_after = azure_core::http::poller::get_retry_after(
+                                &headers,
+                                &[
+                                    azure_core::http::headers::RETRY_AFTER_MS,
+                                    azure_core::http::headers::X_MS_RETRY_AFTER_MS,
+                                    azure_core::http::headers::RETRY_AFTER,
+                                ],
+                                &azure_core::http::poller::PollerOptions::default(),
+                            );
                             let bytes = body.collect().await?;
                             let op: Operation = json::from_json(&bytes)?;
                             let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
@@ -7109,8 +7179,15 @@ pub mod global_reach_connections {
                                 }));
                             }
                             let (status, headers, body) = rsp.deconstruct();
-                            let retry_after =
-                                azure_core::http::poller::get_retry_after(&headers, &[], &azure_core::http::poller::PollerOptions::default());
+                            let retry_after = azure_core::http::poller::get_retry_after(
+                                &headers,
+                                &[
+                                    azure_core::http::headers::RETRY_AFTER_MS,
+                                    azure_core::http::headers::X_MS_RETRY_AFTER_MS,
+                                    azure_core::http::headers::RETRY_AFTER,
+                                ],
+                                &azure_core::http::poller::PollerOptions::default(),
+                            );
                             let bytes = body.collect().await?;
                             let op: Operation = json::from_json(&bytes)?;
                             let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
@@ -8167,8 +8244,15 @@ pub mod iscsi_paths {
                                 }));
                             }
                             let (status, headers, body) = rsp.deconstruct();
-                            let retry_after =
-                                azure_core::http::poller::get_retry_after(&headers, &[], &azure_core::http::poller::PollerOptions::default());
+                            let retry_after = azure_core::http::poller::get_retry_after(
+                                &headers,
+                                &[
+                                    azure_core::http::headers::RETRY_AFTER_MS,
+                                    azure_core::http::headers::X_MS_RETRY_AFTER_MS,
+                                    azure_core::http::headers::RETRY_AFTER,
+                                ],
+                                &azure_core::http::poller::PollerOptions::default(),
+                            );
                             let bytes = body.collect().await?;
                             let op: Operation = json::from_json(&bytes)?;
                             let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
@@ -9044,8 +9128,15 @@ pub mod pure_storage_policies {
                                 }));
                             }
                             let (status, headers, body) = rsp.deconstruct();
-                            let retry_after =
-                                azure_core::http::poller::get_retry_after(&headers, &[], &azure_core::http::poller::PollerOptions::default());
+                            let retry_after = azure_core::http::poller::get_retry_after(
+                                &headers,
+                                &[
+                                    azure_core::http::headers::RETRY_AFTER_MS,
+                                    azure_core::http::headers::X_MS_RETRY_AFTER_MS,
+                                    azure_core::http::headers::RETRY_AFTER,
+                                ],
+                                &azure_core::http::poller::PollerOptions::default(),
+                            );
                             let bytes = body.collect().await?;
                             let op: Operation = json::from_json(&bytes)?;
                             let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
@@ -9645,8 +9736,15 @@ pub mod script_executions {
                                 }));
                             }
                             let (status, headers, body) = rsp.deconstruct();
-                            let retry_after =
-                                azure_core::http::poller::get_retry_after(&headers, &[], &azure_core::http::poller::PollerOptions::default());
+                            let retry_after = azure_core::http::poller::get_retry_after(
+                                &headers,
+                                &[
+                                    azure_core::http::headers::RETRY_AFTER_MS,
+                                    azure_core::http::headers::X_MS_RETRY_AFTER_MS,
+                                    azure_core::http::headers::RETRY_AFTER,
+                                ],
+                                &azure_core::http::poller::PollerOptions::default(),
+                            );
                             let bytes = body.collect().await?;
                             let op: Operation = json::from_json(&bytes)?;
                             let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
@@ -11939,8 +12037,15 @@ pub mod workload_networks {
                                 }));
                             }
                             let (status, headers, body) = rsp.deconstruct();
-                            let retry_after =
-                                azure_core::http::poller::get_retry_after(&headers, &[], &azure_core::http::poller::PollerOptions::default());
+                            let retry_after = azure_core::http::poller::get_retry_after(
+                                &headers,
+                                &[
+                                    azure_core::http::headers::RETRY_AFTER_MS,
+                                    azure_core::http::headers::X_MS_RETRY_AFTER_MS,
+                                    azure_core::http::headers::RETRY_AFTER,
+                                ],
+                                &azure_core::http::poller::PollerOptions::default(),
+                            );
                             let bytes = body.collect().await?;
                             let op: Operation = json::from_json(&bytes)?;
                             let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
@@ -12111,8 +12216,15 @@ pub mod workload_networks {
                                 }));
                             }
                             let (status, headers, body) = rsp.deconstruct();
-                            let retry_after =
-                                azure_core::http::poller::get_retry_after(&headers, &[], &azure_core::http::poller::PollerOptions::default());
+                            let retry_after = azure_core::http::poller::get_retry_after(
+                                &headers,
+                                &[
+                                    azure_core::http::headers::RETRY_AFTER_MS,
+                                    azure_core::http::headers::X_MS_RETRY_AFTER_MS,
+                                    azure_core::http::headers::RETRY_AFTER,
+                                ],
+                                &azure_core::http::poller::PollerOptions::default(),
+                            );
                             let bytes = body.collect().await?;
                             let op: Operation = json::from_json(&bytes)?;
                             let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
@@ -12598,8 +12710,15 @@ pub mod workload_networks {
                                 }));
                             }
                             let (status, headers, body) = rsp.deconstruct();
-                            let retry_after =
-                                azure_core::http::poller::get_retry_after(&headers, &[], &azure_core::http::poller::PollerOptions::default());
+                            let retry_after = azure_core::http::poller::get_retry_after(
+                                &headers,
+                                &[
+                                    azure_core::http::headers::RETRY_AFTER_MS,
+                                    azure_core::http::headers::X_MS_RETRY_AFTER_MS,
+                                    azure_core::http::headers::RETRY_AFTER,
+                                ],
+                                &azure_core::http::poller::PollerOptions::default(),
+                            );
                             let bytes = body.collect().await?;
                             let op: Operation = json::from_json(&bytes)?;
                             let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
@@ -12775,8 +12894,15 @@ pub mod workload_networks {
                                 }));
                             }
                             let (status, headers, body) = rsp.deconstruct();
-                            let retry_after =
-                                azure_core::http::poller::get_retry_after(&headers, &[], &azure_core::http::poller::PollerOptions::default());
+                            let retry_after = azure_core::http::poller::get_retry_after(
+                                &headers,
+                                &[
+                                    azure_core::http::headers::RETRY_AFTER_MS,
+                                    azure_core::http::headers::X_MS_RETRY_AFTER_MS,
+                                    azure_core::http::headers::RETRY_AFTER,
+                                ],
+                                &azure_core::http::poller::PollerOptions::default(),
+                            );
                             let bytes = body.collect().await?;
                             let op: Operation = json::from_json(&bytes)?;
                             let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
@@ -13259,8 +13385,15 @@ pub mod workload_networks {
                                 }));
                             }
                             let (status, headers, body) = rsp.deconstruct();
-                            let retry_after =
-                                azure_core::http::poller::get_retry_after(&headers, &[], &azure_core::http::poller::PollerOptions::default());
+                            let retry_after = azure_core::http::poller::get_retry_after(
+                                &headers,
+                                &[
+                                    azure_core::http::headers::RETRY_AFTER_MS,
+                                    azure_core::http::headers::X_MS_RETRY_AFTER_MS,
+                                    azure_core::http::headers::RETRY_AFTER,
+                                ],
+                                &azure_core::http::poller::PollerOptions::default(),
+                            );
                             let bytes = body.collect().await?;
                             let op: Operation = json::from_json(&bytes)?;
                             let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
@@ -13434,8 +13567,15 @@ pub mod workload_networks {
                                 }));
                             }
                             let (status, headers, body) = rsp.deconstruct();
-                            let retry_after =
-                                azure_core::http::poller::get_retry_after(&headers, &[], &azure_core::http::poller::PollerOptions::default());
+                            let retry_after = azure_core::http::poller::get_retry_after(
+                                &headers,
+                                &[
+                                    azure_core::http::headers::RETRY_AFTER_MS,
+                                    azure_core::http::headers::X_MS_RETRY_AFTER_MS,
+                                    azure_core::http::headers::RETRY_AFTER,
+                                ],
+                                &azure_core::http::poller::PollerOptions::default(),
+                            );
                             let bytes = body.collect().await?;
                             let op: Operation = json::from_json(&bytes)?;
                             let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
@@ -14162,8 +14302,15 @@ pub mod workload_networks {
                                 }));
                             }
                             let (status, headers, body) = rsp.deconstruct();
-                            let retry_after =
-                                azure_core::http::poller::get_retry_after(&headers, &[], &azure_core::http::poller::PollerOptions::default());
+                            let retry_after = azure_core::http::poller::get_retry_after(
+                                &headers,
+                                &[
+                                    azure_core::http::headers::RETRY_AFTER_MS,
+                                    azure_core::http::headers::X_MS_RETRY_AFTER_MS,
+                                    azure_core::http::headers::RETRY_AFTER,
+                                ],
+                                &azure_core::http::poller::PollerOptions::default(),
+                            );
                             let bytes = body.collect().await?;
                             let op: Operation = json::from_json(&bytes)?;
                             let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
@@ -14338,8 +14485,15 @@ pub mod workload_networks {
                                 }));
                             }
                             let (status, headers, body) = rsp.deconstruct();
-                            let retry_after =
-                                azure_core::http::poller::get_retry_after(&headers, &[], &azure_core::http::poller::PollerOptions::default());
+                            let retry_after = azure_core::http::poller::get_retry_after(
+                                &headers,
+                                &[
+                                    azure_core::http::headers::RETRY_AFTER_MS,
+                                    azure_core::http::headers::X_MS_RETRY_AFTER_MS,
+                                    azure_core::http::headers::RETRY_AFTER,
+                                ],
+                                &azure_core::http::poller::PollerOptions::default(),
+                            );
                             let bytes = body.collect().await?;
                             let op: Operation = json::from_json(&bytes)?;
                             let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
@@ -14821,8 +14975,15 @@ pub mod workload_networks {
                                 }));
                             }
                             let (status, headers, body) = rsp.deconstruct();
-                            let retry_after =
-                                azure_core::http::poller::get_retry_after(&headers, &[], &azure_core::http::poller::PollerOptions::default());
+                            let retry_after = azure_core::http::poller::get_retry_after(
+                                &headers,
+                                &[
+                                    azure_core::http::headers::RETRY_AFTER_MS,
+                                    azure_core::http::headers::X_MS_RETRY_AFTER_MS,
+                                    azure_core::http::headers::RETRY_AFTER,
+                                ],
+                                &azure_core::http::poller::PollerOptions::default(),
+                            );
                             let bytes = body.collect().await?;
                             let op: Operation = json::from_json(&bytes)?;
                             let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
@@ -15305,8 +15466,15 @@ pub mod workload_networks {
                                 }));
                             }
                             let (status, headers, body) = rsp.deconstruct();
-                            let retry_after =
-                                azure_core::http::poller::get_retry_after(&headers, &[], &azure_core::http::poller::PollerOptions::default());
+                            let retry_after = azure_core::http::poller::get_retry_after(
+                                &headers,
+                                &[
+                                    azure_core::http::headers::RETRY_AFTER_MS,
+                                    azure_core::http::headers::X_MS_RETRY_AFTER_MS,
+                                    azure_core::http::headers::RETRY_AFTER,
+                                ],
+                                &azure_core::http::poller::PollerOptions::default(),
+                            );
                             let bytes = body.collect().await?;
                             let op: Operation = json::from_json(&bytes)?;
                             let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
@@ -15480,8 +15648,15 @@ pub mod workload_networks {
                                 }));
                             }
                             let (status, headers, body) = rsp.deconstruct();
-                            let retry_after =
-                                azure_core::http::poller::get_retry_after(&headers, &[], &azure_core::http::poller::PollerOptions::default());
+                            let retry_after = azure_core::http::poller::get_retry_after(
+                                &headers,
+                                &[
+                                    azure_core::http::headers::RETRY_AFTER_MS,
+                                    azure_core::http::headers::X_MS_RETRY_AFTER_MS,
+                                    azure_core::http::headers::RETRY_AFTER,
+                                ],
+                                &azure_core::http::poller::PollerOptions::default(),
+                            );
                             let bytes = body.collect().await?;
                             let op: Operation = json::from_json(&bytes)?;
                             let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
@@ -16210,8 +16385,15 @@ pub mod workload_networks {
                                 }));
                             }
                             let (status, headers, body) = rsp.deconstruct();
-                            let retry_after =
-                                azure_core::http::poller::get_retry_after(&headers, &[], &azure_core::http::poller::PollerOptions::default());
+                            let retry_after = azure_core::http::poller::get_retry_after(
+                                &headers,
+                                &[
+                                    azure_core::http::headers::RETRY_AFTER_MS,
+                                    azure_core::http::headers::X_MS_RETRY_AFTER_MS,
+                                    azure_core::http::headers::RETRY_AFTER,
+                                ],
+                                &azure_core::http::poller::PollerOptions::default(),
+                            );
                             let bytes = body.collect().await?;
                             let op: Operation = json::from_json(&bytes)?;
                             let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
@@ -16385,8 +16567,15 @@ pub mod workload_networks {
                                 }));
                             }
                             let (status, headers, body) = rsp.deconstruct();
-                            let retry_after =
-                                azure_core::http::poller::get_retry_after(&headers, &[], &azure_core::http::poller::PollerOptions::default());
+                            let retry_after = azure_core::http::poller::get_retry_after(
+                                &headers,
+                                &[
+                                    azure_core::http::headers::RETRY_AFTER_MS,
+                                    azure_core::http::headers::X_MS_RETRY_AFTER_MS,
+                                    azure_core::http::headers::RETRY_AFTER,
+                                ],
+                                &azure_core::http::poller::PollerOptions::default(),
+                            );
                             let bytes = body.collect().await?;
                             let op: Operation = json::from_json(&bytes)?;
                             let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();

@@ -150,15 +150,15 @@ impl ToTokens for RequestBuilderSendCode {
                     // Continuation token provided as a query parameter; build subsequent requests by reusing the builder and setting the token.
                     quote! {
                                 #[doc = "Return a Pager over pages"]
-                    pub fn pager(self) -> azure_core::Result<azure_core::http::Pager<#response_type>> {
+                    pub fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<#response_type>> {
                                     let client = self.client.clone();
                                     let initial = self.clone();
-                                    Ok(azure_core::http::Pager::from_callback(move |state: azure_core::http::PagerState<String>| {
+                                    Ok(azure_core::http::pager::Pager::from_callback(move |state: azure_core::http::pager::PagerState<String>| {
                                         let client = client.clone();
                                         let initial = initial.clone();
                                         async move {
                                             let rsp = match state {
-                                                azure_core::http::PagerState::Initial => {
+                                                azure_core::http::pager::PagerState::Initial => {
                                                     // Build the initial request and send it as raw to maintain access to bytes
                                                     let url = initial.url()?;
                                                     let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
@@ -167,7 +167,7 @@ impl ToTokens for RequestBuilderSendCode {
                                                     #stream_api_version
                                                     client.send_raw(&mut req).await?
                                                 }
-                                                azure_core::http::PagerState::More(token) => {
+                                                azure_core::http::pager::PagerState::More(token) => {
                                                     let url = initial.url()?;
                                                     let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
                                                     let bearer_token = client.bearer_token().await?;
@@ -193,8 +193,8 @@ impl ToTokens for RequestBuilderSendCode {
                                                 .and_then(|v| v.get(#next_link_name).and_then(|x| x.as_str()).map(|s| s.to_string()))
                                                 .filter(|s| !s.is_empty());
                                             Ok(match continuation {
-                                                Some(continuation) => azure_core::http::PagerResult::More { response, continuation },
-                                                None => azure_core::http::PagerResult::Done { response },
+                                                Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
+                                                None => azure_core::http::pager::PagerResult::Done { response },
                                             })
                                         }
                                     }))
@@ -204,15 +204,15 @@ impl ToTokens for RequestBuilderSendCode {
                     // Continuation link provided as a URL in the response body (next link); build subsequent requests from the absolute/relative URL.
                     quote! {
                                 #[doc = "Return a Pager over pages"]
-                    pub fn pager(self) -> azure_core::Result<azure_core::http::Pager<#response_type>> {
+                    pub fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<#response_type>> {
                                     let client = self.client.clone();
                                     let initial = self.clone();
-                                    Ok(azure_core::http::Pager::from_callback(move |state: azure_core::http::PagerState<String>| {
+                                    Ok(azure_core::http::pager::Pager::from_callback(move |state: azure_core::http::pager::PagerState<String>| {
                                         let client = client.clone();
                                         let initial = initial.clone();
                                         async move {
                                             let rsp = match state {
-                                                azure_core::http::PagerState::Initial => {
+                                                azure_core::http::pager::PagerState::Initial => {
                                                     // Build the initial request and send it as raw to maintain access to bytes
                                                     let url = initial.url()?;
                                                     let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
@@ -221,7 +221,7 @@ impl ToTokens for RequestBuilderSendCode {
                                                     #stream_api_version
                                                     client.send_raw(&mut req).await?
                                                 }
-                                                azure_core::http::PagerState::More(next_url) => {
+                                                azure_core::http::pager::PagerState::More(next_url) => {
                                                     let mut url = client.endpoint().clone();
                                                     url.set_path("");
                                                     let url = url.join(next_url.as_ref())?;
@@ -248,8 +248,8 @@ impl ToTokens for RequestBuilderSendCode {
                                                 .and_then(|v| v.get(#next_link_name).and_then(|x| x.as_str()).map(|s| s.to_string()))
                                                 .filter(|s| !s.is_empty());
                                             Ok(match continuation {
-                                                Some(continuation) => azure_core::http::PagerResult::More { response, continuation },
-                                                None => azure_core::http::PagerResult::Done { response },
+                                                Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
+                                                None => azure_core::http::pager::PagerResult::Done { response },
                                             })
                                         }
                                     }))
@@ -319,7 +319,15 @@ impl ToTokens for RequestBuilderSendCode {
                                         return Err(azure_core::error::Error::from(azure_core::error::ErrorKind::HttpResponse { status: rsp.status(), error_code: None }));
                                     }
                                     let (status, headers, body) = rsp.deconstruct();
-                                    let retry_after = azure_core::http::poller::get_retry_after(&headers, &azure_core::http::poller::PollerOptions::default());
+                                    let retry_after = azure_core::http::poller::get_retry_after(
+                                        &headers,
+                                        &[
+                                            azure_core::http::headers::RETRY_AFTER_MS,
+                                            azure_core::http::headers::X_MS_RETRY_AFTER_MS,
+                                            azure_core::http::headers::RETRY_AFTER,
+                                        ],
+                                        &azure_core::http::poller::PollerOptions::default(),
+                                    );
                                     let bytes = body.collect().await?;
                                     // Parse into Operation to determine status
                                     let op: Operation = json::from_json(&bytes)?;
