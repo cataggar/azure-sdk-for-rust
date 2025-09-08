@@ -105,6 +105,7 @@ impl Client {
             options,
             Vec::new(),
             Vec::new(),
+            None,
         );
         Self {
             endpoint,
@@ -258,16 +259,16 @@ pub mod operations {
                 })
             }
             #[doc = "Return a Pager over pages"]
-            pub fn pager(self) -> azure_core::Result<azure_core::http::Pager<models::OperationListResult>> {
+            pub fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::OperationListResult>> {
                 let client = self.client.clone();
                 let initial = self.clone();
-                Ok(azure_core::http::Pager::from_callback(
-                    move |state: azure_core::http::PagerState<String>| {
+                Ok(azure_core::http::pager::Pager::from_callback(
+                    move |state: azure_core::http::pager::PagerState<String>| {
                         let client = client.clone();
                         let initial = initial.clone();
                         async move {
                             let rsp = match state {
-                                azure_core::http::PagerState::Initial => {
+                                azure_core::http::pager::PagerState::Initial => {
                                     let url = initial.url()?;
                                     let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
                                     let bearer_token = client.bearer_token().await?;
@@ -286,7 +287,7 @@ pub mod operations {
                                     }
                                     client.send_raw(&mut req).await?
                                 }
-                                azure_core::http::PagerState::More(next_url) => {
+                                azure_core::http::pager::PagerState::More(next_url) => {
                                     let mut url = client.endpoint().clone();
                                     url.set_path("");
                                     let url = url.join(next_url.as_ref())?;
@@ -326,8 +327,8 @@ pub mod operations {
                                 .and_then(|v| v.get("nextLink").and_then(|x| x.as_str()).map(|s| s.to_string()))
                                 .filter(|s| !s.is_empty());
                             Ok(match continuation {
-                                Some(continuation) => azure_core::http::PagerResult::More { response, continuation },
-                                None => azure_core::http::PagerResult::Done { response },
+                                Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
+                                None => azure_core::http::pager::PagerResult::Done { response },
                             })
                         }
                     },
@@ -798,16 +799,16 @@ pub mod private_clouds {
                 })
             }
             #[doc = "Return a Pager over pages"]
-            pub fn pager(self) -> azure_core::Result<azure_core::http::Pager<models::PrivateCloudList>> {
+            pub fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::PrivateCloudList>> {
                 let client = self.client.clone();
                 let initial = self.clone();
-                Ok(azure_core::http::Pager::from_callback(
-                    move |state: azure_core::http::PagerState<String>| {
+                Ok(azure_core::http::pager::Pager::from_callback(
+                    move |state: azure_core::http::pager::PagerState<String>| {
                         let client = client.clone();
                         let initial = initial.clone();
                         async move {
                             let rsp = match state {
-                                azure_core::http::PagerState::Initial => {
+                                azure_core::http::pager::PagerState::Initial => {
                                     let url = initial.url()?;
                                     let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
                                     let bearer_token = client.bearer_token().await?;
@@ -826,7 +827,7 @@ pub mod private_clouds {
                                     }
                                     client.send_raw(&mut req).await?
                                 }
-                                azure_core::http::PagerState::More(next_url) => {
+                                azure_core::http::pager::PagerState::More(next_url) => {
                                     let mut url = client.endpoint().clone();
                                     url.set_path("");
                                     let url = url.join(next_url.as_ref())?;
@@ -866,8 +867,8 @@ pub mod private_clouds {
                                 .and_then(|v| v.get("nextLink").and_then(|x| x.as_str()).map(|s| s.to_string()))
                                 .filter(|s| !s.is_empty());
                             Ok(match continuation {
-                                Some(continuation) => azure_core::http::PagerResult::More { response, continuation },
-                                None => azure_core::http::PagerResult::Done { response },
+                                Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
+                                None => azure_core::http::pager::PagerResult::Done { response },
                             })
                         }
                     },
@@ -948,16 +949,16 @@ pub mod private_clouds {
                 })
             }
             #[doc = "Return a Pager over pages"]
-            pub fn pager(self) -> azure_core::Result<azure_core::http::Pager<models::PrivateCloudList>> {
+            pub fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::PrivateCloudList>> {
                 let client = self.client.clone();
                 let initial = self.clone();
-                Ok(azure_core::http::Pager::from_callback(
-                    move |state: azure_core::http::PagerState<String>| {
+                Ok(azure_core::http::pager::Pager::from_callback(
+                    move |state: azure_core::http::pager::PagerState<String>| {
                         let client = client.clone();
                         let initial = initial.clone();
                         async move {
                             let rsp = match state {
-                                azure_core::http::PagerState::Initial => {
+                                azure_core::http::pager::PagerState::Initial => {
                                     let url = initial.url()?;
                                     let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
                                     let bearer_token = client.bearer_token().await?;
@@ -976,7 +977,7 @@ pub mod private_clouds {
                                     }
                                     client.send_raw(&mut req).await?
                                 }
-                                azure_core::http::PagerState::More(next_url) => {
+                                azure_core::http::pager::PagerState::More(next_url) => {
                                     let mut url = client.endpoint().clone();
                                     url.set_path("");
                                     let url = url.join(next_url.as_ref())?;
@@ -1016,8 +1017,8 @@ pub mod private_clouds {
                                 .and_then(|v| v.get("nextLink").and_then(|x| x.as_str()).map(|s| s.to_string()))
                                 .filter(|s| !s.is_empty());
                             Ok(match continuation {
-                                Some(continuation) => azure_core::http::PagerResult::More { response, continuation },
-                                None => azure_core::http::PagerResult::Done { response },
+                                Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
+                                None => azure_core::http::pager::PagerResult::Done { response },
                             })
                         }
                     },
@@ -1265,7 +1266,7 @@ pub mod private_clouds {
                             }
                             let (status, headers, body) = rsp.deconstruct();
                             let retry_after =
-                                azure_core::http::poller::get_retry_after(&headers, &azure_core::http::poller::PollerOptions::default());
+                                azure_core::http::poller::get_retry_after(&headers, &[], &azure_core::http::poller::PollerOptions::default());
                             let bytes = body.collect().await?;
                             let op: Operation = json::from_json(&bytes)?;
                             let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
@@ -1438,7 +1439,7 @@ pub mod private_clouds {
                             }
                             let (status, headers, body) = rsp.deconstruct();
                             let retry_after =
-                                azure_core::http::poller::get_retry_after(&headers, &azure_core::http::poller::PollerOptions::default());
+                                azure_core::http::poller::get_retry_after(&headers, &[], &azure_core::http::poller::PollerOptions::default());
                             let bytes = body.collect().await?;
                             let op: Operation = json::from_json(&bytes)?;
                             let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
@@ -1831,16 +1832,16 @@ pub mod skus {
                 })
             }
             #[doc = "Return a Pager over pages"]
-            pub fn pager(self) -> azure_core::Result<azure_core::http::Pager<models::PagedResourceSku>> {
+            pub fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::PagedResourceSku>> {
                 let client = self.client.clone();
                 let initial = self.clone();
-                Ok(azure_core::http::Pager::from_callback(
-                    move |state: azure_core::http::PagerState<String>| {
+                Ok(azure_core::http::pager::Pager::from_callback(
+                    move |state: azure_core::http::pager::PagerState<String>| {
                         let client = client.clone();
                         let initial = initial.clone();
                         async move {
                             let rsp = match state {
-                                azure_core::http::PagerState::Initial => {
+                                azure_core::http::pager::PagerState::Initial => {
                                     let url = initial.url()?;
                                     let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
                                     let bearer_token = client.bearer_token().await?;
@@ -1859,7 +1860,7 @@ pub mod skus {
                                     }
                                     client.send_raw(&mut req).await?
                                 }
-                                azure_core::http::PagerState::More(next_url) => {
+                                azure_core::http::pager::PagerState::More(next_url) => {
                                     let mut url = client.endpoint().clone();
                                     url.set_path("");
                                     let url = url.join(next_url.as_ref())?;
@@ -1899,8 +1900,8 @@ pub mod skus {
                                 .and_then(|v| v.get("nextLink").and_then(|x| x.as_str()).map(|s| s.to_string()))
                                 .filter(|s| !s.is_empty());
                             Ok(match continuation {
-                                Some(continuation) => azure_core::http::PagerResult::More { response, continuation },
-                                None => azure_core::http::PagerResult::Done { response },
+                                Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
+                                None => azure_core::http::pager::PagerResult::Done { response },
                             })
                         }
                     },
@@ -2077,16 +2078,16 @@ pub mod addons {
                 })
             }
             #[doc = "Return a Pager over pages"]
-            pub fn pager(self) -> azure_core::Result<azure_core::http::Pager<models::AddonList>> {
+            pub fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::AddonList>> {
                 let client = self.client.clone();
                 let initial = self.clone();
-                Ok(azure_core::http::Pager::from_callback(
-                    move |state: azure_core::http::PagerState<String>| {
+                Ok(azure_core::http::pager::Pager::from_callback(
+                    move |state: azure_core::http::pager::PagerState<String>| {
                         let client = client.clone();
                         let initial = initial.clone();
                         async move {
                             let rsp = match state {
-                                azure_core::http::PagerState::Initial => {
+                                azure_core::http::pager::PagerState::Initial => {
                                     let url = initial.url()?;
                                     let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
                                     let bearer_token = client.bearer_token().await?;
@@ -2105,7 +2106,7 @@ pub mod addons {
                                     }
                                     client.send_raw(&mut req).await?
                                 }
-                                azure_core::http::PagerState::More(next_url) => {
+                                azure_core::http::pager::PagerState::More(next_url) => {
                                     let mut url = client.endpoint().clone();
                                     url.set_path("");
                                     let url = url.join(next_url.as_ref())?;
@@ -2145,8 +2146,8 @@ pub mod addons {
                                 .and_then(|v| v.get("nextLink").and_then(|x| x.as_str()).map(|s| s.to_string()))
                                 .filter(|s| !s.is_empty());
                             Ok(match continuation {
-                                Some(continuation) => azure_core::http::PagerResult::More { response, continuation },
-                                None => azure_core::http::PagerResult::Done { response },
+                                Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
+                                None => azure_core::http::pager::PagerResult::Done { response },
                             })
                         }
                     },
@@ -2392,7 +2393,7 @@ pub mod addons {
                             }
                             let (status, headers, body) = rsp.deconstruct();
                             let retry_after =
-                                azure_core::http::poller::get_retry_after(&headers, &azure_core::http::poller::PollerOptions::default());
+                                azure_core::http::poller::get_retry_after(&headers, &[], &azure_core::http::poller::PollerOptions::default());
                             let bytes = body.collect().await?;
                             let op: Operation = json::from_json(&bytes)?;
                             let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
@@ -2653,16 +2654,16 @@ pub mod authorizations {
                 })
             }
             #[doc = "Return a Pager over pages"]
-            pub fn pager(self) -> azure_core::Result<azure_core::http::Pager<models::ExpressRouteAuthorizationList>> {
+            pub fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::ExpressRouteAuthorizationList>> {
                 let client = self.client.clone();
                 let initial = self.clone();
-                Ok(azure_core::http::Pager::from_callback(
-                    move |state: azure_core::http::PagerState<String>| {
+                Ok(azure_core::http::pager::Pager::from_callback(
+                    move |state: azure_core::http::pager::PagerState<String>| {
                         let client = client.clone();
                         let initial = initial.clone();
                         async move {
                             let rsp = match state {
-                                azure_core::http::PagerState::Initial => {
+                                azure_core::http::pager::PagerState::Initial => {
                                     let url = initial.url()?;
                                     let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
                                     let bearer_token = client.bearer_token().await?;
@@ -2681,7 +2682,7 @@ pub mod authorizations {
                                     }
                                     client.send_raw(&mut req).await?
                                 }
-                                azure_core::http::PagerState::More(next_url) => {
+                                azure_core::http::pager::PagerState::More(next_url) => {
                                     let mut url = client.endpoint().clone();
                                     url.set_path("");
                                     let url = url.join(next_url.as_ref())?;
@@ -2723,8 +2724,8 @@ pub mod authorizations {
                                 .and_then(|v| v.get("nextLink").and_then(|x| x.as_str()).map(|s| s.to_string()))
                                 .filter(|s| !s.is_empty());
                             Ok(match continuation {
-                                Some(continuation) => azure_core::http::PagerResult::More { response, continuation },
-                                None => azure_core::http::PagerResult::Done { response },
+                                Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
+                                None => azure_core::http::pager::PagerResult::Done { response },
                             })
                         }
                     },
@@ -2980,7 +2981,7 @@ pub mod authorizations {
                             }
                             let (status, headers, body) = rsp.deconstruct();
                             let retry_after =
-                                azure_core::http::poller::get_retry_after(&headers, &azure_core::http::poller::PollerOptions::default());
+                                azure_core::http::poller::get_retry_after(&headers, &[], &azure_core::http::poller::PollerOptions::default());
                             let bytes = body.collect().await?;
                             let op: Operation = json::from_json(&bytes)?;
                             let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
@@ -3237,16 +3238,16 @@ pub mod cloud_links {
                 })
             }
             #[doc = "Return a Pager over pages"]
-            pub fn pager(self) -> azure_core::Result<azure_core::http::Pager<models::CloudLinkList>> {
+            pub fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::CloudLinkList>> {
                 let client = self.client.clone();
                 let initial = self.clone();
-                Ok(azure_core::http::Pager::from_callback(
-                    move |state: azure_core::http::PagerState<String>| {
+                Ok(azure_core::http::pager::Pager::from_callback(
+                    move |state: azure_core::http::pager::PagerState<String>| {
                         let client = client.clone();
                         let initial = initial.clone();
                         async move {
                             let rsp = match state {
-                                azure_core::http::PagerState::Initial => {
+                                azure_core::http::pager::PagerState::Initial => {
                                     let url = initial.url()?;
                                     let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
                                     let bearer_token = client.bearer_token().await?;
@@ -3265,7 +3266,7 @@ pub mod cloud_links {
                                     }
                                     client.send_raw(&mut req).await?
                                 }
-                                azure_core::http::PagerState::More(next_url) => {
+                                azure_core::http::pager::PagerState::More(next_url) => {
                                     let mut url = client.endpoint().clone();
                                     url.set_path("");
                                     let url = url.join(next_url.as_ref())?;
@@ -3305,8 +3306,8 @@ pub mod cloud_links {
                                 .and_then(|v| v.get("nextLink").and_then(|x| x.as_str()).map(|s| s.to_string()))
                                 .filter(|s| !s.is_empty());
                             Ok(match continuation {
-                                Some(continuation) => azure_core::http::PagerResult::More { response, continuation },
-                                None => azure_core::http::PagerResult::Done { response },
+                                Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
+                                None => azure_core::http::pager::PagerResult::Done { response },
                             })
                         }
                     },
@@ -3552,7 +3553,7 @@ pub mod cloud_links {
                             }
                             let (status, headers, body) = rsp.deconstruct();
                             let retry_after =
-                                azure_core::http::poller::get_retry_after(&headers, &azure_core::http::poller::PollerOptions::default());
+                                azure_core::http::poller::get_retry_after(&headers, &[], &azure_core::http::poller::PollerOptions::default());
                             let bytes = body.collect().await?;
                             let op: Operation = json::from_json(&bytes)?;
                             let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
@@ -3855,16 +3856,16 @@ pub mod clusters {
                 })
             }
             #[doc = "Return a Pager over pages"]
-            pub fn pager(self) -> azure_core::Result<azure_core::http::Pager<models::ClusterList>> {
+            pub fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::ClusterList>> {
                 let client = self.client.clone();
                 let initial = self.clone();
-                Ok(azure_core::http::Pager::from_callback(
-                    move |state: azure_core::http::PagerState<String>| {
+                Ok(azure_core::http::pager::Pager::from_callback(
+                    move |state: azure_core::http::pager::PagerState<String>| {
                         let client = client.clone();
                         let initial = initial.clone();
                         async move {
                             let rsp = match state {
-                                azure_core::http::PagerState::Initial => {
+                                azure_core::http::pager::PagerState::Initial => {
                                     let url = initial.url()?;
                                     let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
                                     let bearer_token = client.bearer_token().await?;
@@ -3883,7 +3884,7 @@ pub mod clusters {
                                     }
                                     client.send_raw(&mut req).await?
                                 }
-                                azure_core::http::PagerState::More(next_url) => {
+                                azure_core::http::pager::PagerState::More(next_url) => {
                                     let mut url = client.endpoint().clone();
                                     url.set_path("");
                                     let url = url.join(next_url.as_ref())?;
@@ -3923,8 +3924,8 @@ pub mod clusters {
                                 .and_then(|v| v.get("nextLink").and_then(|x| x.as_str()).map(|s| s.to_string()))
                                 .filter(|s| !s.is_empty());
                             Ok(match continuation {
-                                Some(continuation) => azure_core::http::PagerResult::More { response, continuation },
-                                None => azure_core::http::PagerResult::Done { response },
+                                Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
+                                None => azure_core::http::pager::PagerResult::Done { response },
                             })
                         }
                     },
@@ -4170,7 +4171,7 @@ pub mod clusters {
                             }
                             let (status, headers, body) = rsp.deconstruct();
                             let retry_after =
-                                azure_core::http::poller::get_retry_after(&headers, &azure_core::http::poller::PollerOptions::default());
+                                azure_core::http::poller::get_retry_after(&headers, &[], &azure_core::http::poller::PollerOptions::default());
                             let bytes = body.collect().await?;
                             let op: Operation = json::from_json(&bytes)?;
                             let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
@@ -4342,7 +4343,7 @@ pub mod clusters {
                             }
                             let (status, headers, body) = rsp.deconstruct();
                             let retry_after =
-                                azure_core::http::poller::get_retry_after(&headers, &azure_core::http::poller::PollerOptions::default());
+                                azure_core::http::poller::get_retry_after(&headers, &[], &azure_core::http::poller::PollerOptions::default());
                             let bytes = body.collect().await?;
                             let op: Operation = json::from_json(&bytes)?;
                             let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
@@ -4701,16 +4702,16 @@ pub mod datastores {
                 })
             }
             #[doc = "Return a Pager over pages"]
-            pub fn pager(self) -> azure_core::Result<azure_core::http::Pager<models::DatastoreList>> {
+            pub fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::DatastoreList>> {
                 let client = self.client.clone();
                 let initial = self.clone();
-                Ok(azure_core::http::Pager::from_callback(
-                    move |state: azure_core::http::PagerState<String>| {
+                Ok(azure_core::http::pager::Pager::from_callback(
+                    move |state: azure_core::http::pager::PagerState<String>| {
                         let client = client.clone();
                         let initial = initial.clone();
                         async move {
                             let rsp = match state {
-                                azure_core::http::PagerState::Initial => {
+                                azure_core::http::pager::PagerState::Initial => {
                                     let url = initial.url()?;
                                     let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
                                     let bearer_token = client.bearer_token().await?;
@@ -4729,7 +4730,7 @@ pub mod datastores {
                                     }
                                     client.send_raw(&mut req).await?
                                 }
-                                azure_core::http::PagerState::More(next_url) => {
+                                azure_core::http::pager::PagerState::More(next_url) => {
                                     let mut url = client.endpoint().clone();
                                     url.set_path("");
                                     let url = url.join(next_url.as_ref())?;
@@ -4769,8 +4770,8 @@ pub mod datastores {
                                 .and_then(|v| v.get("nextLink").and_then(|x| x.as_str()).map(|s| s.to_string()))
                                 .filter(|s| !s.is_empty());
                             Ok(match continuation {
-                                Some(continuation) => azure_core::http::PagerResult::More { response, continuation },
-                                None => azure_core::http::PagerResult::Done { response },
+                                Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
+                                None => azure_core::http::pager::PagerResult::Done { response },
                             })
                         }
                     },
@@ -5018,7 +5019,7 @@ pub mod datastores {
                             }
                             let (status, headers, body) = rsp.deconstruct();
                             let retry_after =
-                                azure_core::http::poller::get_retry_after(&headers, &azure_core::http::poller::PollerOptions::default());
+                                azure_core::http::poller::get_retry_after(&headers, &[], &azure_core::http::poller::PollerOptions::default());
                             let bytes = body.collect().await?;
                             let op: Operation = json::from_json(&bytes)?;
                             let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
@@ -5236,16 +5237,16 @@ pub mod hosts {
                 })
             }
             #[doc = "Return a Pager over pages"]
-            pub fn pager(self) -> azure_core::Result<azure_core::http::Pager<models::HostListResult>> {
+            pub fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::HostListResult>> {
                 let client = self.client.clone();
                 let initial = self.clone();
-                Ok(azure_core::http::Pager::from_callback(
-                    move |state: azure_core::http::PagerState<String>| {
+                Ok(azure_core::http::pager::Pager::from_callback(
+                    move |state: azure_core::http::pager::PagerState<String>| {
                         let client = client.clone();
                         let initial = initial.clone();
                         async move {
                             let rsp = match state {
-                                azure_core::http::PagerState::Initial => {
+                                azure_core::http::pager::PagerState::Initial => {
                                     let url = initial.url()?;
                                     let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
                                     let bearer_token = client.bearer_token().await?;
@@ -5264,7 +5265,7 @@ pub mod hosts {
                                     }
                                     client.send_raw(&mut req).await?
                                 }
-                                azure_core::http::PagerState::More(next_url) => {
+                                azure_core::http::pager::PagerState::More(next_url) => {
                                     let mut url = client.endpoint().clone();
                                     url.set_path("");
                                     let url = url.join(next_url.as_ref())?;
@@ -5304,8 +5305,8 @@ pub mod hosts {
                                 .and_then(|v| v.get("nextLink").and_then(|x| x.as_str()).map(|s| s.to_string()))
                                 .filter(|s| !s.is_empty());
                             Ok(match continuation {
-                                Some(continuation) => azure_core::http::PagerResult::More { response, continuation },
-                                None => azure_core::http::PagerResult::Done { response },
+                                Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
+                                None => azure_core::http::pager::PagerResult::Done { response },
                             })
                         }
                     },
@@ -5612,16 +5613,16 @@ pub mod placement_policies {
                 })
             }
             #[doc = "Return a Pager over pages"]
-            pub fn pager(self) -> azure_core::Result<azure_core::http::Pager<models::PlacementPoliciesList>> {
+            pub fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::PlacementPoliciesList>> {
                 let client = self.client.clone();
                 let initial = self.clone();
-                Ok(azure_core::http::Pager::from_callback(
-                    move |state: azure_core::http::PagerState<String>| {
+                Ok(azure_core::http::pager::Pager::from_callback(
+                    move |state: azure_core::http::pager::PagerState<String>| {
                         let client = client.clone();
                         let initial = initial.clone();
                         async move {
                             let rsp = match state {
-                                azure_core::http::PagerState::Initial => {
+                                azure_core::http::pager::PagerState::Initial => {
                                     let url = initial.url()?;
                                     let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
                                     let bearer_token = client.bearer_token().await?;
@@ -5640,7 +5641,7 @@ pub mod placement_policies {
                                     }
                                     client.send_raw(&mut req).await?
                                 }
-                                azure_core::http::PagerState::More(next_url) => {
+                                azure_core::http::pager::PagerState::More(next_url) => {
                                     let mut url = client.endpoint().clone();
                                     url.set_path("");
                                     let url = url.join(next_url.as_ref())?;
@@ -5682,8 +5683,8 @@ pub mod placement_policies {
                                 .and_then(|v| v.get("nextLink").and_then(|x| x.as_str()).map(|s| s.to_string()))
                                 .filter(|s| !s.is_empty());
                             Ok(match continuation {
-                                Some(continuation) => azure_core::http::PagerResult::More { response, continuation },
-                                None => azure_core::http::PagerResult::Done { response },
+                                Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
+                                None => azure_core::http::pager::PagerResult::Done { response },
                             })
                         }
                     },
@@ -5945,7 +5946,7 @@ pub mod placement_policies {
                             }
                             let (status, headers, body) = rsp.deconstruct();
                             let retry_after =
-                                azure_core::http::poller::get_retry_after(&headers, &azure_core::http::poller::PollerOptions::default());
+                                azure_core::http::poller::get_retry_after(&headers, &[], &azure_core::http::poller::PollerOptions::default());
                             let bytes = body.collect().await?;
                             let op: Operation = json::from_json(&bytes)?;
                             let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
@@ -6125,7 +6126,7 @@ pub mod placement_policies {
                             }
                             let (status, headers, body) = rsp.deconstruct();
                             let retry_after =
-                                azure_core::http::poller::get_retry_after(&headers, &azure_core::http::poller::PollerOptions::default());
+                                azure_core::http::poller::get_retry_after(&headers, &[], &azure_core::http::poller::PollerOptions::default());
                             let bytes = body.collect().await?;
                             let op: Operation = json::from_json(&bytes)?;
                             let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
@@ -6375,16 +6376,16 @@ pub mod virtual_machines {
                 })
             }
             #[doc = "Return a Pager over pages"]
-            pub fn pager(self) -> azure_core::Result<azure_core::http::Pager<models::VirtualMachinesList>> {
+            pub fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::VirtualMachinesList>> {
                 let client = self.client.clone();
                 let initial = self.clone();
-                Ok(azure_core::http::Pager::from_callback(
-                    move |state: azure_core::http::PagerState<String>| {
+                Ok(azure_core::http::pager::Pager::from_callback(
+                    move |state: azure_core::http::pager::PagerState<String>| {
                         let client = client.clone();
                         let initial = initial.clone();
                         async move {
                             let rsp = match state {
-                                azure_core::http::PagerState::Initial => {
+                                azure_core::http::pager::PagerState::Initial => {
                                     let url = initial.url()?;
                                     let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
                                     let bearer_token = client.bearer_token().await?;
@@ -6403,7 +6404,7 @@ pub mod virtual_machines {
                                     }
                                     client.send_raw(&mut req).await?
                                 }
-                                azure_core::http::PagerState::More(next_url) => {
+                                azure_core::http::pager::PagerState::More(next_url) => {
                                     let mut url = client.endpoint().clone();
                                     url.set_path("");
                                     let url = url.join(next_url.as_ref())?;
@@ -6443,8 +6444,8 @@ pub mod virtual_machines {
                                 .and_then(|v| v.get("nextLink").and_then(|x| x.as_str()).map(|s| s.to_string()))
                                 .filter(|s| !s.is_empty());
                             Ok(match continuation {
-                                Some(continuation) => azure_core::http::PagerResult::More { response, continuation },
-                                None => azure_core::http::PagerResult::Done { response },
+                                Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
+                                None => azure_core::http::pager::PagerResult::Done { response },
                             })
                         }
                     },
@@ -6786,16 +6787,16 @@ pub mod global_reach_connections {
                 })
             }
             #[doc = "Return a Pager over pages"]
-            pub fn pager(self) -> azure_core::Result<azure_core::http::Pager<models::GlobalReachConnectionList>> {
+            pub fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::GlobalReachConnectionList>> {
                 let client = self.client.clone();
                 let initial = self.clone();
-                Ok(azure_core::http::Pager::from_callback(
-                    move |state: azure_core::http::PagerState<String>| {
+                Ok(azure_core::http::pager::Pager::from_callback(
+                    move |state: azure_core::http::pager::PagerState<String>| {
                         let client = client.clone();
                         let initial = initial.clone();
                         async move {
                             let rsp = match state {
-                                azure_core::http::PagerState::Initial => {
+                                azure_core::http::pager::PagerState::Initial => {
                                     let url = initial.url()?;
                                     let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
                                     let bearer_token = client.bearer_token().await?;
@@ -6814,7 +6815,7 @@ pub mod global_reach_connections {
                                     }
                                     client.send_raw(&mut req).await?
                                 }
-                                azure_core::http::PagerState::More(next_url) => {
+                                azure_core::http::pager::PagerState::More(next_url) => {
                                     let mut url = client.endpoint().clone();
                                     url.set_path("");
                                     let url = url.join(next_url.as_ref())?;
@@ -6856,8 +6857,8 @@ pub mod global_reach_connections {
                                 .and_then(|v| v.get("nextLink").and_then(|x| x.as_str()).map(|s| s.to_string()))
                                 .filter(|s| !s.is_empty());
                             Ok(match continuation {
-                                Some(continuation) => azure_core::http::PagerResult::More { response, continuation },
-                                None => azure_core::http::PagerResult::Done { response },
+                                Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
+                                None => azure_core::http::pager::PagerResult::Done { response },
                             })
                         }
                     },
@@ -7109,7 +7110,7 @@ pub mod global_reach_connections {
                             }
                             let (status, headers, body) = rsp.deconstruct();
                             let retry_after =
-                                azure_core::http::poller::get_retry_after(&headers, &azure_core::http::poller::PollerOptions::default());
+                                azure_core::http::poller::get_retry_after(&headers, &[], &azure_core::http::poller::PollerOptions::default());
                             let bytes = body.collect().await?;
                             let op: Operation = json::from_json(&bytes)?;
                             let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
@@ -7366,16 +7367,16 @@ pub mod hcx_enterprise_sites {
                 })
             }
             #[doc = "Return a Pager over pages"]
-            pub fn pager(self) -> azure_core::Result<azure_core::http::Pager<models::HcxEnterpriseSiteList>> {
+            pub fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::HcxEnterpriseSiteList>> {
                 let client = self.client.clone();
                 let initial = self.clone();
-                Ok(azure_core::http::Pager::from_callback(
-                    move |state: azure_core::http::PagerState<String>| {
+                Ok(azure_core::http::pager::Pager::from_callback(
+                    move |state: azure_core::http::pager::PagerState<String>| {
                         let client = client.clone();
                         let initial = initial.clone();
                         async move {
                             let rsp = match state {
-                                azure_core::http::PagerState::Initial => {
+                                azure_core::http::pager::PagerState::Initial => {
                                     let url = initial.url()?;
                                     let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
                                     let bearer_token = client.bearer_token().await?;
@@ -7394,7 +7395,7 @@ pub mod hcx_enterprise_sites {
                                     }
                                     client.send_raw(&mut req).await?
                                 }
-                                azure_core::http::PagerState::More(next_url) => {
+                                azure_core::http::pager::PagerState::More(next_url) => {
                                     let mut url = client.endpoint().clone();
                                     url.set_path("");
                                     let url = url.join(next_url.as_ref())?;
@@ -7436,8 +7437,8 @@ pub mod hcx_enterprise_sites {
                                 .and_then(|v| v.get("nextLink").and_then(|x| x.as_str()).map(|s| s.to_string()))
                                 .filter(|s| !s.is_empty());
                             Ok(match continuation {
-                                Some(continuation) => azure_core::http::PagerResult::More { response, continuation },
-                                None => azure_core::http::PagerResult::Done { response },
+                                Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
+                                None => azure_core::http::pager::PagerResult::Done { response },
                             })
                         }
                     },
@@ -7854,16 +7855,16 @@ pub mod iscsi_paths {
                 })
             }
             #[doc = "Return a Pager over pages"]
-            pub fn pager(self) -> azure_core::Result<azure_core::http::Pager<models::IscsiPathListResult>> {
+            pub fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::IscsiPathListResult>> {
                 let client = self.client.clone();
                 let initial = self.clone();
-                Ok(azure_core::http::Pager::from_callback(
-                    move |state: azure_core::http::PagerState<String>| {
+                Ok(azure_core::http::pager::Pager::from_callback(
+                    move |state: azure_core::http::pager::PagerState<String>| {
                         let client = client.clone();
                         let initial = initial.clone();
                         async move {
                             let rsp = match state {
-                                azure_core::http::PagerState::Initial => {
+                                azure_core::http::pager::PagerState::Initial => {
                                     let url = initial.url()?;
                                     let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
                                     let bearer_token = client.bearer_token().await?;
@@ -7882,7 +7883,7 @@ pub mod iscsi_paths {
                                     }
                                     client.send_raw(&mut req).await?
                                 }
-                                azure_core::http::PagerState::More(next_url) => {
+                                azure_core::http::pager::PagerState::More(next_url) => {
                                     let mut url = client.endpoint().clone();
                                     url.set_path("");
                                     let url = url.join(next_url.as_ref())?;
@@ -7922,8 +7923,8 @@ pub mod iscsi_paths {
                                 .and_then(|v| v.get("nextLink").and_then(|x| x.as_str()).map(|s| s.to_string()))
                                 .filter(|s| !s.is_empty());
                             Ok(match continuation {
-                                Some(continuation) => azure_core::http::PagerResult::More { response, continuation },
-                                None => azure_core::http::PagerResult::Done { response },
+                                Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
+                                None => azure_core::http::pager::PagerResult::Done { response },
                             })
                         }
                     },
@@ -8167,7 +8168,7 @@ pub mod iscsi_paths {
                             }
                             let (status, headers, body) = rsp.deconstruct();
                             let retry_after =
-                                azure_core::http::poller::get_retry_after(&headers, &azure_core::http::poller::PollerOptions::default());
+                                azure_core::http::poller::get_retry_after(&headers, &[], &azure_core::http::poller::PollerOptions::default());
                             let bytes = body.collect().await?;
                             let op: Operation = json::from_json(&bytes)?;
                             let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
@@ -8380,16 +8381,16 @@ pub mod provisioned_networks {
                 })
             }
             #[doc = "Return a Pager over pages"]
-            pub fn pager(self) -> azure_core::Result<azure_core::http::Pager<models::ProvisionedNetworkListResult>> {
+            pub fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::ProvisionedNetworkListResult>> {
                 let client = self.client.clone();
                 let initial = self.clone();
-                Ok(azure_core::http::Pager::from_callback(
-                    move |state: azure_core::http::PagerState<String>| {
+                Ok(azure_core::http::pager::Pager::from_callback(
+                    move |state: azure_core::http::pager::PagerState<String>| {
                         let client = client.clone();
                         let initial = initial.clone();
                         async move {
                             let rsp = match state {
-                                azure_core::http::PagerState::Initial => {
+                                azure_core::http::pager::PagerState::Initial => {
                                     let url = initial.url()?;
                                     let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
                                     let bearer_token = client.bearer_token().await?;
@@ -8408,7 +8409,7 @@ pub mod provisioned_networks {
                                     }
                                     client.send_raw(&mut req).await?
                                 }
-                                azure_core::http::PagerState::More(next_url) => {
+                                azure_core::http::pager::PagerState::More(next_url) => {
                                     let mut url = client.endpoint().clone();
                                     url.set_path("");
                                     let url = url.join(next_url.as_ref())?;
@@ -8450,8 +8451,8 @@ pub mod provisioned_networks {
                                 .and_then(|v| v.get("nextLink").and_then(|x| x.as_str()).map(|s| s.to_string()))
                                 .filter(|s| !s.is_empty());
                             Ok(match continuation {
-                                Some(continuation) => azure_core::http::PagerResult::More { response, continuation },
-                                None => azure_core::http::PagerResult::Done { response },
+                                Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
+                                None => azure_core::http::pager::PagerResult::Done { response },
                             })
                         }
                     },
@@ -8721,16 +8722,16 @@ pub mod pure_storage_policies {
                 })
             }
             #[doc = "Return a Pager over pages"]
-            pub fn pager(self) -> azure_core::Result<azure_core::http::Pager<models::PureStoragePolicyListResult>> {
+            pub fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::PureStoragePolicyListResult>> {
                 let client = self.client.clone();
                 let initial = self.clone();
-                Ok(azure_core::http::Pager::from_callback(
-                    move |state: azure_core::http::PagerState<String>| {
+                Ok(azure_core::http::pager::Pager::from_callback(
+                    move |state: azure_core::http::pager::PagerState<String>| {
                         let client = client.clone();
                         let initial = initial.clone();
                         async move {
                             let rsp = match state {
-                                azure_core::http::PagerState::Initial => {
+                                azure_core::http::pager::PagerState::Initial => {
                                     let url = initial.url()?;
                                     let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
                                     let bearer_token = client.bearer_token().await?;
@@ -8749,7 +8750,7 @@ pub mod pure_storage_policies {
                                     }
                                     client.send_raw(&mut req).await?
                                 }
-                                azure_core::http::PagerState::More(next_url) => {
+                                azure_core::http::pager::PagerState::More(next_url) => {
                                     let mut url = client.endpoint().clone();
                                     url.set_path("");
                                     let url = url.join(next_url.as_ref())?;
@@ -8791,8 +8792,8 @@ pub mod pure_storage_policies {
                                 .and_then(|v| v.get("nextLink").and_then(|x| x.as_str()).map(|s| s.to_string()))
                                 .filter(|s| !s.is_empty());
                             Ok(match continuation {
-                                Some(continuation) => azure_core::http::PagerResult::More { response, continuation },
-                                None => azure_core::http::PagerResult::Done { response },
+                                Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
+                                None => azure_core::http::pager::PagerResult::Done { response },
                             })
                         }
                     },
@@ -9044,7 +9045,7 @@ pub mod pure_storage_policies {
                             }
                             let (status, headers, body) = rsp.deconstruct();
                             let retry_after =
-                                azure_core::http::poller::get_retry_after(&headers, &azure_core::http::poller::PollerOptions::default());
+                                azure_core::http::poller::get_retry_after(&headers, &[], &azure_core::http::poller::PollerOptions::default());
                             let bytes = body.collect().await?;
                             let op: Operation = json::from_json(&bytes)?;
                             let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
@@ -9324,16 +9325,16 @@ pub mod script_executions {
                 })
             }
             #[doc = "Return a Pager over pages"]
-            pub fn pager(self) -> azure_core::Result<azure_core::http::Pager<models::ScriptExecutionsList>> {
+            pub fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::ScriptExecutionsList>> {
                 let client = self.client.clone();
                 let initial = self.clone();
-                Ok(azure_core::http::Pager::from_callback(
-                    move |state: azure_core::http::PagerState<String>| {
+                Ok(azure_core::http::pager::Pager::from_callback(
+                    move |state: azure_core::http::pager::PagerState<String>| {
                         let client = client.clone();
                         let initial = initial.clone();
                         async move {
                             let rsp = match state {
-                                azure_core::http::PagerState::Initial => {
+                                azure_core::http::pager::PagerState::Initial => {
                                     let url = initial.url()?;
                                     let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
                                     let bearer_token = client.bearer_token().await?;
@@ -9352,7 +9353,7 @@ pub mod script_executions {
                                     }
                                     client.send_raw(&mut req).await?
                                 }
-                                azure_core::http::PagerState::More(next_url) => {
+                                azure_core::http::pager::PagerState::More(next_url) => {
                                     let mut url = client.endpoint().clone();
                                     url.set_path("");
                                     let url = url.join(next_url.as_ref())?;
@@ -9392,8 +9393,8 @@ pub mod script_executions {
                                 .and_then(|v| v.get("nextLink").and_then(|x| x.as_str()).map(|s| s.to_string()))
                                 .filter(|s| !s.is_empty());
                             Ok(match continuation {
-                                Some(continuation) => azure_core::http::PagerResult::More { response, continuation },
-                                None => azure_core::http::PagerResult::Done { response },
+                                Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
+                                None => azure_core::http::pager::PagerResult::Done { response },
                             })
                         }
                     },
@@ -9645,7 +9646,7 @@ pub mod script_executions {
                             }
                             let (status, headers, body) = rsp.deconstruct();
                             let retry_after =
-                                azure_core::http::poller::get_retry_after(&headers, &azure_core::http::poller::PollerOptions::default());
+                                azure_core::http::poller::get_retry_after(&headers, &[], &azure_core::http::poller::PollerOptions::default());
                             let bytes = body.collect().await?;
                             let op: Operation = json::from_json(&bytes)?;
                             let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
@@ -9951,16 +9952,16 @@ pub mod script_packages {
                 })
             }
             #[doc = "Return a Pager over pages"]
-            pub fn pager(self) -> azure_core::Result<azure_core::http::Pager<models::ScriptPackagesList>> {
+            pub fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::ScriptPackagesList>> {
                 let client = self.client.clone();
                 let initial = self.clone();
-                Ok(azure_core::http::Pager::from_callback(
-                    move |state: azure_core::http::PagerState<String>| {
+                Ok(azure_core::http::pager::Pager::from_callback(
+                    move |state: azure_core::http::pager::PagerState<String>| {
                         let client = client.clone();
                         let initial = initial.clone();
                         async move {
                             let rsp = match state {
-                                azure_core::http::PagerState::Initial => {
+                                azure_core::http::pager::PagerState::Initial => {
                                     let url = initial.url()?;
                                     let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
                                     let bearer_token = client.bearer_token().await?;
@@ -9979,7 +9980,7 @@ pub mod script_packages {
                                     }
                                     client.send_raw(&mut req).await?
                                 }
-                                azure_core::http::PagerState::More(next_url) => {
+                                azure_core::http::pager::PagerState::More(next_url) => {
                                     let mut url = client.endpoint().clone();
                                     url.set_path("");
                                     let url = url.join(next_url.as_ref())?;
@@ -10019,8 +10020,8 @@ pub mod script_packages {
                                 .and_then(|v| v.get("nextLink").and_then(|x| x.as_str()).map(|s| s.to_string()))
                                 .filter(|s| !s.is_empty());
                             Ok(match continuation {
-                                Some(continuation) => azure_core::http::PagerResult::More { response, continuation },
-                                None => azure_core::http::PagerResult::Done { response },
+                                Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
+                                None => azure_core::http::pager::PagerResult::Done { response },
                             })
                         }
                     },
@@ -10248,16 +10249,16 @@ pub mod script_cmdlets {
                 })
             }
             #[doc = "Return a Pager over pages"]
-            pub fn pager(self) -> azure_core::Result<azure_core::http::Pager<models::ScriptCmdletsList>> {
+            pub fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::ScriptCmdletsList>> {
                 let client = self.client.clone();
                 let initial = self.clone();
-                Ok(azure_core::http::Pager::from_callback(
-                    move |state: azure_core::http::PagerState<String>| {
+                Ok(azure_core::http::pager::Pager::from_callback(
+                    move |state: azure_core::http::pager::PagerState<String>| {
                         let client = client.clone();
                         let initial = initial.clone();
                         async move {
                             let rsp = match state {
-                                azure_core::http::PagerState::Initial => {
+                                azure_core::http::pager::PagerState::Initial => {
                                     let url = initial.url()?;
                                     let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
                                     let bearer_token = client.bearer_token().await?;
@@ -10276,7 +10277,7 @@ pub mod script_cmdlets {
                                     }
                                     client.send_raw(&mut req).await?
                                 }
-                                azure_core::http::PagerState::More(next_url) => {
+                                azure_core::http::pager::PagerState::More(next_url) => {
                                     let mut url = client.endpoint().clone();
                                     url.set_path("");
                                     let url = url.join(next_url.as_ref())?;
@@ -10316,8 +10317,8 @@ pub mod script_cmdlets {
                                 .and_then(|v| v.get("nextLink").and_then(|x| x.as_str()).map(|s| s.to_string()))
                                 .filter(|s| !s.is_empty());
                             Ok(match continuation {
-                                Some(continuation) => azure_core::http::PagerResult::More { response, continuation },
-                                None => azure_core::http::PagerResult::Done { response },
+                                Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
+                                None => azure_core::http::pager::PagerResult::Done { response },
                             })
                         }
                     },
@@ -11387,16 +11388,16 @@ pub mod workload_networks {
                 })
             }
             #[doc = "Return a Pager over pages"]
-            pub fn pager(self) -> azure_core::Result<azure_core::http::Pager<models::WorkloadNetworkList>> {
+            pub fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::WorkloadNetworkList>> {
                 let client = self.client.clone();
                 let initial = self.clone();
-                Ok(azure_core::http::Pager::from_callback(
-                    move |state: azure_core::http::PagerState<String>| {
+                Ok(azure_core::http::pager::Pager::from_callback(
+                    move |state: azure_core::http::pager::PagerState<String>| {
                         let client = client.clone();
                         let initial = initial.clone();
                         async move {
                             let rsp = match state {
-                                azure_core::http::PagerState::Initial => {
+                                azure_core::http::pager::PagerState::Initial => {
                                     let url = initial.url()?;
                                     let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
                                     let bearer_token = client.bearer_token().await?;
@@ -11415,7 +11416,7 @@ pub mod workload_networks {
                                     }
                                     client.send_raw(&mut req).await?
                                 }
-                                azure_core::http::PagerState::More(next_url) => {
+                                azure_core::http::pager::PagerState::More(next_url) => {
                                     let mut url = client.endpoint().clone();
                                     url.set_path("");
                                     let url = url.join(next_url.as_ref())?;
@@ -11455,8 +11456,8 @@ pub mod workload_networks {
                                 .and_then(|v| v.get("nextLink").and_then(|x| x.as_str()).map(|s| s.to_string()))
                                 .filter(|s| !s.is_empty());
                             Ok(match continuation {
-                                Some(continuation) => azure_core::http::PagerResult::More { response, continuation },
-                                None => azure_core::http::PagerResult::Done { response },
+                                Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
+                                None => azure_core::http::pager::PagerResult::Done { response },
                             })
                         }
                     },
@@ -11622,16 +11623,16 @@ pub mod workload_networks {
                 })
             }
             #[doc = "Return a Pager over pages"]
-            pub fn pager(self) -> azure_core::Result<azure_core::http::Pager<models::WorkloadNetworkDhcpList>> {
+            pub fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::WorkloadNetworkDhcpList>> {
                 let client = self.client.clone();
                 let initial = self.clone();
-                Ok(azure_core::http::Pager::from_callback(
-                    move |state: azure_core::http::PagerState<String>| {
+                Ok(azure_core::http::pager::Pager::from_callback(
+                    move |state: azure_core::http::pager::PagerState<String>| {
                         let client = client.clone();
                         let initial = initial.clone();
                         async move {
                             let rsp = match state {
-                                azure_core::http::PagerState::Initial => {
+                                azure_core::http::pager::PagerState::Initial => {
                                     let url = initial.url()?;
                                     let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
                                     let bearer_token = client.bearer_token().await?;
@@ -11650,7 +11651,7 @@ pub mod workload_networks {
                                     }
                                     client.send_raw(&mut req).await?
                                 }
-                                azure_core::http::PagerState::More(next_url) => {
+                                azure_core::http::pager::PagerState::More(next_url) => {
                                     let mut url = client.endpoint().clone();
                                     url.set_path("");
                                     let url = url.join(next_url.as_ref())?;
@@ -11692,8 +11693,8 @@ pub mod workload_networks {
                                 .and_then(|v| v.get("nextLink").and_then(|x| x.as_str()).map(|s| s.to_string()))
                                 .filter(|s| !s.is_empty());
                             Ok(match continuation {
-                                Some(continuation) => azure_core::http::PagerResult::More { response, continuation },
-                                None => azure_core::http::PagerResult::Done { response },
+                                Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
+                                None => azure_core::http::pager::PagerResult::Done { response },
                             })
                         }
                     },
@@ -11939,7 +11940,7 @@ pub mod workload_networks {
                             }
                             let (status, headers, body) = rsp.deconstruct();
                             let retry_after =
-                                azure_core::http::poller::get_retry_after(&headers, &azure_core::http::poller::PollerOptions::default());
+                                azure_core::http::poller::get_retry_after(&headers, &[], &azure_core::http::poller::PollerOptions::default());
                             let bytes = body.collect().await?;
                             let op: Operation = json::from_json(&bytes)?;
                             let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
@@ -12111,7 +12112,7 @@ pub mod workload_networks {
                             }
                             let (status, headers, body) = rsp.deconstruct();
                             let retry_after =
-                                azure_core::http::poller::get_retry_after(&headers, &azure_core::http::poller::PollerOptions::default());
+                                azure_core::http::poller::get_retry_after(&headers, &[], &azure_core::http::poller::PollerOptions::default());
                             let bytes = body.collect().await?;
                             let op: Operation = json::from_json(&bytes)?;
                             let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
@@ -12271,16 +12272,16 @@ pub mod workload_networks {
                 })
             }
             #[doc = "Return a Pager over pages"]
-            pub fn pager(self) -> azure_core::Result<azure_core::http::Pager<models::WorkloadNetworkDnsServicesList>> {
+            pub fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::WorkloadNetworkDnsServicesList>> {
                 let client = self.client.clone();
                 let initial = self.clone();
-                Ok(azure_core::http::Pager::from_callback(
-                    move |state: azure_core::http::PagerState<String>| {
+                Ok(azure_core::http::pager::Pager::from_callback(
+                    move |state: azure_core::http::pager::PagerState<String>| {
                         let client = client.clone();
                         let initial = initial.clone();
                         async move {
                             let rsp = match state {
-                                azure_core::http::PagerState::Initial => {
+                                azure_core::http::pager::PagerState::Initial => {
                                     let url = initial.url()?;
                                     let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
                                     let bearer_token = client.bearer_token().await?;
@@ -12299,7 +12300,7 @@ pub mod workload_networks {
                                     }
                                     client.send_raw(&mut req).await?
                                 }
-                                azure_core::http::PagerState::More(next_url) => {
+                                azure_core::http::pager::PagerState::More(next_url) => {
                                     let mut url = client.endpoint().clone();
                                     url.set_path("");
                                     let url = url.join(next_url.as_ref())?;
@@ -12341,8 +12342,8 @@ pub mod workload_networks {
                                 .and_then(|v| v.get("nextLink").and_then(|x| x.as_str()).map(|s| s.to_string()))
                                 .filter(|s| !s.is_empty());
                             Ok(match continuation {
-                                Some(continuation) => azure_core::http::PagerResult::More { response, continuation },
-                                None => azure_core::http::PagerResult::Done { response },
+                                Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
+                                None => azure_core::http::pager::PagerResult::Done { response },
                             })
                         }
                     },
@@ -12598,7 +12599,7 @@ pub mod workload_networks {
                             }
                             let (status, headers, body) = rsp.deconstruct();
                             let retry_after =
-                                azure_core::http::poller::get_retry_after(&headers, &azure_core::http::poller::PollerOptions::default());
+                                azure_core::http::poller::get_retry_after(&headers, &[], &azure_core::http::poller::PollerOptions::default());
                             let bytes = body.collect().await?;
                             let op: Operation = json::from_json(&bytes)?;
                             let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
@@ -12775,7 +12776,7 @@ pub mod workload_networks {
                             }
                             let (status, headers, body) = rsp.deconstruct();
                             let retry_after =
-                                azure_core::http::poller::get_retry_after(&headers, &azure_core::http::poller::PollerOptions::default());
+                                azure_core::http::poller::get_retry_after(&headers, &[], &azure_core::http::poller::PollerOptions::default());
                             let bytes = body.collect().await?;
                             let op: Operation = json::from_json(&bytes)?;
                             let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
@@ -12936,16 +12937,16 @@ pub mod workload_networks {
                 })
             }
             #[doc = "Return a Pager over pages"]
-            pub fn pager(self) -> azure_core::Result<azure_core::http::Pager<models::WorkloadNetworkDnsZonesList>> {
+            pub fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::WorkloadNetworkDnsZonesList>> {
                 let client = self.client.clone();
                 let initial = self.clone();
-                Ok(azure_core::http::Pager::from_callback(
-                    move |state: azure_core::http::PagerState<String>| {
+                Ok(azure_core::http::pager::Pager::from_callback(
+                    move |state: azure_core::http::pager::PagerState<String>| {
                         let client = client.clone();
                         let initial = initial.clone();
                         async move {
                             let rsp = match state {
-                                azure_core::http::PagerState::Initial => {
+                                azure_core::http::pager::PagerState::Initial => {
                                     let url = initial.url()?;
                                     let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
                                     let bearer_token = client.bearer_token().await?;
@@ -12964,7 +12965,7 @@ pub mod workload_networks {
                                     }
                                     client.send_raw(&mut req).await?
                                 }
-                                azure_core::http::PagerState::More(next_url) => {
+                                azure_core::http::pager::PagerState::More(next_url) => {
                                     let mut url = client.endpoint().clone();
                                     url.set_path("");
                                     let url = url.join(next_url.as_ref())?;
@@ -13006,8 +13007,8 @@ pub mod workload_networks {
                                 .and_then(|v| v.get("nextLink").and_then(|x| x.as_str()).map(|s| s.to_string()))
                                 .filter(|s| !s.is_empty());
                             Ok(match continuation {
-                                Some(continuation) => azure_core::http::PagerResult::More { response, continuation },
-                                None => azure_core::http::PagerResult::Done { response },
+                                Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
+                                None => azure_core::http::pager::PagerResult::Done { response },
                             })
                         }
                     },
@@ -13259,7 +13260,7 @@ pub mod workload_networks {
                             }
                             let (status, headers, body) = rsp.deconstruct();
                             let retry_after =
-                                azure_core::http::poller::get_retry_after(&headers, &azure_core::http::poller::PollerOptions::default());
+                                azure_core::http::poller::get_retry_after(&headers, &[], &azure_core::http::poller::PollerOptions::default());
                             let bytes = body.collect().await?;
                             let op: Operation = json::from_json(&bytes)?;
                             let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
@@ -13434,7 +13435,7 @@ pub mod workload_networks {
                             }
                             let (status, headers, body) = rsp.deconstruct();
                             let retry_after =
-                                azure_core::http::poller::get_retry_after(&headers, &azure_core::http::poller::PollerOptions::default());
+                                azure_core::http::poller::get_retry_after(&headers, &[], &azure_core::http::poller::PollerOptions::default());
                             let bytes = body.collect().await?;
                             let op: Operation = json::from_json(&bytes)?;
                             let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
@@ -13595,16 +13596,16 @@ pub mod workload_networks {
                 })
             }
             #[doc = "Return a Pager over pages"]
-            pub fn pager(self) -> azure_core::Result<azure_core::http::Pager<models::WorkloadNetworkGatewayList>> {
+            pub fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::WorkloadNetworkGatewayList>> {
                 let client = self.client.clone();
                 let initial = self.clone();
-                Ok(azure_core::http::Pager::from_callback(
-                    move |state: azure_core::http::PagerState<String>| {
+                Ok(azure_core::http::pager::Pager::from_callback(
+                    move |state: azure_core::http::pager::PagerState<String>| {
                         let client = client.clone();
                         let initial = initial.clone();
                         async move {
                             let rsp = match state {
-                                azure_core::http::PagerState::Initial => {
+                                azure_core::http::pager::PagerState::Initial => {
                                     let url = initial.url()?;
                                     let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
                                     let bearer_token = client.bearer_token().await?;
@@ -13623,7 +13624,7 @@ pub mod workload_networks {
                                     }
                                     client.send_raw(&mut req).await?
                                 }
-                                azure_core::http::PagerState::More(next_url) => {
+                                azure_core::http::pager::PagerState::More(next_url) => {
                                     let mut url = client.endpoint().clone();
                                     url.set_path("");
                                     let url = url.join(next_url.as_ref())?;
@@ -13665,8 +13666,8 @@ pub mod workload_networks {
                                 .and_then(|v| v.get("nextLink").and_then(|x| x.as_str()).map(|s| s.to_string()))
                                 .filter(|s| !s.is_empty());
                             Ok(match continuation {
-                                Some(continuation) => azure_core::http::PagerResult::More { response, continuation },
-                                None => azure_core::http::PagerResult::Done { response },
+                                Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
+                                None => azure_core::http::pager::PagerResult::Done { response },
                             })
                         }
                     },
@@ -13837,16 +13838,16 @@ pub mod workload_networks {
                 })
             }
             #[doc = "Return a Pager over pages"]
-            pub fn pager(self) -> azure_core::Result<azure_core::http::Pager<models::WorkloadNetworkPortMirroringList>> {
+            pub fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::WorkloadNetworkPortMirroringList>> {
                 let client = self.client.clone();
                 let initial = self.clone();
-                Ok(azure_core::http::Pager::from_callback(
-                    move |state: azure_core::http::PagerState<String>| {
+                Ok(azure_core::http::pager::Pager::from_callback(
+                    move |state: azure_core::http::pager::PagerState<String>| {
                         let client = client.clone();
                         let initial = initial.clone();
                         async move {
                             let rsp = match state {
-                                azure_core::http::PagerState::Initial => {
+                                azure_core::http::pager::PagerState::Initial => {
                                     let url = initial.url()?;
                                     let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
                                     let bearer_token = client.bearer_token().await?;
@@ -13865,7 +13866,7 @@ pub mod workload_networks {
                                     }
                                     client.send_raw(&mut req).await?
                                 }
-                                azure_core::http::PagerState::More(next_url) => {
+                                azure_core::http::pager::PagerState::More(next_url) => {
                                     let mut url = client.endpoint().clone();
                                     url.set_path("");
                                     let url = url.join(next_url.as_ref())?;
@@ -13907,8 +13908,8 @@ pub mod workload_networks {
                                 .and_then(|v| v.get("nextLink").and_then(|x| x.as_str()).map(|s| s.to_string()))
                                 .filter(|s| !s.is_empty());
                             Ok(match continuation {
-                                Some(continuation) => azure_core::http::PagerResult::More { response, continuation },
-                                None => azure_core::http::PagerResult::Done { response },
+                                Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
+                                None => azure_core::http::pager::PagerResult::Done { response },
                             })
                         }
                     },
@@ -14162,7 +14163,7 @@ pub mod workload_networks {
                             }
                             let (status, headers, body) = rsp.deconstruct();
                             let retry_after =
-                                azure_core::http::poller::get_retry_after(&headers, &azure_core::http::poller::PollerOptions::default());
+                                azure_core::http::poller::get_retry_after(&headers, &[], &azure_core::http::poller::PollerOptions::default());
                             let bytes = body.collect().await?;
                             let op: Operation = json::from_json(&bytes)?;
                             let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
@@ -14338,7 +14339,7 @@ pub mod workload_networks {
                             }
                             let (status, headers, body) = rsp.deconstruct();
                             let retry_after =
-                                azure_core::http::poller::get_retry_after(&headers, &azure_core::http::poller::PollerOptions::default());
+                                azure_core::http::poller::get_retry_after(&headers, &[], &azure_core::http::poller::PollerOptions::default());
                             let bytes = body.collect().await?;
                             let op: Operation = json::from_json(&bytes)?;
                             let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
@@ -14498,16 +14499,16 @@ pub mod workload_networks {
                 })
             }
             #[doc = "Return a Pager over pages"]
-            pub fn pager(self) -> azure_core::Result<azure_core::http::Pager<models::WorkloadNetworkPublicIPsList>> {
+            pub fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::WorkloadNetworkPublicIPsList>> {
                 let client = self.client.clone();
                 let initial = self.clone();
-                Ok(azure_core::http::Pager::from_callback(
-                    move |state: azure_core::http::PagerState<String>| {
+                Ok(azure_core::http::pager::Pager::from_callback(
+                    move |state: azure_core::http::pager::PagerState<String>| {
                         let client = client.clone();
                         let initial = initial.clone();
                         async move {
                             let rsp = match state {
-                                azure_core::http::PagerState::Initial => {
+                                azure_core::http::pager::PagerState::Initial => {
                                     let url = initial.url()?;
                                     let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
                                     let bearer_token = client.bearer_token().await?;
@@ -14526,7 +14527,7 @@ pub mod workload_networks {
                                     }
                                     client.send_raw(&mut req).await?
                                 }
-                                azure_core::http::PagerState::More(next_url) => {
+                                azure_core::http::pager::PagerState::More(next_url) => {
                                     let mut url = client.endpoint().clone();
                                     url.set_path("");
                                     let url = url.join(next_url.as_ref())?;
@@ -14568,8 +14569,8 @@ pub mod workload_networks {
                                 .and_then(|v| v.get("nextLink").and_then(|x| x.as_str()).map(|s| s.to_string()))
                                 .filter(|s| !s.is_empty());
                             Ok(match continuation {
-                                Some(continuation) => azure_core::http::PagerResult::More { response, continuation },
-                                None => azure_core::http::PagerResult::Done { response },
+                                Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
+                                None => azure_core::http::pager::PagerResult::Done { response },
                             })
                         }
                     },
@@ -14821,7 +14822,7 @@ pub mod workload_networks {
                             }
                             let (status, headers, body) = rsp.deconstruct();
                             let retry_after =
-                                azure_core::http::poller::get_retry_after(&headers, &azure_core::http::poller::PollerOptions::default());
+                                azure_core::http::poller::get_retry_after(&headers, &[], &azure_core::http::poller::PollerOptions::default());
                             let bytes = body.collect().await?;
                             let op: Operation = json::from_json(&bytes)?;
                             let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
@@ -14982,16 +14983,16 @@ pub mod workload_networks {
                 })
             }
             #[doc = "Return a Pager over pages"]
-            pub fn pager(self) -> azure_core::Result<azure_core::http::Pager<models::WorkloadNetworkSegmentsList>> {
+            pub fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::WorkloadNetworkSegmentsList>> {
                 let client = self.client.clone();
                 let initial = self.clone();
-                Ok(azure_core::http::Pager::from_callback(
-                    move |state: azure_core::http::PagerState<String>| {
+                Ok(azure_core::http::pager::Pager::from_callback(
+                    move |state: azure_core::http::pager::PagerState<String>| {
                         let client = client.clone();
                         let initial = initial.clone();
                         async move {
                             let rsp = match state {
-                                azure_core::http::PagerState::Initial => {
+                                azure_core::http::pager::PagerState::Initial => {
                                     let url = initial.url()?;
                                     let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
                                     let bearer_token = client.bearer_token().await?;
@@ -15010,7 +15011,7 @@ pub mod workload_networks {
                                     }
                                     client.send_raw(&mut req).await?
                                 }
-                                azure_core::http::PagerState::More(next_url) => {
+                                azure_core::http::pager::PagerState::More(next_url) => {
                                     let mut url = client.endpoint().clone();
                                     url.set_path("");
                                     let url = url.join(next_url.as_ref())?;
@@ -15052,8 +15053,8 @@ pub mod workload_networks {
                                 .and_then(|v| v.get("nextLink").and_then(|x| x.as_str()).map(|s| s.to_string()))
                                 .filter(|s| !s.is_empty());
                             Ok(match continuation {
-                                Some(continuation) => azure_core::http::PagerResult::More { response, continuation },
-                                None => azure_core::http::PagerResult::Done { response },
+                                Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
+                                None => azure_core::http::pager::PagerResult::Done { response },
                             })
                         }
                     },
@@ -15305,7 +15306,7 @@ pub mod workload_networks {
                             }
                             let (status, headers, body) = rsp.deconstruct();
                             let retry_after =
-                                azure_core::http::poller::get_retry_after(&headers, &azure_core::http::poller::PollerOptions::default());
+                                azure_core::http::poller::get_retry_after(&headers, &[], &azure_core::http::poller::PollerOptions::default());
                             let bytes = body.collect().await?;
                             let op: Operation = json::from_json(&bytes)?;
                             let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
@@ -15480,7 +15481,7 @@ pub mod workload_networks {
                             }
                             let (status, headers, body) = rsp.deconstruct();
                             let retry_after =
-                                azure_core::http::poller::get_retry_after(&headers, &azure_core::http::poller::PollerOptions::default());
+                                azure_core::http::poller::get_retry_after(&headers, &[], &azure_core::http::poller::PollerOptions::default());
                             let bytes = body.collect().await?;
                             let op: Operation = json::from_json(&bytes)?;
                             let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
@@ -15643,16 +15644,16 @@ pub mod workload_networks {
                 })
             }
             #[doc = "Return a Pager over pages"]
-            pub fn pager(self) -> azure_core::Result<azure_core::http::Pager<models::WorkloadNetworkVirtualMachinesList>> {
+            pub fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::WorkloadNetworkVirtualMachinesList>> {
                 let client = self.client.clone();
                 let initial = self.clone();
-                Ok(azure_core::http::Pager::from_callback(
-                    move |state: azure_core::http::PagerState<String>| {
+                Ok(azure_core::http::pager::Pager::from_callback(
+                    move |state: azure_core::http::pager::PagerState<String>| {
                         let client = client.clone();
                         let initial = initial.clone();
                         async move {
                             let rsp = match state {
-                                azure_core::http::PagerState::Initial => {
+                                azure_core::http::pager::PagerState::Initial => {
                                     let url = initial.url()?;
                                     let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
                                     let bearer_token = client.bearer_token().await?;
@@ -15671,7 +15672,7 @@ pub mod workload_networks {
                                     }
                                     client.send_raw(&mut req).await?
                                 }
-                                azure_core::http::PagerState::More(next_url) => {
+                                azure_core::http::pager::PagerState::More(next_url) => {
                                     let mut url = client.endpoint().clone();
                                     url.set_path("");
                                     let url = url.join(next_url.as_ref())?;
@@ -15713,8 +15714,8 @@ pub mod workload_networks {
                                 .and_then(|v| v.get("nextLink").and_then(|x| x.as_str()).map(|s| s.to_string()))
                                 .filter(|s| !s.is_empty());
                             Ok(match continuation {
-                                Some(continuation) => azure_core::http::PagerResult::More { response, continuation },
-                                None => azure_core::http::PagerResult::Done { response },
+                                Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
+                                None => azure_core::http::pager::PagerResult::Done { response },
                             })
                         }
                     },
@@ -15887,16 +15888,16 @@ pub mod workload_networks {
                 })
             }
             #[doc = "Return a Pager over pages"]
-            pub fn pager(self) -> azure_core::Result<azure_core::http::Pager<models::WorkloadNetworkVmGroupsList>> {
+            pub fn pager(self) -> azure_core::Result<azure_core::http::pager::Pager<models::WorkloadNetworkVmGroupsList>> {
                 let client = self.client.clone();
                 let initial = self.clone();
-                Ok(azure_core::http::Pager::from_callback(
-                    move |state: azure_core::http::PagerState<String>| {
+                Ok(azure_core::http::pager::Pager::from_callback(
+                    move |state: azure_core::http::pager::PagerState<String>| {
                         let client = client.clone();
                         let initial = initial.clone();
                         async move {
                             let rsp = match state {
-                                azure_core::http::PagerState::Initial => {
+                                azure_core::http::pager::PagerState::Initial => {
                                     let url = initial.url()?;
                                     let mut req = typespec_client_core::http::request::Request::new(url, azure_core::http::Method::Get);
                                     let bearer_token = client.bearer_token().await?;
@@ -15915,7 +15916,7 @@ pub mod workload_networks {
                                     }
                                     client.send_raw(&mut req).await?
                                 }
-                                azure_core::http::PagerState::More(next_url) => {
+                                azure_core::http::pager::PagerState::More(next_url) => {
                                     let mut url = client.endpoint().clone();
                                     url.set_path("");
                                     let url = url.join(next_url.as_ref())?;
@@ -15957,8 +15958,8 @@ pub mod workload_networks {
                                 .and_then(|v| v.get("nextLink").and_then(|x| x.as_str()).map(|s| s.to_string()))
                                 .filter(|s| !s.is_empty());
                             Ok(match continuation {
-                                Some(continuation) => azure_core::http::PagerResult::More { response, continuation },
-                                None => azure_core::http::PagerResult::Done { response },
+                                Some(continuation) => azure_core::http::pager::PagerResult::More { response, continuation },
+                                None => azure_core::http::pager::PagerResult::Done { response },
                             })
                         }
                     },
@@ -16210,7 +16211,7 @@ pub mod workload_networks {
                             }
                             let (status, headers, body) = rsp.deconstruct();
                             let retry_after =
-                                azure_core::http::poller::get_retry_after(&headers, &azure_core::http::poller::PollerOptions::default());
+                                azure_core::http::poller::get_retry_after(&headers, &[], &azure_core::http::poller::PollerOptions::default());
                             let bytes = body.collect().await?;
                             let op: Operation = json::from_json(&bytes)?;
                             let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
@@ -16385,7 +16386,7 @@ pub mod workload_networks {
                             }
                             let (status, headers, body) = rsp.deconstruct();
                             let retry_after =
-                                azure_core::http::poller::get_retry_after(&headers, &azure_core::http::poller::PollerOptions::default());
+                                azure_core::http::poller::get_retry_after(&headers, &[], &azure_core::http::poller::PollerOptions::default());
                             let bytes = body.collect().await?;
                             let op: Operation = json::from_json(&bytes)?;
                             let response = azure_core::http::response::RawResponse::from_bytes(status, headers, bytes).into();
