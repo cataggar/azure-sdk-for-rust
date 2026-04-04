@@ -97,14 +97,24 @@ fn emit_models_mod(krate: &model::Crate, gen_dir: &Path) -> Result<()> {
 fn emit_client(client: &model::Client, _krate: &model::Crate, gen_dir: &Path) -> Result<()> {
     let module_name = client.name.to_snake_case();
     let mut content = String::from(generated_header());
+    let has_methods = !client.methods.is_empty();
 
+    // Imports
     content.push_str("use azure_core::{\n");
     content.push_str("    credentials::TokenCredential,\n");
     content.push_str("    fmt::SafeDebug,\n");
     content.push_str("    http::{\n");
+    if has_methods {
+        content.push_str("        pager::{PagerResult, PagerState, PagerContinuation},\n");
+        content.push_str("        Method, Pager, PagerOptions, PipelineSendOptions,\n");
+        content.push_str("        CheckSuccessOptions, RawResponse, Request, Response,\n");
+    }
     content.push_str("        policies::{auth::BearerTokenAuthorizationPolicy, Policy},\n");
     content.push_str("        ClientOptions, Pipeline, Url,\n");
     content.push_str("    },\n");
+    if has_methods {
+        content.push_str("    json,\n");
+    }
     content.push_str("    tracing, Result,\n");
     content.push_str("};\n");
     content.push_str("use std::sync::Arc;\n\n");
@@ -127,51 +137,345 @@ fn emit_client(client: &model::Client, _krate: &model::Crate, gen_dir: &Path) ->
     }
     content.push_str("}\n\n");
 
-    // Options struct
+    // Options struct + Default impl
     content.push_str(&format!(
         "/// Options used when creating a [`{name}`]({name})\n",
         name = client.name
     ));
     content.push_str("#[derive(Clone, SafeDebug)]\n");
     content.push_str(&format!("pub struct {}Options {{\n", client.name));
+    content.push_str("    /// The API version to use for this operation.\n");
     content.push_str("    pub api_version: String,\n");
+    content.push_str("    /// Allows customization of the client.\n");
     content.push_str("    pub client_options: ClientOptions,\n");
     content.push_str("}\n\n");
+    content.push_str(&format!("impl Default for {}Options {{\n", client.name));
+    content.push_str("    fn default() -> Self {\n");
+    content.push_str("        Self {\n");
+    content.push_str("            api_version: \"2025-09-01\".to_string(),\n");
+    content.push_str("            client_options: ClientOptions::default(),\n");
+    content.push_str("        }\n");
+    content.push_str("    }\n");
+    content.push_str("}\n\n");
+
+    // Constructor (only for top-level clients that have credential scopes)
+    content.push_str(&format!("impl {} {{\n", client.name));
+    if !client.credential_scopes.is_empty() && client.endpoint.default_value.is_some() {
+        emit_constructor(client, &mut content);
+    }
 
     // Sub-client accessors
-    if !client.sub_clients.is_empty() {
-        content.push_str(&format!("impl {} {{\n", client.name));
-        for sub in &client.sub_clients {
+    for sub in &client.sub_clients {
+        content.push_str(&format!(
+            "    /// Returns a new instance of {}.\n",
+            sub.client_name
+        ));
+        content.push_str("    #[tracing::subclient]\n");
+        content.push_str(&format!(
+            "    pub fn {}(&self) -> {} {{\n",
+            sub.accessor_name, sub.client_name
+        ));
+        content.push_str(&format!("        {} {{\n", sub.client_name));
+        content.push_str("            api_version: self.api_version.clone(),\n");
+        content.push_str("            endpoint: self.endpoint.clone(),\n");
+        content.push_str("            pipeline: self.pipeline.clone(),\n");
+        for param in &client.parameters {
             content.push_str(&format!(
-                "    /// Returns a new instance of {}.\n",
-                sub.client_name
+                "            {name}: self.{name}.clone(),\n",
+                name = param.name
             ));
-            content.push_str("    #[tracing::subclient]\n");
-            content.push_str(&format!(
-                "    pub fn {}(&self) -> {} {{\n",
-                sub.accessor_name, sub.client_name
-            ));
-            content.push_str(&format!("        {} {{\n", sub.client_name));
-            content.push_str("            api_version: self.api_version.clone(),\n");
-            content.push_str("            endpoint: self.endpoint.clone(),\n");
-            content.push_str("            pipeline: self.pipeline.clone(),\n");
-            for param in &client.parameters {
-                content.push_str(&format!(
-                    "            {name}: self.{name}.clone(),\n",
-                    name = param.name
-                ));
-            }
-            content.push_str("        }\n");
-            content.push_str("    }\n\n");
         }
-        content.push_str("}\n");
+        content.push_str("        }\n");
+        content.push_str("    }\n\n");
     }
+
+    // Operation methods
+    for method in &client.methods {
+        emit_method(client, method, &mut content);
+    }
+
+    content.push_str("}\n");
 
     fs::write(
         gen_dir.join("clients").join(format!("{module_name}.rs")),
         content,
     )?;
     Ok(())
+}
+
+fn emit_constructor(client: &model::Client, content: &mut String) {
+    content.push_str(&format!(
+        "    /// Creates a new {}, using Entra ID authentication.\n",
+        client.name
+    ));
+    content.push_str("    #[tracing::new(\"Microsoft.AVS\")]\n");
+    content.push_str(
+        "    pub fn new(\n        endpoint: &str,\n        credential: Arc<dyn TokenCredential>,\n",
+    );
+    for param in &client.parameters {
+        content.push_str(&format!(
+            "        {}: {},\n",
+            param.name,
+            type_ref_to_rust(&param.param_type)
+        ));
+    }
+    content.push_str(&format!(
+        "        options: Option<{}Options>,\n",
+        client.name
+    ));
+    content.push_str("    ) -> Result<Self> {\n");
+    content.push_str("        let options = options.unwrap_or_default();\n");
+    content.push_str("        let endpoint = Url::parse(endpoint)?;\n");
+    content.push_str("        if !endpoint.scheme().starts_with(\"http\") {\n");
+    content.push_str("            return Err(azure_core::Error::with_message(\n");
+    content.push_str("                azure_core::error::ErrorKind::Other,\n");
+    content.push_str("                format!(\"{endpoint} must use http(s)\"),\n");
+    content.push_str("            ));\n");
+    content.push_str("        }\n");
+
+    // Auth policy — derive scope from endpoint for ARM
+    content.push_str("        let auth_policy: Arc<dyn Policy> = Arc::new(BearerTokenAuthorizationPolicy::new(\n");
+    content.push_str("            credential,\n");
+    content.push_str(
+        "            vec![format!(\"{}/.default\", endpoint.origin().ascii_serialization())],\n",
+    );
+    content.push_str("        ));\n");
+
+    content.push_str("        Ok(Self {\n");
+    content.push_str("            endpoint,\n");
+    for param in &client.parameters {
+        content.push_str(&format!("            {},\n", param.name));
+    }
+    content.push_str("            api_version: options.api_version,\n");
+    content.push_str("            pipeline: Pipeline::new(\n");
+    content.push_str("                option_env!(\"CARGO_PKG_NAME\"),\n");
+    content.push_str("                option_env!(\"CARGO_PKG_VERSION\"),\n");
+    content.push_str("                options.client_options,\n");
+    content.push_str("                Vec::default(),\n");
+    content.push_str("                vec![auth_policy],\n");
+    content.push_str("                None,\n");
+    content.push_str("            ),\n");
+    content.push_str("        })\n");
+    content.push_str("    }\n\n");
+}
+
+fn emit_method(client: &model::Client, method: &model::Method, content: &mut String) {
+    let http_method = match method.http_method {
+        model::HttpMethod::Get => "Get",
+        model::HttpMethod::Put => "Put",
+        model::HttpMethod::Post => "Post",
+        model::HttpMethod::Patch => "Patch",
+        model::HttpMethod::Delete => "Delete",
+        model::HttpMethod::Head => "Head",
+    };
+
+    if let Some(doc) = &method.doc {
+        content.push_str(&format!("    /// {doc}\n"));
+    }
+
+    let is_paged = method.paging.is_some();
+
+    if is_paged {
+        emit_paged_method(client, method, http_method, content);
+    } else {
+        emit_simple_method(client, method, http_method, content);
+    }
+}
+
+fn emit_simple_method(
+    client: &model::Client,
+    method: &model::Method,
+    http_method: &str,
+    content: &mut String,
+) {
+    let return_type = method
+        .response
+        .body
+        .as_ref()
+        .map(|t| format!("Response<{}>", type_ref_to_rust(t)))
+        .unwrap_or_else(|| "Response<()>".to_string());
+
+    // Method signature
+    content.push_str(&format!("    pub async fn {}(\n", method.name));
+    content.push_str("        &self,\n");
+    for param in &method.parameters {
+        content.push_str(&format!(
+            "        {}: {},\n",
+            param.name,
+            if param.optional {
+                format!("Option<{}>", type_ref_to_rust(&param.param_type))
+            } else {
+                format!("&{}", type_ref_to_rust(&param.param_type))
+            }
+        ));
+    }
+    content.push_str(&format!("    ) -> Result<{return_type}> {{\n"));
+
+    // Build URL
+    content.push_str("        let mut url = self.endpoint.clone();\n");
+    content.push_str(&format!(
+        "        let mut path = String::from(\"{}\");\n",
+        method.path
+    ));
+    // Replace path parameters
+    for param in &method.parameters {
+        if matches!(param.location, model::ParameterLocation::Path) {
+            content.push_str(&format!(
+                "        path = path.replace(\"{{{}}}\", {});\n",
+                to_camel_case(&param.name),
+                param.name
+            ));
+        }
+    }
+    content.push_str("        path = path.replace(\"{subscriptionId}\", &self.subscription_id);\n");
+    content.push_str("        url.append_path(&path);\n");
+    content.push_str(
+        "        url.query_builder().set_pair(\"api-version\", &self.api_version).build();\n",
+    );
+
+    // Build & send request
+    content.push_str(&format!(
+        "        let mut request = Request::new(url, Method::{http_method});\n"
+    ));
+    content.push_str("        request.insert_header(\"accept\", \"application/json\");\n");
+    content.push_str("        let rsp = self.pipeline.send(\n");
+    content.push_str("            &azure_core::Context::default(),\n");
+    content.push_str("            &mut request,\n");
+    content.push_str(&format!(
+        "            Some(PipelineSendOptions {{ check_success: CheckSuccessOptions {{ success_codes: &[{}] }}, ..Default::default() }}),\n",
+        method.response.success_codes.iter().map(|c| c.to_string()).collect::<Vec<_>>().join(", ")
+    ));
+    content.push_str("        ).await?;\n");
+    content.push_str("        Ok(rsp.into())\n");
+    content.push_str("    }\n\n");
+}
+
+fn emit_paged_method(
+    client: &model::Client,
+    method: &model::Method,
+    http_method: &str,
+    content: &mut String,
+) {
+    let page_type = method
+        .response
+        .body
+        .as_ref()
+        .map(type_ref_to_rust)
+        .unwrap_or_else(|| "serde_json::Value".to_string());
+
+    // Pager method signature
+    content.push_str(&format!("    pub fn {}(\n", method.name));
+    content.push_str("        &self,\n");
+    for param in &method.parameters {
+        content.push_str(&format!(
+            "        {}: {},\n",
+            param.name,
+            if param.optional {
+                format!("Option<{}>", type_ref_to_rust(&param.param_type))
+            } else {
+                format!("&{}", type_ref_to_rust(&param.param_type))
+            }
+        ));
+    }
+    content.push_str(&format!("    ) -> Result<Pager<{page_type}>> {{\n"));
+
+    // Build first URL
+    content.push_str("        let pipeline = self.pipeline.clone();\n");
+    content.push_str("        let mut first_url = self.endpoint.clone();\n");
+    content.push_str(&format!(
+        "        let mut path = String::from(\"{}\");\n",
+        method.path
+    ));
+    content.push_str("        path = path.replace(\"{subscriptionId}\", &self.subscription_id);\n");
+    for param in &method.parameters {
+        if matches!(param.location, model::ParameterLocation::Path) {
+            content.push_str(&format!(
+                "        path = path.replace(\"{{{}}}\", {});\n",
+                to_camel_case(&param.name),
+                param.name
+            ));
+        }
+    }
+    content.push_str("        first_url.append_path(&path);\n");
+    content.push_str(
+        "        first_url.query_builder().set_pair(\"api-version\", &self.api_version).build();\n",
+    );
+    content.push_str("        let api_version = self.api_version.clone();\n");
+
+    // Create Pager
+    content.push_str("        Ok(Pager::new(\n");
+    content
+        .push_str("            move |next_link: PagerState, pager_options: PagerOptions<'_>| {\n");
+    content.push_str("                let url = match next_link {\n");
+    content.push_str("                    PagerState::More(next_link) => {\n");
+    content.push_str("                        let mut next_link: Url = next_link.try_into().expect(\"expected Url\");\n");
+    content.push_str("                        next_link.query_builder().set_pair(\"api-version\", &api_version).build();\n");
+    content.push_str("                        next_link\n");
+    content.push_str("                    }\n");
+    content.push_str("                    PagerState::Initial => first_url.clone(),\n");
+    content.push_str("                };\n");
+    content.push_str(&format!(
+        "                let mut request = Request::new(url, Method::{http_method});\n"
+    ));
+    content.push_str("                request.insert_header(\"accept\", \"application/json\");\n");
+    content.push_str("                let pipeline = pipeline.clone();\n");
+    content.push_str("                Box::pin({\n");
+    content.push_str("                    let first_url = first_url.clone();\n");
+    content.push_str("                    async move {\n");
+    content.push_str("                        let rsp = pipeline.send(\n");
+    content.push_str("                            &pager_options.context,\n");
+    content.push_str("                            &mut request,\n");
+    content.push_str(&format!(
+        "                            Some(PipelineSendOptions {{ check_success: CheckSuccessOptions {{ success_codes: &[{}] }}, ..Default::default() }}),\n",
+        method.response.success_codes.iter().map(|c| c.to_string()).collect::<Vec<_>>().join(", ")
+    ));
+    content.push_str("                        ).await?;\n");
+    content.push_str("                        let (status, headers, body) = rsp.deconstruct();\n");
+    content.push_str(&format!(
+        "                        let res: {page_type} = json::from_json(&body)?;\n"
+    ));
+    content.push_str("                        let rsp = RawResponse::from_bytes(status, headers, body).into();\n");
+
+    // Next link handling
+    if let Some(paging) = &method.paging {
+        let next_link_field = paging
+            .next_link_path
+            .as_deref()
+            .unwrap_or("next_link")
+            .to_snake_case();
+        content.push_str(&format!(
+            "                        Ok(match res.{next_link_field} {{\n"
+        ));
+        content.push_str("                            Some(next_link) if !next_link.is_empty() => PagerResult::More {\n");
+        content.push_str("                                response: rsp,\n");
+        content.push_str("                                continuation: PagerContinuation::Link(first_url.join(next_link.as_ref())?),\n");
+        content.push_str("                            },\n");
+        content.push_str("                            _ => PagerResult::Done { response: rsp },\n");
+        content.push_str("                        })\n");
+    }
+
+    content.push_str("                    }\n");
+    content.push_str("                })\n");
+    content.push_str("            },\n");
+    content.push_str("            None,\n");
+    content.push_str("        ))\n");
+    content.push_str("    }\n\n");
+}
+
+fn to_camel_case(snake: &str) -> String {
+    let mut result = String::new();
+    let mut capitalize = false;
+    for c in snake.chars() {
+        if c == '_' {
+            capitalize = true;
+        } else if capitalize {
+            result.push(c.to_ascii_uppercase());
+            capitalize = false;
+        } else {
+            result.push(c);
+        }
+    }
+    result
 }
 
 fn emit_models(krate: &model::Crate, gen_dir: &Path) -> Result<()> {
