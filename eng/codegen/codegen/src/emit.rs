@@ -254,10 +254,10 @@ fn emit_enums(krate: &model::Crate, gen_dir: &Path) -> Result<()> {
 fn type_ref_to_rust(type_ref: &model::TypeRef) -> String {
     match type_ref {
         model::TypeRef::Scalar(s) => scalar_to_rust(s).to_string(),
-        model::TypeRef::Model { name }
-        | model::TypeRef::Enum { name }
-        | model::TypeRef::Union { name } => name.clone(),
-        model::TypeRef::Array { element } => format!("Vec<{}>", type_ref_to_rust(element)),
+        model::TypeRef::Model(name) | model::TypeRef::Enum(name) | model::TypeRef::Union(name) => {
+            name.clone()
+        }
+        model::TypeRef::Array(element) => format!("Vec<{}>", type_ref_to_rust(element)),
         model::TypeRef::Map { key, value } => {
             format!(
                 "HashMap<{}, {}>",
@@ -265,7 +265,7 @@ fn type_ref_to_rust(type_ref: &model::TypeRef) -> String {
                 type_ref_to_rust(value)
             )
         }
-        model::TypeRef::Option { inner } => format!("Option<{}>", type_ref_to_rust(inner)),
+        model::TypeRef::Option(inner) => format!("Option<{}>", type_ref_to_rust(inner)),
     }
 }
 

@@ -1,0 +1,281 @@
+{
+  "name": "azure_resourcemanager_vmware",
+  "version": "0.1.0",
+  "service_type": "azure-arm",
+  "clients": [
+    {
+      "name": "AVSClient",
+      "doc": "Azure VMware Solution API",
+      "endpoint": {
+        "name": "endpoint",
+        "default_value": "https://management.azure.com"
+      },
+      "parameters": [
+        {
+          "name": "subscription_id",
+          "doc": "The ID of the target subscription. The value must be an UUID.",
+          "param_type": { "kind": "Scalar", "value": "string" },
+          "optional": false
+        }
+      ],
+      "methods": [],
+      "sub_clients": [
+        {
+          "name": "private_clouds",
+          "accessor_name": "get_avs_private_clouds_client",
+          "client_name": "AVSPrivateCloudsClient"
+        },
+        {
+          "name": "clusters",
+          "accessor_name": "get_avs_clusters_client",
+          "client_name": "AVSClustersClient"
+        }
+      ],
+      "credential_scopes": ["https://management.azure.com/.default"]
+    },
+    {
+      "name": "AVSPrivateCloudsClient",
+      "doc": "Private clouds operations",
+      "endpoint": {
+        "name": "endpoint",
+        "default_value": null
+      },
+      "parameters": [
+        {
+          "name": "subscription_id",
+          "doc": "The ID of the target subscription.",
+          "param_type": { "kind": "Scalar", "value": "string" },
+          "optional": false
+        }
+      ],
+      "methods": [
+        {
+          "name": "list_in_subscription",
+          "doc": "List PrivateCloud resources by subscription ID.",
+          "http_method": "GET",
+          "path": "/subscriptions/{subscriptionId}/providers/Microsoft.AVS/privateClouds",
+          "parameters": [],
+          "response": {
+            "body": { "kind": "Model", "value": "PrivateCloudList" },
+            "headers": [],
+            "success_codes": [200]
+          },
+          "paging": {
+            "items_path": "value",
+            "next_link_path": "nextLink"
+          },
+          "lro": null
+        },
+        {
+          "name": "get",
+          "doc": "Get a PrivateCloud.",
+          "http_method": "GET",
+          "path": "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.AVS/privateClouds/{privateCloudName}",
+          "parameters": [
+            {
+              "name": "resource_group_name",
+              "doc": "The name of the resource group.",
+              "param_type": { "kind": "Scalar", "value": "string" },
+              "location": "path",
+              "optional": false,
+              "format": null
+            },
+            {
+              "name": "private_cloud_name",
+              "doc": "Name of the private cloud.",
+              "param_type": { "kind": "Scalar", "value": "string" },
+              "location": "path",
+              "optional": false,
+              "format": null
+            }
+          ],
+          "response": {
+            "body": { "kind": "Model", "value": "PrivateCloud" },
+            "headers": [],
+            "success_codes": [200]
+          },
+          "paging": null,
+          "lro": null
+        }
+      ],
+      "sub_clients": [],
+      "credential_scopes": ["https://management.azure.com/.default"]
+    },
+    {
+      "name": "AVSClustersClient",
+      "doc": "Clusters operations",
+      "endpoint": {
+        "name": "endpoint",
+        "default_value": null
+      },
+      "parameters": [
+        {
+          "name": "subscription_id",
+          "doc": "The ID of the target subscription.",
+          "param_type": { "kind": "Scalar", "value": "string" },
+          "optional": false
+        }
+      ],
+      "methods": [],
+      "sub_clients": [],
+      "credential_scopes": ["https://management.azure.com/.default"]
+    }
+  ],
+  "models": [
+    {
+      "name": "PrivateCloud",
+      "doc": "A private cloud resource",
+      "fields": [
+        {
+          "name": "id",
+          "serialized_name": "id",
+          "doc": "Fully qualified resource ID for the resource.",
+          "field_type": { "kind": "Scalar", "value": "string" },
+          "optional": true,
+          "read_only": true,
+          "flatten": false
+        },
+        {
+          "name": "name",
+          "serialized_name": "name",
+          "doc": "The name of the resource.",
+          "field_type": { "kind": "Scalar", "value": "string" },
+          "optional": true,
+          "read_only": true,
+          "flatten": false
+        },
+        {
+          "name": "location",
+          "serialized_name": "location",
+          "doc": "The geo-location where the resource lives.",
+          "field_type": { "kind": "Scalar", "value": "string" },
+          "optional": true,
+          "read_only": false,
+          "flatten": false
+        },
+        {
+          "name": "properties",
+          "serialized_name": "properties",
+          "doc": "The resource-specific properties for this resource.",
+          "field_type": { "kind": "Model", "value": "PrivateCloudProperties" },
+          "optional": true,
+          "read_only": false,
+          "flatten": false
+        },
+        {
+          "name": "type_prop",
+          "serialized_name": "type",
+          "doc": "The type of the resource.",
+          "field_type": { "kind": "Scalar", "value": "string" },
+          "optional": true,
+          "read_only": true,
+          "flatten": false
+        }
+      ],
+      "parents": [],
+      "is_input": true,
+      "is_output": true
+    },
+    {
+      "name": "PrivateCloudProperties",
+      "doc": "The properties of a private cloud resource.",
+      "fields": [
+        {
+          "name": "provisioning_state",
+          "serialized_name": "provisioningState",
+          "doc": "The provisioning state of the resource.",
+          "field_type": { "kind": "Enum", "value": "PrivateCloudProvisioningState" },
+          "optional": true,
+          "read_only": true,
+          "flatten": false
+        },
+        {
+          "name": "management_cluster",
+          "serialized_name": "managementCluster",
+          "doc": "The default cluster used for management.",
+          "field_type": { "kind": "Model", "value": "ManagementCluster" },
+          "optional": true,
+          "read_only": false,
+          "flatten": false
+        },
+        {
+          "name": "network_block",
+          "serialized_name": "networkBlock",
+          "doc": "The block of addresses for the private cloud.",
+          "field_type": { "kind": "Scalar", "value": "string" },
+          "optional": true,
+          "read_only": false,
+          "flatten": false
+        }
+      ],
+      "parents": [],
+      "is_input": true,
+      "is_output": true
+    },
+    {
+      "name": "ManagementCluster",
+      "doc": "The properties of a management cluster.",
+      "fields": [
+        {
+          "name": "cluster_size",
+          "serialized_name": "clusterSize",
+          "doc": "The cluster size.",
+          "field_type": { "kind": "Scalar", "value": "i32" },
+          "optional": true,
+          "read_only": false,
+          "flatten": false
+        }
+      ],
+      "parents": [],
+      "is_input": true,
+      "is_output": true
+    },
+    {
+      "name": "PrivateCloudList",
+      "doc": "The response of a PrivateCloud list operation.",
+      "fields": [
+        {
+          "name": "value",
+          "serialized_name": "value",
+          "doc": "The PrivateCloud items on this page.",
+          "field_type": {
+            "kind": "Array",
+            "value": { "kind": "Model", "value": "PrivateCloud" }
+          },
+          "optional": false,
+          "read_only": false,
+          "flatten": false
+        },
+        {
+          "name": "next_link",
+          "serialized_name": "nextLink",
+          "doc": "The link to the next page of items.",
+          "field_type": { "kind": "Scalar", "value": "string" },
+          "optional": true,
+          "read_only": false,
+          "flatten": false
+        }
+      ],
+      "parents": [],
+      "is_input": false,
+      "is_output": true
+    }
+  ],
+  "enums": [
+    {
+      "name": "PrivateCloudProvisioningState",
+      "doc": "Provisioning state of the resource.",
+      "values": [
+        { "name": "Succeeded", "value": "Succeeded", "doc": null },
+        { "name": "Failed", "value": "Failed", "doc": null },
+        { "name": "Canceled", "value": "Canceled", "doc": null },
+        { "name": "Building", "value": "Building", "doc": null },
+        { "name": "Deleting", "value": "Deleting", "doc": null },
+        { "name": "Updating", "value": "Updating", "doc": null }
+      ],
+      "value_type": "string",
+      "extensible": true
+    }
+  ],
+  "unions": []
+}

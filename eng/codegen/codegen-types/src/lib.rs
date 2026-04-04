@@ -201,28 +201,18 @@ pub struct UnionVariant {
 
 /// A reference to a type, possibly with generics.
 #[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(tag = "kind")]
+#[serde(tag = "kind", content = "value")]
 pub enum TypeRef {
     Scalar(ScalarType),
-    Model {
-        name: String,
-    },
-    Enum {
-        name: String,
-    },
-    Union {
-        name: String,
-    },
-    Array {
-        element: Box<TypeRef>,
-    },
+    Model(String),
+    Enum(String),
+    Union(String),
+    Array(Box<TypeRef>),
     Map {
         key: Box<TypeRef>,
         value: Box<TypeRef>,
     },
-    Option {
-        inner: Box<TypeRef>,
-    },
+    Option(Box<TypeRef>),
 }
 
 /// Built-in scalar types.
