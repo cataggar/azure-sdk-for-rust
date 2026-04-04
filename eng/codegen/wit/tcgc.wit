@@ -1,0 +1,22 @@
+/// WIT interface for the TCGC code model.
+///
+/// This defines the boundary between the TypeSpec/TCGC JavaScript world
+/// (compiled to a WASI component via jco) and the Rust code generator host.
+///
+/// The component exports a single function that takes a TypeSpec project
+/// path and returns a JSON-serialized code model.
+
+package azure:codegen;
+
+interface tcgc {
+    /// Compile a TypeSpec project and return the TCGC code model as JSON.
+    ///
+    /// The input is the path to a directory containing tspconfig.yaml or main.tsp.
+    /// The output is a JSON string conforming to the code model schema
+    /// defined in codegen-types.
+    compile: func(project-path: string, emitter-options: string) -> result<string, string>;
+}
+
+world codegen {
+    export tcgc;
+}

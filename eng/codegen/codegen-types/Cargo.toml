@@ -1,0 +1,12 @@
+[package]
+name = "typespec-codegen-types"
+version = "0.1.0"
+description = "Code model types for the TypeSpec Rust code generator"
+publish = false
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
