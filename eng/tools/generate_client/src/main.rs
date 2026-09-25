@@ -10,7 +10,7 @@ mod output;
 mod source;
 
 use clap::Parser;
-use std::{fs, path::Path};
+use std::{fs, io::Write, path::Path};
 
 fn main() {
     if let Err(error) = run(cli::Args::parse()) {
@@ -77,6 +77,24 @@ fn run(args: cli::Args) -> Result<(), String> {
     let parsed: model::Package = serde_json::from_str(&model)
         .map_err(|error| format!("Invalid TCGC code model: {error}"))?;
     parsed.validate()?;
+
+    if args.export_model {
+        let output_root = output
+            .canonicalize()
+            .map_err(|error| format!("{}: {error}", output.display()))?;
+        if output_root == crate_dir {
+            return Err("model export requires a separate scratch output crate".to_string());
+        }
+        let path = output_root.join("tcgc-model.json");
+        let mut file = fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&path)
+            .map_err(|error| format!("{}: {error}", path.display()))?;
+        file.write_all(model.as_bytes())
+            .map_err(|error| format!("{}: {error}", path.display()))?;
+        return Ok(());
+    }
 
     if args.preview_models || args.preview_basic {
         let output_root = output

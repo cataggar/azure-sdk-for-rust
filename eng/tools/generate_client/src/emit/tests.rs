@@ -68,6 +68,29 @@ fn emits_modules_models_and_wire_enums() {
 }
 
 #[test]
+fn normalizes_version_enum_variants_without_changing_wire_values() {
+    let mut input = fixture();
+    input["enums"][0]["name"] = json!("Versions");
+    input["models"][0]["fields"][2]["type"]["value_type"]["name"] = json!("Versions");
+    input["enums"][0]["values"][0]["name"] = json!("v7.5");
+    input["enums"][0]["values"][0]["wire_value"] = json!("7.5");
+    let enums = file(&render(&package(input.clone())).unwrap(), "models/enums.rs");
+    assert!(enums.contains("V7_5"));
+    assert!(enums.contains("\"7.5\""));
+
+    input["enums"][0]["values"][1]["name"] = json!("v7.6_preview.2");
+    input["enums"][0]["values"][1]["wire_value"] = json!("7.6-preview.2");
+    let enums = file(&render(&package(input.clone())).unwrap(), "models/enums.rs");
+    assert!(enums.contains("V7_6Preview2"));
+    assert!(enums.contains("\"7.6-preview.2\""));
+
+    input["enums"][0]["values"][1]["name"] = json!("v7_5");
+    assert!(render(&package(input))
+        .unwrap_err()
+        .contains("duplicate Rust enum variant"));
+}
+
+#[test]
 fn deterministic_across_input_order() {
     let original = fixture();
     let mut reversed = original.clone();
@@ -108,15 +131,68 @@ fn rejects_invalid_identifiers_and_unsupported_wire_types() {
 
     let mut input = fixture();
     input["models"][0]["fields"][0]["type"] = json!({"kind":"bytes"});
-    assert!(render(&package(input))
-        .unwrap_err()
-        .contains("explicit wire encoding"));
+    assert!(serde_json::from_value::<Package>(input).is_err());
 
     let mut input = fixture();
     input["models"][0]["fields"][0]["type"] = json!({"kind":"utcDateTime"});
+    assert!(serde_json::from_value::<Package>(input).is_err());
+}
+
+#[test]
+fn emits_explicit_unix_time_for_optional_and_required_dates() {
+    let mut input = fixture();
+    input["models"][0]["fields"][0]["type"] =
+        json!({"kind":"utcDateTime","format":"unixTime","wire_type":"int32"});
+    let models = file(
+        &render(&package(input.clone())).unwrap(),
+        "models/models.rs",
+    );
+    assert!(models.contains("pub next: Option<azure_core::time::OffsetDateTime>"));
+    assert!(models.contains("with = \"azure_core::time::unix_time::option\""));
+
+    input["models"][0]["fields"][0]["optional"] = json!(false);
+    let models = file(
+        &render(&package(input.clone())).unwrap(),
+        "models/models.rs",
+    );
+    assert!(models.contains("pub next: azure_core::time::OffsetDateTime"));
+    assert!(models.contains("with = \"azure_core::time::unix_time\""));
+
+    input["models"][0]["fields"][0]["type"] = json!({
+        "kind":"array",
+        "value_type":{"kind":"utcDateTime","format":"unixTime","wire_type":"int32"}
+    });
     assert!(render(&package(input))
         .unwrap_err()
-        .contains("explicit wire format"));
+        .contains("encoded dates require a direct model field"));
+}
+
+#[test]
+fn emits_url_safe_base64_for_explicit_encoded_bytes() {
+    let mut input = fixture();
+    input["models"][0]["fields"][0]["type"] = json!({"kind":"bytes","encoding":"base64url"});
+    let models = file(
+        &render(&package(input.clone())).unwrap(),
+        "models/models.rs",
+    );
+    assert!(models.contains("pub next: Option<Vec<u8>>"));
+    assert!(models.contains("base64::option::serialize_url_safe"));
+    assert!(models.contains("base64::option::deserialize_url_safe"));
+
+    input["models"][0]["fields"][0]["optional"] = json!(false);
+    let models = file(
+        &render(&package(input.clone())).unwrap(),
+        "models/models.rs",
+    );
+    assert!(models.contains("pub next: Vec<u8>"));
+    assert!(models.contains("base64::serialize_url_safe"));
+    assert!(models.contains("base64::deserialize_url_safe"));
+
+    input["models"][0]["fields"][0]["type"] =
+        json!({"kind":"array","value_type":{"kind":"bytes","encoding":"base64url"}});
+    assert!(render(&package(input))
+        .unwrap_err()
+        .contains("encoded bytes require a direct model field"));
 }
 
 #[test]
@@ -138,7 +214,7 @@ fn normalizes_model_field_names_without_losing_wire_names() {
 }
 
 #[test]
-fn rejects_collisions_and_ambiguous_optionals() {
+fn rejects_collisions_and_handles_optional_nullable_fields() {
     let mut input = fixture();
     input["models"][0]["fields"][0]["wire_name"] = json!("Items");
     assert!(render(&package(input)).unwrap_err().contains("duplicate"));
@@ -146,9 +222,9 @@ fn rejects_collisions_and_ambiguous_optionals() {
     let mut input = fixture();
     input["models"][0]["fields"][0]["type"] =
         json!({"kind":"nullable","value_type":{"kind":"model","name":"Widget"}});
-    assert!(render(&package(input))
-        .unwrap_err()
-        .contains("missing/null semantics"));
+    let models = file(&render(&package(input)).unwrap(), "models/models.rs");
+    assert!(models.contains("pub next: Option<Box<Widget>>"));
+    assert!(models.contains("skip_serializing_if = \"Option::is_none\""));
 
     let mut input = fixture();
     input["enums"][0]["values"][0]["name"] = json!("UnknownValue");
@@ -200,6 +276,20 @@ fn rejects_duplicate_enum_wire_values() {
         .contains("duplicate wire enum value"));
 }
 
+#[test]
+fn normalizes_enum_variants_and_rejects_collisions() {
+    let mut input = fixture();
+    input["enums"][0]["values"][0]["name"] = json!("darkRed");
+    let enums = file(&render(&package(input.clone())).unwrap(), "models/enums.rs");
+    assert!(enums.contains("DarkRed"));
+    assert!(!enums.contains("pub enum Color {\n    darkRed"));
+
+    input["enums"][0]["values"][1]["name"] = json!("dark_red");
+    assert!(render(&package(input))
+        .unwrap_err()
+        .contains("duplicate Rust enum variant"));
+}
+
 fn basic_fixture() -> Value {
     serde_json::from_str(include_str!("../../tests/fixtures/basic-http.json")).unwrap()
 }
@@ -247,6 +337,7 @@ fn basic_preview_emits_all_methods_and_bodyless_response() {
         op["status_codes"] = json!([204, 205]);
         operations.push(op);
     }
+
     let clients = file(&render_basic(&package(input)).unwrap(), "clients.rs");
     for method in ["Get", "Put", "Post", "Patch", "Delete", "Head"] {
         assert!(clients.contains(&format!("Method::{method}")));
@@ -257,15 +348,27 @@ fn basic_preview_emits_all_methods_and_bodyless_response() {
 }
 
 #[test]
+fn basic_preview_qualifies_nested_model_response_types() {
+    let mut input = basic_fixture();
+    input["clients"][0]["operations"][0]["response_type"] = json!({
+        "kind": "array",
+        "value_type": {
+            "kind": "dict",
+            "value_type": {"kind": "model", "name": "Widget"}
+        }
+    });
+    let clients = file(&render_basic(&package(input)).unwrap(), "clients.rs");
+    assert!(clients.contains("Response<Vec<std::collections::HashMap<"));
+    assert!(clients.contains("crate::generated::models::Widget"));
+}
+
+#[test]
 fn basic_preview_rejects_unsupported_bindings_before_writing() {
     let mut input = basic_fixture();
-    input["clients"][0]["children"] = json!([{
-        "name":"Child","parent":"WidgetClient","cross_language_id":null,
-        "doc":null,"endpoint_name":"endpoint","operations":[],"children":[]
-    }]);
+    input["clients"][0]["operations"] = json!([]);
     assert!(render_basic(&package(input))
         .unwrap_err()
-        .contains("child clients"));
+        .contains("no operations or children"));
 
     let mut input = basic_fixture();
     input["clients"][0]["operations"][0]["parameters"][0]["type"] =
@@ -276,6 +379,7 @@ fn basic_preview_rejects_unsupported_bindings_before_writing() {
 
     let mut input = basic_fixture();
     input["clients"][0]["operations"][0]["parameters"][0]["optional"] = json!(true);
+    input["clients"][0]["operations"][0]["path"] = json!("/widgets/{widgetId}/details");
     assert!(render_basic(&package(input))
         .unwrap_err()
         .contains("invalid path binding"));
@@ -303,6 +407,205 @@ fn basic_preview_rejects_unsupported_bindings_before_writing() {
     assert!(render_basic(&package(input))
         .unwrap_err()
         .contains("JSON response requires"));
+}
+
+#[test]
+fn basic_preview_emits_nested_client_accessors() {
+    let mut input = basic_fixture();
+    let operations = input["clients"][0]["operations"].take();
+    input["clients"][0]["operations"] = json!([]);
+    input["clients"][0]["children"] = json!([{
+        "name":"WidgetsClient","parent":"WidgetClient","cross_language_id":null,
+        "doc":"A client for widget operations.","endpoint_name":"endpoint",
+        "operations":operations,"children":[]
+    }]);
+    let clients = file(&render_basic(&package(input)).unwrap(), "clients.rs");
+    assert!(clients.contains("pub struct WidgetClient"));
+    assert!(clients.contains("pub struct WidgetsClient"));
+    assert!(clients.contains("pub fn get_widgets_client(&self) -> WidgetsClient"));
+    assert!(clients.contains("pub async fn get_widget("));
+}
+
+#[test]
+fn basic_preview_documents_bearer_pipeline_requirement() {
+    let mut input = basic_fixture();
+    input["clients"][0]["authentication"] = json!({"kind": "bearer"});
+    let clients = file(&render_basic(&package(input)).unwrap(), "clients.rs");
+    assert!(clients.contains("pipeline configured with bearer-token authentication"));
+}
+
+#[test]
+fn basic_preview_documents_oauth2_pipeline_requirement() {
+    let mut input = basic_fixture();
+    input["clients"][0]["authentication"] = json!({
+        "kind": "oauth2", "flow": "implicit",
+        "authorization_url": "https://login.microsoftonline.com/common/oauth2/authorize",
+        "scopes": ["https://vault.azure.net/.default"]
+    });
+    let clients = file(&render_basic(&package(input)).unwrap(), "clients.rs");
+    assert!(clients.contains(
+        "pipeline configured with OAuth2 implicit-flow token authentication (authorization URL: https://login.microsoftonline.com/common/oauth2/authorize) for the scopes: https://vault.azure.net/.default."
+    ));
+}
+
+#[test]
+fn basic_preview_uses_client_owned_api_version_default_and_override() {
+    let mut input = basic_fixture();
+    input["clients"][0]["api_version"] =
+        json!({"name":"apiVersion","default":"2026-05-01-preview"});
+    input["clients"][0]["operations"][0]["parameters"]
+        .as_array_mut()
+        .unwrap()
+        .push(json!({
+            "name":"apiVersion", "wire_name":"api-version", "location":"query",
+            "type":{"kind":"string"}, "optional":false, "constant":null, "client_owned":true
+        }));
+    let clients = file(
+        &render_basic(&package(input.clone())).unwrap(),
+        "clients.rs",
+    );
+    assert!(clients.contains("api_version: \"2026-05-01-preview\".to_string()"));
+    assert!(clients.contains("pub fn with_api_version("));
+    assert!(clients.contains("append_pair(\"api-version\", self.api_version.as_str())"));
+    assert!(!clients.contains("api_version: &str"));
+
+    input["clients"][0]["operations"][0]["parameters"][3]["client_owned"] = json!(false);
+    let clients = file(&render_basic(&package(input)).unwrap(), "clients.rs");
+    assert!(clients.contains("api_version: &str"));
+    assert!(clients.contains("append_pair(\"api-version\", &api_version.to_string())"));
+}
+
+#[test]
+fn basic_preview_serializes_optional_enum_query() {
+    let mut input = basic_fixture();
+    input["enums"] = fixture()["enums"].clone();
+    input["clients"][0]["operations"][0]["parameters"]
+        .as_array_mut()
+        .unwrap()
+        .push(json!({
+            "name":"outContentType", "wire_name":"outContentType", "location":"query",
+            "type":{"kind":"enum","name":"Color"}, "optional":true, "constant":null
+        }));
+    let clients = file(&render_basic(&package(input)).unwrap(), "clients.rs");
+    assert!(clients.contains("out_content_type: Option<&crate::generated::models::Color>"));
+    assert!(clients.contains("append_pair(\"outContentType\", value.as_ref())"));
+
+    let mut invalid = basic_fixture();
+    invalid["enums"] = fixture()["enums"].clone();
+    invalid["clients"][0]["operations"][0]["parameters"][0]["type"] =
+        json!({"kind":"enum","name":"Color"});
+    assert!(render_basic(&package(invalid))
+        .unwrap_err()
+        .contains("enum parameters require a query binding"));
+}
+
+#[test]
+fn basic_preview_serializes_verified_json_model_body() {
+    let mut input = basic_fixture();
+    input["clients"][0]["operations"][0]["body"] =
+        json!({"name":"widget", "type":{"kind":"model","name":"Widget"}, "optional":false});
+    let clients = file(
+        &render_basic(&package(input.clone())).unwrap(),
+        "clients.rs",
+    );
+    assert!(clients.contains("widget: &crate::generated::models::Widget"));
+    assert!(clients.contains("_generated_request.set_json(widget)?"));
+    assert!(clients.contains("insert_header(\"content-type\", \"application/json\")"));
+
+    input["clients"][0]["operations"][0]["body"]["optional"] = json!(true);
+    assert!(render_basic(&package(input))
+        .unwrap_err()
+        .contains("unsupported JSON request body"));
+
+    let mut input = basic_fixture();
+    input["clients"][0]["operations"][0]["body"] =
+        json!({"name":"widget", "type":{"kind":"model","name":"Widget"}, "optional":false});
+    input["clients"][0]["operations"][0]["parameters"]
+        .as_array_mut()
+        .unwrap()
+        .push(
+            json!({"name":"contentType","wire_name":"content-type","location":"header",
+                    "type":{"kind":"string"},"optional":false,"constant":"text/plain"}),
+        );
+    assert!(render_basic(&package(input))
+        .unwrap_err()
+        .contains("JSON body requires a constant application/json content type"));
+}
+
+#[test]
+fn basic_preview_renders_complete_versioned_json_body_fixture() {
+    let input: Value =
+        serde_json::from_str(include_str!("../../tests/fixtures/basic-json-body.json")).unwrap();
+    let clients = file(&render_basic(&package(input)).unwrap(), "clients.rs");
+    assert!(clients.contains("widget_name: &str"));
+    assert!(clients.contains("self.api_version.as_str()"));
+    assert!(clients.contains("widget: &crate::generated::models::Widget"));
+    assert_eq!(clients.matches("insert_header(\"content-type\"").count(), 1);
+}
+
+#[test]
+fn basic_preview_adds_json_content_type_without_explicit_header() {
+    let mut input: Value =
+        serde_json::from_str(include_str!("../../tests/fixtures/basic-json-body.json")).unwrap();
+    input["clients"][0]["operations"][0]["parameters"]
+        .as_array_mut()
+        .unwrap()
+        .retain(|parameter| parameter["wire_name"] != "content-type");
+    let clients = file(&render_basic(&package(input)).unwrap(), "clients.rs");
+    assert_eq!(clients.matches("insert_header(\"content-type\"").count(), 1);
+    assert!(clients.contains("_generated_request.set_json(widget)?;"));
+}
+
+#[test]
+fn basic_preview_emits_pager_and_default_empty_items() {
+    let input: Value =
+        serde_json::from_str(include_str!("../../tests/fixtures/basic-paging.json")).unwrap();
+    let files = render_basic(&package(input)).unwrap();
+    let clients = file(&files, "clients.rs");
+    assert!(clients.contains("Pager<crate::generated::models::ListWidgetsResult>"));
+    assert!(clients.contains("first_url.join(&link)?"));
+    assert!(clients.contains("set_pair(\"api-version\", &api_version)"));
+    assert!(clients.contains("PagerResult::More"));
+    let models = file(&files, "models/models.rs");
+    assert!(models.contains("pub value: Vec<Widget>"));
+    assert!(models.contains("impl azure_core::http::pager::Page for ListWidgetsResult"));
+    assert!(models.contains("Ok(self.value.into_iter())"));
+}
+
+#[test]
+fn basic_preview_renders_pinned_keyvault_secrets_without_adopting_sdk_source() {
+    let input: Value = serde_json::from_str(include_str!(
+        "../../tests/fixtures/keyvault-secrets-8d521358.json"
+    ))
+    .unwrap();
+    let files = render_basic(&package(input)).unwrap();
+    let clients = file(&files, "clients.rs");
+    assert!(clients.contains("pub struct SecretClient {"));
+    assert!(!clients.contains("pub struct Secret {"));
+    assert!(clients.contains("pub async fn set_secret("));
+    assert!(clients.contains("pub fn list_secret_properties("));
+    assert!(clients.contains("pub async fn get_secret("));
+    assert!(clients.contains("out_content_type: Option<&crate::generated::models::ContentType>"));
+    let models = file(&files, "models/models.rs");
+    assert!(models.contains("base64::option::deserialize_url_safe"));
+    assert!(models.contains("with = \"azure_core::time::unix_time::option\""));
+}
+
+#[test]
+fn basic_preview_preserves_empty_terminal_optional_path_segment() {
+    let mut input = basic_fixture();
+    input["clients"][0]["operations"][0]["path"] = json!("/widgets/{widgetId}/{secret-version}");
+    input["clients"][0]["operations"][0]["parameters"]
+        .as_array_mut()
+        .unwrap()
+        .push(json!({
+            "name":"secretVersion", "wire_name":"secret-version", "location":"path",
+            "type":{"kind":"string"}, "optional":true, "constant":null
+        }));
+    let clients = file(&render_basic(&package(input)).unwrap(), "clients.rs");
+    assert!(clients.contains("secret_version: Option<&str>"));
+    assert!(clients.contains("secret_version.unwrap_or(\"\").to_string()"));
+    assert!(clients.contains("_generated_segments.push(&value)"));
 }
 
 #[test]

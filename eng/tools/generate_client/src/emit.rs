@@ -155,6 +155,52 @@ fn ident(name: &str, scope: &str) -> Result<Ident, String> {
 }
 
 fn field_ident(name: &str, scope: &str) -> Result<Ident, String> {
+    ident(&normalized_snake(name, scope)?, scope)
+}
+
+fn variant_ident(name: &str, scope: &str) -> Result<Ident, String> {
+    if let Some((numbers, preview)) = name
+        .strip_prefix('v')
+        .and_then(|value| value.split_once("_preview."))
+    {
+        if numbers.contains('.')
+            && numbers
+                .split('.')
+                .all(|part| !part.is_empty() && part.bytes().all(|byte| byte.is_ascii_digit()))
+            && !preview.is_empty()
+            && preview.bytes().all(|byte| byte.is_ascii_digit())
+        {
+            return ident(
+                &format!("V{}Preview{preview}", numbers.replace('.', "_")),
+                scope,
+            );
+        }
+    }
+    let version = name
+        .strip_prefix('v')
+        .filter(|value| value.contains(['.', '_']))
+        .is_some_and(|value| {
+            value
+                .split(['.', '_'])
+                .all(|part| !part.is_empty() && part.bytes().all(|byte| byte.is_ascii_digit()))
+        });
+    if version {
+        return ident(&format!("V{}", name[1..].replace('.', "_")), scope);
+    }
+    let normalized = normalized_snake(name, scope)?;
+    let pascal: String = normalized
+        .split('_')
+        .map(|word| {
+            let mut chars = word.chars();
+            chars.next().map_or_else(String::new, |first| {
+                first.to_ascii_uppercase().to_string() + chars.as_str()
+            })
+        })
+        .collect();
+    ident(&pascal, scope)
+}
+
+fn normalized_snake(name: &str, scope: &str) -> Result<String, String> {
     let chars: Vec<_> = name.chars().collect();
     let mut rust_name = String::new();
     for (index, &ch) in chars.iter().enumerate() {
@@ -181,7 +227,7 @@ fn field_ident(name: &str, scope: &str) -> Result<Ident, String> {
             return Err(format!("{scope}: unsupported Rust field name '{name}'"));
         }
     }
-    ident(&rust_name, scope)
+    Ok(rust_name)
 }
 
 #[cfg(test)]

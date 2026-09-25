@@ -46,7 +46,7 @@ test("Wasm export compiles a virtual project and returns diagnostics", async () 
   assert.equal(getWidget.path, "/widgets/{widget_id}");
   assert.deepEqual(getWidget.parameters.find((param) => param.location === "path"), {
     name: "widget_id", wire_name: "widget_id", location: "path",
-    type: { kind: "string" }, optional: false, constant: null,
+    type: { kind: "string" }, optional: false, constant: null, client_owned: false,
   });
   assert.throws(() => tcgc.compile("/spec", options("model Broken { invalid: ; }")),
     /TypeSpec compilation failed/);

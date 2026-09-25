@@ -1,7 +1,10 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-use crate::{emit::ident, model::Package};
+use crate::{
+    emit::{ident, variant_ident},
+    model::Package,
+};
 use proc_macro2::TokenStream;
 use quote::quote;
 use std::collections::BTreeSet;
@@ -31,14 +34,15 @@ pub(super) fn render(package: &Package) -> Result<TokenStream, String> {
         let mut wire_values = Vec::new();
         let mut rust_names = BTreeSet::new();
         for value in sorted_values {
-            let variant = ident(&value.name, &format!("{}.{}", enumeration.name, value.name))?;
+            let variant =
+                variant_ident(&value.name, &format!("{}.{}", enumeration.name, value.name))?;
             if !rust_names.insert(variant.to_string().trim_start_matches("r#").to_owned()) {
                 return Err(format!(
                     "{scope}: duplicate Rust enum variant '{}'",
                     value.name
                 ));
             }
-            if enumeration.extensible && value.name == "UnknownValue" {
+            if enumeration.extensible && variant == "UnknownValue" {
                 return Err(format!(
                     "{scope}: UnknownValue conflicts with the extensible fallback"
                 ));

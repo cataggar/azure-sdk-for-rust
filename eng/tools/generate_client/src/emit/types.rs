@@ -39,12 +39,8 @@ pub(super) fn rust_type(value: &Type, scope: &str, boxed: bool) -> Result<RustTy
             let inner = rust_type(value_type, scope, boxed)?;
             quote!(Option<#inner>)
         }
-        Type::Bytes => return Err(format!("{scope}: bytes require an explicit wire encoding")),
-        Type::UtcDateTime => {
-            return Err(format!(
-                "{scope}: utcDateTime requires an explicit wire format"
-            ))
-        }
+        Type::Bytes { .. } => quote!(Vec<u8>),
+        Type::UtcDateTime { .. } => quote!(azure_core::time::OffsetDateTime),
     };
     parse2(tokens).map_err(|error| format!("{scope}: invalid Rust type: {error}"))
 }

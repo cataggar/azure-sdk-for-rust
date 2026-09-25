@@ -121,21 +121,57 @@ impl Location {
             .join("azure-sdk-for-rust")
             .join("typespec")
             .join(&self.commit);
-        fs::create_dir_all(&cache).map_err(|error| format!("{}: {error}", cache.display()))?;
+        self.sync_from(&cache, URL)
+    }
+
+    fn sync_from(&self, cache: &Path, url: &str) -> Result<PathBuf, String> {
+        fs::create_dir_all(cache).map_err(|error| format!("{}: {error}", cache.display()))?;
         if !cache.join(".git").is_dir() {
-            git_command(&cache, &["init", "-q", "."])?;
+            git_command(cache, &["init", "-q", "."])?;
         }
-        if git_output(&cache, &["rev-parse", "HEAD"])
-            .ok()
-            .as_deref()
-            .map(str::trim)
-            != Some(self.commit.as_str())
-        {
-            git_command(&cache, &["fetch", "--depth=1", URL, &self.commit])?;
-            git_command(&cache, &["checkout", "--detach", "FETCH_HEAD"])?;
+        let head = git_output(cache, &["rev-parse", "--verify", "HEAD"]).ok();
+        if head.is_some() {
+            let status = git_output(cache, &["status", "--porcelain", "--untracked-files=all"])?;
+            if !status.trim().is_empty() {
+                return Err(format!(
+                    "TypeSpec checkout {} has uncommitted or untracked files",
+                    cache.display()
+                ));
+            }
+        }
+        let mut paths = vec![&self.directory];
+        paths.extend(self.additional_directories.iter().flatten());
+        let patterns = paths
+            .into_iter()
+            .map(|path| {
+                path.iter()
+                    .map(|part| {
+                        part.to_str().ok_or_else(|| {
+                            format!("Non-UTF-8 TypeSpec directory: {}", path.display())
+                        })
+                    })
+                    .collect::<Result<Vec<_>, _>>()
+                    .map(|parts| parts.join("/"))
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        let mut args = vec!["sparse-checkout", "set", "--cone", "--"];
+        args.extend(patterns.iter().map(String::as_str));
+        git_command(cache, &args)?;
+        if head.as_deref().map(str::trim) != Some(self.commit.as_str()) {
+            git_command(cache, &["fetch", "--depth=1", url, &self.commit])?;
+            git_command(cache, &["checkout", "--detach", "FETCH_HEAD"])?;
         }
         let project = cache.join(&self.directory);
         self.verify(&project)?;
+        for directory in self.additional_directories.iter().flatten() {
+            let path = cache.join(directory);
+            if !path.is_dir() {
+                return Err(format!(
+                    "Missing pinned additional TypeSpec directory: {}",
+                    path.display()
+                ));
+            }
+        }
         Ok(project)
     }
 }

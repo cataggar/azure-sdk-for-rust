@@ -1,0 +1,62 @@
+{
+  "schema_version": 2,
+  "clients": [{
+    "name": "WidgetClient",
+    "parent": null,
+    "cross_language_id": null,
+    "doc": "Manages widgets.",
+    "authentication": null,
+    "api_version": {"name": "apiVersion", "default": "2026-05-01-preview"},
+    "endpoint_name": "endpoint",
+    "operations": [{
+      "name": "listWidgets",
+      "kind": "paging",
+      "cross_language_id": null,
+      "doc": "Lists widgets.",
+      "http_method": "GET",
+      "path": "/widgets",
+      "parameters": [
+        {"name": "apiVersion", "wire_name": "api-version", "location": "query",
+         "type": {"kind": "string"}, "optional": false, "constant": null, "client_owned": true},
+        {"name": "maxresults", "wire_name": "maxresults", "location": "query",
+         "type": {"kind": "int32"}, "optional": true, "constant": null, "client_owned": false},
+        {"name": "accept", "wire_name": "accept", "location": "header",
+         "type": {"kind": "string"}, "optional": false, "constant": "application/json", "client_owned": false}
+      ],
+      "body": null,
+      "status_codes": [200],
+      "response_type": {"kind": "model", "name": "ListWidgetsResult"},
+      "paging": {
+        "next_link": {"name": "nextLink", "wire_name": "nextLink", "optional": true},
+        "items": {
+          "name": "value", "wire_name": "value", "optional": true,
+          "type": {"kind": "array", "value_type": {"kind": "model", "name": "Widget"}}
+        },
+        "next_link_verb": "GET",
+        "reinject_api_version": true
+      },
+      "exceptions": []
+    }],
+    "children": []
+  }],
+  "models": [
+    {
+      "name": "ListWidgetsResult", "cross_language_id": null, "doc": "A widget page.",
+      "fields": [
+        {"name": "nextLink", "wire_name": "nextLink", "type": {"kind": "string"},
+         "optional": true, "read_only": true, "doc": null},
+        {"name": "value", "wire_name": "value",
+         "type": {"kind": "array", "value_type": {"kind": "model", "name": "Widget"}},
+         "optional": true, "read_only": true, "doc": null}
+      ]
+    },
+    {
+      "name": "Widget", "cross_language_id": null, "doc": "A widget.",
+      "fields": [
+        {"name": "label", "wire_name": "label", "type": {"kind": "string"},
+         "optional": false, "read_only": false, "doc": null}
+      ]
+    }
+  ],
+  "enums": []
+}

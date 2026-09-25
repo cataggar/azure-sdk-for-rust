@@ -6,6 +6,7 @@
       "parent": null,
       "cross_language_id": "Example.WidgetClient",
       "doc": "A client for widgets.",
+      "authentication": null,
       "endpoint_name": "endpoint",
       "operations": [
         {

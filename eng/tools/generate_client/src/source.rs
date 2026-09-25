@@ -26,6 +26,7 @@ pub(crate) fn collect(
     let mut sources = BTreeMap::new();
     let mut bytes = 0;
     collect_dir(project, project, "/spec", false, &mut sources, &mut bytes)?;
+    check_relative_imports(&sources)?;
     let resources = resources.ok_or_else(|| {
         "TypeSpec component resources are required; pass --resources <component/dist/resources>"
             .to_string()
@@ -92,6 +93,109 @@ pub(crate) fn collect(
         ));
     }
     Ok(sources)
+}
+
+fn check_relative_imports(sources: &BTreeMap<String, String>) -> Result<(), String> {
+    for (file, content) in sources.iter().filter(|(path, _)| path.ends_with(".tsp")) {
+        for import in relative_imports(content) {
+            if !import.starts_with("./") && !import.starts_with("../") {
+                continue;
+            }
+            let mut segments: Vec<_> = file
+                .rsplit_once('/')
+                .expect("virtual source path has a parent")
+                .0
+                .trim_start_matches('/')
+                .split('/')
+                .collect();
+            for part in import.split('/') {
+                match part {
+                    "" | "." => {}
+                    ".." if segments.len() > 1 => {
+                        segments.pop();
+                    }
+                    ".." => {
+                        return Err(format!("TypeSpec import {import} in {file} escapes /spec"))
+                    }
+                    part => segments.push(part),
+                }
+            }
+            let target = format!("/{}", segments.join("/"));
+            let present = if target.ends_with(".tsp") || target.ends_with(".json") {
+                sources.contains_key(&target)
+            } else {
+                sources.contains_key(&format!("{target}.tsp"))
+                    || sources.contains_key(&format!("{target}/main.tsp"))
+                    || sources.contains_key(&format!("{target}/index.tsp"))
+            };
+            if !present {
+                return Err(format!(
+                    "Missing relative TypeSpec import {import} in {file} (resolved to {target}); include its directory in additionalDirectories for a sparse pinned checkout"
+                ));
+            }
+        }
+    }
+    Ok(())
+}
+
+fn relative_imports(content: &str) -> Vec<&str> {
+    let bytes = content.as_bytes();
+    let mut imports = Vec::new();
+    let mut index = 0;
+    while index < bytes.len() {
+        if bytes[index..].starts_with(b"//") {
+            index = bytes[index..]
+                .iter()
+                .position(|byte| *byte == b'\n')
+                .map_or(bytes.len(), |offset| index + offset);
+        } else if bytes[index..].starts_with(b"/*") {
+            index = bytes[index + 2..]
+                .windows(2)
+                .position(|pair| pair == b"*/")
+                .map_or(bytes.len(), |offset| index + offset + 4);
+        } else if matches!(bytes[index], b'"' | b'\'' | b'`') {
+            let quote = bytes[index];
+            index += 1;
+            while index < bytes.len() {
+                if bytes[index] == b'\\' {
+                    index += 2;
+                } else if bytes[index] == quote {
+                    index += 1;
+                    break;
+                } else {
+                    index += 1;
+                }
+            }
+        } else if bytes[index..].starts_with(b"import")
+            && (index == 0 || !is_identifier_byte(bytes[index - 1]))
+            && bytes
+                .get(index + 6)
+                .is_some_and(|byte| byte.is_ascii_whitespace())
+        {
+            index += 6;
+            while bytes
+                .get(index)
+                .is_some_and(|byte| byte.is_ascii_whitespace())
+            {
+                index += 1;
+            }
+            if let Some(&quote @ (b'"' | b'\'')) = bytes.get(index) {
+                let start = index + 1;
+                if let Some(end) = bytes[start..].iter().position(|byte| *byte == quote) {
+                    imports.push(&content[start..start + end]);
+                    index = start + end + 1;
+                    continue;
+                }
+            }
+        } else {
+            index += 1;
+        }
+    }
+    imports
+}
+
+fn is_identifier_byte(byte: u8) -> bool {
+    byte.is_ascii_alphanumeric() || byte == b'_'
 }
 
 fn collect_dir(

@@ -3,7 +3,10 @@
 
 use crate::{
     emit::{field_ident, ident, types},
-    model::{Client, Operation, Package, ParameterLocation, Type},
+    model::{
+        Authentication, Client, OAuth2Flow, Operation, OperationKind, Package, ParameterLocation,
+        Type,
+    },
 };
 use proc_macro2::TokenStream;
 use quote::quote;
@@ -12,44 +15,176 @@ use std::collections::HashSet;
 pub(super) fn render(package: &Package) -> Result<TokenStream, String> {
     let mut clients = Vec::new();
     let mut client_names = HashSet::new();
-    for client in &package.clients {
-        let scope = format!("client {}", client.name);
-        if !client.children.is_empty() {
-            return Err(format!(
-                "{scope}: child clients are not supported in --preview-basic"
-            ));
+    let mut roots: Vec<_> = package.clients.iter().collect();
+    roots.sort_by(|a, b| a.name.cmp(&b.name));
+    for client in roots {
+        render_client(client, &mut clients, &mut client_names)?;
+    }
+    fn kinds(client: &Client) -> (bool, bool) {
+        let mut basic = client
+            .operations
+            .iter()
+            .any(|operation| matches!(operation.kind, OperationKind::Basic));
+        let mut paging = client
+            .operations
+            .iter()
+            .any(|operation| matches!(operation.kind, OperationKind::Paging));
+        for child in &client.children {
+            let (child_basic, child_paging) = kinds(child);
+            basic |= child_basic;
+            paging |= child_paging;
         }
-        if client.operations.is_empty() {
-            return Err(format!(
-                "{scope}: clients without operations are not supported"
-            ));
+        (basic, paging)
+    }
+    let (basic, paging) = package
+        .clients
+        .iter()
+        .fold((false, false), |(basic, paging), client| {
+            let (client_basic, client_paging) = kinds(client);
+            (basic || client_basic, paging || client_paging)
+        });
+    let basic_imports = basic.then(|| {
+        quote!(
+            use azure_core::http::{Context, Response};
+        )
+    });
+    let paging_import = paging.then(|| {
+        quote!(
+            use azure_core::http::UrlExt;
+        )
+    });
+    Ok(quote! {
+        use azure_core::{
+            error::CheckSuccessOptions,
+            http::{Method, Pipeline, PipelineSendOptions, Request, Url},
+        };
+        #basic_imports
+        #paging_import
+
+        #(#clients)*
+    })
+}
+
+fn render_client(
+    client: &Client,
+    clients: &mut Vec<TokenStream>,
+    client_names: &mut HashSet<String>,
+) -> Result<(), String> {
+    let scope = format!("client {}", client.name);
+    if client.operations.is_empty() && client.children.is_empty() {
+        return Err(format!("{scope}: client has no operations or children"));
+    }
+    let name = client_ident(&client.name)?;
+    let client_doc = client.doc.as_deref().unwrap_or(&client.name);
+    let authentication_doc = match &client.authentication {
+        Some(Authentication::Bearer) => {
+            "The caller must supply a pipeline configured with bearer-token authentication.".to_string()
         }
-        let name = ident(&client.name, &scope)?;
-        let client_doc = client.doc.as_deref().unwrap_or(&client.name);
-        if !client_names.insert(name.to_string()) {
-            return Err(format!("{scope}: duplicate Rust client name"));
-        }
-        let mut operations = Vec::new();
-        let mut methods = HashSet::new();
-        for operation in &client.operations {
-            let method = field_ident(&operation.name, &scope)?;
-            if !methods.insert(method.to_string())
-                || matches!(method.to_string().as_str(), "new" | "endpoint")
-            {
-                return Err(format!(
-                    "{scope}: duplicate or reserved Rust method {}",
-                    method
+        Some(Authentication::OAuth2 {
+            flow,
+            authorization_url,
+            scopes,
+        }) => match flow {
+            OAuth2Flow::Implicit => format!(
+                "The caller must supply a pipeline configured with OAuth2 implicit-flow token authentication (authorization URL: {authorization_url}) for the scopes: {}.",
+                scopes.join(", ")
+            ),
+        },
+        None => "The caller must supply a pipeline configured for this service.".to_string(),
+    };
+    let api_version_field = client
+        .api_version
+        .as_ref()
+        .map(|_| quote!(api_version: String,));
+    let api_version_init = client.api_version.as_ref().map(|version| {
+        let default = &version.default;
+        quote!(api_version: #default.to_string(),)
+    });
+    let api_version_override = client.api_version.as_ref().map(|_| quote! {
+        /// Overrides the API version used in operation requests.
+        ///
+        /// # Errors
+        ///
+        /// Returns an error for an empty or invalid version.
+        pub fn with_api_version(mut self, api_version: impl Into<String>) -> azure_core::Result<Self> {
+            let api_version = api_version.into();
+            if api_version.is_empty() || api_version.chars().any(char::is_control) {
+                return Err(azure_core::Error::with_message(
+                    azure_core::error::ErrorKind::Other,
+                    "invalid API version",
                 ));
             }
-            operations.push(render_operation(client, operation, &method)?);
+            self.api_version = api_version;
+            Ok(self)
         }
-        clients.push(quote! {
+    });
+    if !client_names.insert(name.to_string()) {
+        return Err(format!("{scope}: duplicate Rust client name"));
+    }
+    let mut methods = HashSet::from(["new".to_string(), "endpoint".to_string()]);
+    if client.api_version.is_some() {
+        methods.insert("with_api_version".to_string());
+    }
+    let mut operations = Vec::new();
+    let mut sorted_operations: Vec<_> = client.operations.iter().collect();
+    sorted_operations.sort_by(|a, b| a.name.cmp(&b.name));
+    for operation in sorted_operations {
+        let method = field_ident(&operation.name, &scope)?;
+        if !methods.insert(method.to_string()) {
+            return Err(format!(
+                "{scope}: duplicate or reserved Rust method {method}"
+            ));
+        }
+        operations.push(render_operation(client, operation, &method)?);
+    }
+    let mut accessors = Vec::new();
+    let mut children: Vec<_> = client.children.iter().collect();
+    children.sort_by(|a, b| a.name.cmp(&b.name));
+    for child in children {
+        if child.api_version.is_some()
+            && client.api_version.as_ref().map(|v| &v.name)
+                != child.api_version.as_ref().map(|v| &v.name)
+        {
+            return Err(format!(
+                "{scope}: child {} has an unrelated API version",
+                child.name
+            ));
+        }
+        let child_api_version = child
+            .api_version
+            .as_ref()
+            .map(|_| quote!(api_version: self.api_version.clone(),));
+        let child_name = client_ident(&child.name)?;
+        let method = field_ident(
+            &format!("get{}Client", child.name.trim_end_matches("Client")),
+            &scope,
+        )?;
+        if !methods.insert(method.to_string()) {
+            return Err(format!(
+                "{scope}: duplicate or reserved Rust method {method}"
+            ));
+        }
+        let accessor_doc = format!("Returns the {} subclient.", child.name);
+        accessors.push(quote! {
+            #[doc = #accessor_doc]
+            pub fn #method(&self) -> #child_name {
+                #child_name {
+                    endpoint: self.endpoint.clone(),
+                    pipeline: self.pipeline.clone(),
+                    #child_api_version
+                }
+            }
+        });
+        render_client(child, clients, client_names)?;
+    }
+    clients.push(quote! {
             #[doc = #client_doc]
             ///
-            /// The caller must supply a pipeline configured with the required authentication.
+            #[doc = #authentication_doc]
             pub struct #name {
                 endpoint: Url,
                 pipeline: Pipeline,
+                #api_version_field
             }
 
             impl #name {
@@ -65,7 +200,7 @@ pub(super) fn render(package: &Package) -> Result<TokenStream, String> {
                             "client endpoint must be a base URL without a query or fragment",
                         ));
                     }
-                    Ok(Self { endpoint, pipeline })
+                    Ok(Self { endpoint, pipeline, #api_version_init })
                 }
 
                 /// Returns the URL associated with this client.
@@ -73,18 +208,21 @@ pub(super) fn render(package: &Package) -> Result<TokenStream, String> {
                     &self.endpoint
                 }
 
+                #api_version_override
                 #(#operations)*
+                #(#accessors)*
             }
-        });
-    }
-    Ok(quote! {
-        use azure_core::{
-            error::CheckSuccessOptions,
-            http::{Context, Method, Pipeline, PipelineSendOptions, Request, Response, Url},
-        };
+    });
+    Ok(())
+}
 
-        #(#clients)*
-    })
+fn client_ident(name: &str) -> Result<syn::Ident, String> {
+    let name_with_suffix = if name.ends_with("Client") {
+        name.to_owned()
+    } else {
+        format!("{name}Client")
+    };
+    ident(&name_with_suffix, &format!("client {name}"))
 }
 
 fn render_operation(
@@ -124,16 +262,7 @@ fn render_operation(
     let response = match &operation.response_type {
         None => quote!(Response<(), azure_core::http::NoFormat>),
         Some(value) => {
-            let ty = types::rust_type(value, &scope, false)?;
-            let ty = match value {
-                Type::Model { .. } | Type::Enum { .. } => quote!(crate::generated::models::#ty),
-                Type::Array { .. } | Type::Dict { .. } | Type::Nullable { .. } => {
-                    return Err(format!(
-                        "{scope}: composite response types are not supported in --preview-basic"
-                    ));
-                }
-                _ => quote!(#ty),
-            };
+            let ty = response_type(value, &scope)?;
             quote!(Response<#ty>)
         }
     };
@@ -145,6 +274,7 @@ fn render_operation(
     let mut header_names = HashSet::new();
     let mut path_bindings = std::collections::HashMap::new();
     let mut has_accept = false;
+    let mut has_content_type = false;
     for parameter in &operation.parameters {
         let binding = format!("{scope}.{}", parameter.name);
         let name = field_ident(&parameter.name, &binding)?;
@@ -156,7 +286,9 @@ fn render_operation(
         if parameter.constant.is_some() && parameter.optional {
             return Err(format!("{binding}: an optional constant is ambiguous"));
         }
-        let value = if let Some(constant) = &parameter.constant {
+        let value = if parameter.client_owned {
+            quote!(self.api_version.as_str())
+        } else if let Some(constant) = &parameter.constant {
             validate_constant(constant, &parameter.parameter_type, &binding)?;
             quote!(#constant)
         } else {
@@ -166,6 +298,15 @@ fn render_operation(
                 Type::Int32 => quote!(i32),
                 Type::Int64 => quote!(i64),
                 Type::Float64 => quote!(f64),
+                Type::Enum { name } => {
+                    if parameter.location != ParameterLocation::Query {
+                        return Err(format!(
+                            "{binding}: enum parameters require a query binding"
+                        ));
+                    }
+                    let name = ident(name, &binding)?;
+                    quote!(&crate::generated::models::#name)
+                }
                 _ => return Err(format!("{binding}: unsupported HTTP parameter")),
             };
             if parameter.optional {
@@ -177,19 +318,31 @@ fn render_operation(
         };
         match parameter.location {
             ParameterLocation::Path => {
-                if parameter.optional {
-                    return Err(format!("{binding}: optional path parameter"));
-                }
+                let value = if parameter.optional {
+                    if !matches!(parameter.parameter_type, Type::String)
+                        || !operation
+                            .path
+                            .ends_with(&format!("/{{{}}}", parameter.wire_name))
+                    {
+                        return Err(format!("{binding}: unsupported optional path parameter"));
+                    }
+                    quote!(#name.unwrap_or("").to_string())
+                } else {
+                    value
+                };
                 let finite = (parameter.constant.is_none() && matches!(parameter.parameter_type, Type::Float64)).then(|| quote! {
                     if !#name.is_finite() {
                         return Err(azure_core::Error::with_message(azure_core::error::ErrorKind::Other, "non-finite HTTP parameter"));
                     }
                 });
-                path_bindings.insert(parameter.wire_name.as_str(), (value, finite));
+                path_bindings.insert(
+                    parameter.wire_name.as_str(),
+                    (value, finite, parameter.optional),
+                );
             }
             ParameterLocation::Query => {
                 let wire = &parameter.wire_name;
-                if parameter.constant.is_some() {
+                if parameter.client_owned || parameter.constant.is_some() {
                     queries
                         .push(quote!(_generated_url.query_pairs_mut().append_pair(#wire, #value);));
                 } else {
@@ -199,6 +352,11 @@ fn render_operation(
                         }
                     });
                     if parameter.optional {
+                        let text = if matches!(parameter.parameter_type, Type::Enum { .. }) {
+                            quote!(value.as_ref())
+                        } else {
+                            quote!(&value.to_string())
+                        };
                         let finite = matches!(parameter.parameter_type, Type::Float64).then(|| quote! {
                             if !value.is_finite() {
                                 return Err(azure_core::Error::with_message(azure_core::error::ErrorKind::Other, "non-finite HTTP parameter"));
@@ -207,11 +365,16 @@ fn render_operation(
                         queries.push(quote! {
                             if let Some(value) = #name {
                                 #finite
-                                _generated_url.query_pairs_mut().append_pair(#wire, &value.to_string());
+                                _generated_url.query_pairs_mut().append_pair(#wire, #text);
                             }
                         });
                     } else {
-                        queries.push(quote! { #optional_finite _generated_url.query_pairs_mut().append_pair(#wire, &#name.to_string()); });
+                        let text = if matches!(parameter.parameter_type, Type::Enum { .. }) {
+                            quote!(#name.as_ref())
+                        } else {
+                            quote!(&#name.to_string())
+                        };
+                        queries.push(quote! { #optional_finite _generated_url.query_pairs_mut().append_pair(#wire, #text); });
                     }
                 }
             }
@@ -240,6 +403,16 @@ fn render_operation(
                         && parameter.constant.as_deref() != Some("application/json")
                     {
                         return Err(format!("{binding}: JSON response requires a constant application/json accept header"));
+                    }
+                }
+                if wire == "content-type" {
+                    has_content_type = true;
+                    if operation.body.is_some()
+                        && parameter.constant.as_deref() != Some("application/json")
+                    {
+                        return Err(format!(
+                            "{binding}: JSON body requires a constant application/json content type"
+                        ));
                     }
                 }
                 if let Some(constant) = &parameter.constant {
@@ -283,6 +456,31 @@ fn render_operation(
             }
         }
     }
+    let body_request = if let Some(body) = &operation.body {
+        let binding = format!("{scope}.{}", body.name);
+        let name = field_ident(&body.name, &binding)?;
+        if !names.insert(name.to_string()) || name == "context" {
+            return Err(format!(
+                "{binding}: duplicate or reserved Rust parameter name"
+            ));
+        }
+        let Type::Model { name: model } = &body.body_type else {
+            return Err(format!("{binding}: unsupported JSON request body"));
+        };
+        if body.optional {
+            return Err(format!("{binding}: optional request body is not supported"));
+        }
+        let model = ident(model, &binding)?;
+        args.push(quote!(#name: &crate::generated::models::#model));
+        if !has_content_type {
+            headers.push(
+                quote!(_generated_request.insert_header("content-type", "application/json");),
+            );
+        }
+        Some(quote!(_generated_request.set_json(#name)?;))
+    } else {
+        None
+    };
     if operation.response_type.is_some() && !has_accept {
         headers.push(quote!(_generated_request.insert_header("accept", "application/json");));
     }
@@ -306,14 +504,15 @@ fn render_operation(
             paths.push(quote!(_generated_segments.push("");));
         } else if segment.starts_with('{') && segment.ends_with('}') && segment.len() > 2 {
             let wire = &segment[1..segment.len() - 1];
-            let (value, finite) = path_bindings
+            let (value, finite, optional) = path_bindings
                 .remove(wire)
                 .ok_or_else(|| format!("{scope}: missing path binding {wire}"))?;
+            let nonempty = (!optional).then(|| quote!(value.is_empty() ||));
             paths.push(quote! {
                 {
                     #finite
                     let value = #value;
-                    if value.is_empty() || value == "." || value == ".." {
+                    if #nonempty value == "." || value == ".." {
                         return Err(azure_core::Error::with_message(azure_core::error::ErrorKind::Other, "invalid path segment"));
                     }
                     _generated_segments.push(&value);
@@ -338,6 +537,91 @@ fn render_operation(
     }
     let statuses = &operation.status_codes;
     let operation_doc = operation.doc.as_deref().unwrap_or(&operation.name);
+    if let OperationKind::Paging = operation.kind {
+        let Some(paging) = &operation.paging else {
+            return Err(format!("{scope}: missing paging metadata"));
+        };
+        if operation
+            .parameters
+            .iter()
+            .any(|param| param.location == ParameterLocation::Header && param.constant.is_none())
+        {
+            return Err(format!(
+                "{scope}: variable paging headers are not supported"
+            ));
+        }
+        let Some(Type::Model { name }) = &operation.response_type else {
+            return Err(format!("{scope}: paging response must be a model"));
+        };
+        let page = ident(name, &scope)?;
+        let next_wire = &paging.next_link.wire_name;
+        return Ok(quote! {
+            #[doc = #operation_doc]
+            ///
+            /// # Errors
+            ///
+            /// Returns an error for invalid request parameters or endpoint path.
+            pub fn #method_name(&self, options: Option<azure_core::http::pager::PagerOptions<'static>>, #(#args),*) -> azure_core::Result<azure_core::http::Pager<crate::generated::models::#page>> {
+                let mut _generated_url = self.endpoint.clone();
+                {
+                    let mut _generated_segments = _generated_url.path_segments_mut().map_err(|_| {
+                        azure_core::Error::with_message(azure_core::error::ErrorKind::Other, "endpoint cannot contain path segments")
+                    })?;
+                    _generated_segments.pop_if_empty();
+                    #(#paths)*
+                }
+                #(#queries)*
+                let first_url = _generated_url;
+                let pipeline = self.pipeline.clone();
+                let api_version = self.api_version.clone();
+                #[derive(serde::Deserialize)]
+                struct PageLink {
+                    #[serde(rename = #next_wire)]
+                    next_link: Option<String>,
+                }
+                Ok(azure_core::http::Pager::new(
+                    move |state, pager_options| {
+                        let pipeline = pipeline.clone();
+                        let first_url = first_url.clone();
+                        let api_version = api_version.clone();
+                        Box::pin(async move {
+                            let url = match state {
+                                azure_core::http::pager::PagerState::Initial => first_url.clone(),
+                                azure_core::http::pager::PagerState::More(link) => {
+                                    let mut url: Url = link.try_into()?;
+                                    let mut query = url.query_builder();
+                                    query.set_pair("api-version", &api_version);
+                                    query.build();
+                                    url
+                                }
+                            };
+                            let mut _generated_request = Request::new(url, Method::Get);
+                            #(#headers)*
+                            let response = pipeline.send(
+                                &pager_options.context,
+                                &mut _generated_request,
+                                Some(PipelineSendOptions {
+                                    check_success: CheckSuccessOptions { success_codes: &[#(#statuses),*] },
+                                    ..Default::default()
+                                }),
+                            ).await?;
+                            let (status, headers, body) = response.deconstruct();
+                            let link: PageLink = azure_core::json::from_json(&body)?;
+                            let response = azure_core::http::RawResponse::from_bytes(status, headers, body).into();
+                            Ok(match link.next_link {
+                                Some(link) if !link.is_empty() => azure_core::http::pager::PagerResult::More {
+                                    response,
+                                    continuation: azure_core::http::pager::PagerContinuation::Link(first_url.join(&link)?),
+                                },
+                                _ => azure_core::http::pager::PagerResult::Done { response },
+                            })
+                        })
+                    },
+                    options,
+                ))
+            }
+        });
+    }
     Ok(quote! {
         #[doc = #operation_doc]
         ///
@@ -356,6 +640,7 @@ fn render_operation(
             #(#queries)*
             let mut _generated_request = Request::new(_generated_url, #method);
             #(#headers)*
+            #body_request
             let _generated_response = self.pipeline.send(
                 context,
                 &mut _generated_request,
@@ -367,6 +652,31 @@ fn render_operation(
             Ok(_generated_response.into())
         }
     })
+}
+
+fn response_type(value: &Type, scope: &str) -> Result<TokenStream, String> {
+    match value {
+        Type::Model { name } | Type::Enum { name } => {
+            let name = ident(name, scope)?;
+            Ok(quote!(crate::generated::models::#name))
+        }
+        Type::Array { value_type } => {
+            let inner = response_type(value_type, scope)?;
+            Ok(quote!(Vec<#inner>))
+        }
+        Type::Dict { value_type } => {
+            let inner = response_type(value_type, scope)?;
+            Ok(quote!(std::collections::HashMap<String, #inner>))
+        }
+        Type::Nullable { value_type } => {
+            let inner = response_type(value_type, scope)?;
+            Ok(quote!(Option<#inner>))
+        }
+        _ => {
+            let ty = types::rust_type(value, scope, false)?;
+            Ok(quote!(#ty))
+        }
+    }
 }
 
 fn valid_header_name(name: &str) -> bool {

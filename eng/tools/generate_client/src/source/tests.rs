@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-use super::collect;
+use super::{collect, relative_imports};
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -110,4 +110,64 @@ fn retains_sibling_imports_in_pinned_checkout() {
             .unwrap(),
         "namespace Shared;"
     );
+}
+
+#[test]
+fn missing_relative_import_is_an_explicit_error() {
+    let dir = TestDirectory::new();
+    let root = dir.0.join("checkout");
+    let project = root.join("specification").join("keyvault").join("Secrets");
+    let resources = dir.0.join("resources");
+    fs::create_dir_all(&project).unwrap();
+    fs::create_dir_all(resources.join("node_modules")).unwrap();
+    fs::write(
+        project.join("main.tsp"),
+        "import \"../../common-types/shared.tsp\";",
+    )
+    .unwrap();
+    fs::write(
+        dir.0.join("resources.json"),
+        r#"{"schema_version":1,"root":"resources/node_modules","files":[]}"#,
+    )
+    .unwrap();
+
+    let error = collect(
+        &root,
+        Some(&resources),
+        Some(Path::new("specification/keyvault/Secrets")),
+    )
+    .unwrap_err();
+    assert!(error.contains("Missing relative TypeSpec import"));
+    assert!(error.contains("additionalDirectories"));
+    assert!(error.contains("/spec/specification/common-types/shared.tsp"));
+}
+
+#[test]
+fn extensionless_relative_import_resolves_index() {
+    let dir = TestDirectory::new();
+    let project = dir.0.join("project");
+    let resources = dir.0.join("resources");
+    fs::create_dir_all(project.join("shared")).unwrap();
+    fs::create_dir_all(resources.join("node_modules")).unwrap();
+    fs::write(project.join("main.tsp"), "import \"./shared\";").unwrap();
+    fs::write(
+        project.join("shared").join("index.tsp"),
+        "namespace Shared;",
+    )
+    .unwrap();
+    fs::write(
+        dir.0.join("resources.json"),
+        r#"{"schema_version":1,"root":"resources/node_modules","files":[]}"#,
+    )
+    .unwrap();
+    assert!(collect(&project, Some(&resources), None).is_ok());
+}
+
+#[test]
+fn finds_imports_across_lines_without_comment_or_string_false_positives() {
+    let content = "/* import \"./ignored.tsp\" */\n\
+        import\n  \"./first.tsp\"; import '../second.tsp';\n\
+        // import \"./also-ignored.tsp\"\n\
+        const sample = \"import './in-a-string.tsp'\";";
+    assert_eq!(relative_imports(content), ["./first.tsp", "../second.tsp"]);
 }
