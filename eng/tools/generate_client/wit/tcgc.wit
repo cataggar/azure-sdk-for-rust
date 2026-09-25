@@ -1,0 +1,16 @@
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT License.
+
+package azure:codegen;
+
+interface tcgc {
+    /// Compile a virtual TypeSpec project. `emitter-options` is JSON with
+    /// `__spec_files` mapping absolute virtual paths under `/spec` and
+    /// `/node_modules` to UTF-8 source text.
+    /// Success is a JSON code model with `schema_version: 1`.
+    compile: func(project-path: string, emitter-options: string) -> result<string, string>;
+}
+
+world codegen {
+    export tcgc;
+}
