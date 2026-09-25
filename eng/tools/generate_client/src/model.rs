@@ -7,32 +7,37 @@ use std::collections::HashSet;
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct Package {
-    schema_version: u32,
-    clients: Vec<Client>,
-    models: Vec<Model>,
-    enums: Vec<Enum>,
+    pub(crate) schema_version: u32,
+    pub(crate) clients: Vec<Client>,
+    pub(crate) models: Vec<Model>,
+    pub(crate) enums: Vec<Enum>,
 }
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
-struct Client {
-    name: String,
+pub(crate) struct Client {
+    pub(crate) name: String,
     parent: Option<String>,
+    #[expect(dead_code, reason = "Preserved for future client emission")]
     cross_language_id: Option<String>,
+    #[expect(dead_code, reason = "Preserved for future client emission")]
     doc: Option<String>,
     endpoint_name: String,
-    operations: Vec<Operation>,
-    children: Vec<Client>,
+    pub(crate) operations: Vec<Operation>,
+    pub(crate) children: Vec<Client>,
 }
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
-struct Operation {
+pub(crate) struct Operation {
     name: String,
+    #[expect(dead_code, reason = "Preserved for future operation emission")]
     cross_language_id: Option<String>,
+    #[expect(dead_code, reason = "Preserved for future operation emission")]
     doc: Option<String>,
     http_method: String,
     path: String,
+    #[expect(dead_code, reason = "Preserved for future operation emission")]
     headers: Vec<Header>,
     status_code: u16,
     response_type: Option<Type>,
@@ -41,50 +46,54 @@ struct Operation {
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Header {
+    #[expect(dead_code, reason = "Preserved for future operation emission")]
     wire_name: String,
+    #[expect(dead_code, reason = "Preserved for future operation emission")]
     value: String,
 }
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
-struct Model {
-    name: String,
+pub(crate) struct Model {
+    pub(crate) name: String,
+    #[expect(dead_code, reason = "Retained for parity checks")]
     cross_language_id: Option<String>,
-    doc: Option<String>,
-    fields: Vec<Field>,
+    pub(crate) doc: Option<String>,
+    pub(crate) fields: Vec<Field>,
 }
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
-struct Field {
-    name: String,
-    wire_name: String,
+pub(crate) struct Field {
+    pub(crate) name: String,
+    pub(crate) wire_name: String,
     #[serde(rename = "type")]
-    field_type: Type,
-    optional: bool,
-    read_only: bool,
-    doc: Option<String>,
+    pub(crate) field_type: Type,
+    pub(crate) optional: bool,
+    pub(crate) read_only: bool,
+    pub(crate) doc: Option<String>,
 }
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
-struct Enum {
-    name: String,
+pub(crate) struct Enum {
+    pub(crate) name: String,
+    #[expect(dead_code, reason = "Retained for parity checks")]
     cross_language_id: Option<String>,
-    extensible: bool,
-    values: Vec<EnumValue>,
+    pub(crate) extensible: bool,
+    pub(crate) values: Vec<EnumValue>,
 }
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
-struct EnumValue {
-    name: String,
-    wire_value: String,
+pub(crate) struct EnumValue {
+    pub(crate) name: String,
+    pub(crate) wire_value: String,
 }
 
 #[derive(Deserialize)]
 #[serde(tag = "kind", rename_all = "camelCase", deny_unknown_fields)]
-enum Type {
+pub(crate) enum Type {
     String,
     Boolean,
     Int32,
@@ -108,30 +117,49 @@ impl Package {
             ));
         }
         let mut names = HashSet::new();
+        let mut model_names = HashSet::new();
+        let mut enum_names = HashSet::new();
         for model in &self.models {
             register(&mut names, &model.name, "model")?;
+            model_names.insert(model.name.as_str());
         }
         for enum_value in &self.enums {
             register(&mut names, &enum_value.name, "enum")?;
+            enum_names.insert(enum_value.name.as_str());
         }
         for model in &self.models {
             let mut fields = HashSet::new();
+            let mut wire_names = HashSet::new();
             for field in &model.fields {
                 register(&mut fields, &field.name, &model.name)?;
-                field
-                    .field_type
-                    .validate(&names, &format!("{}.{}", model.name, field.name))?;
+                register(
+                    &mut wire_names,
+                    &field.wire_name,
+                    &format!("{} wire field", model.name),
+                )?;
+                field.field_type.validate(
+                    &model_names,
+                    &enum_names,
+                    &format!("{}.{}", model.name, field.name),
+                )?;
             }
         }
         for enum_value in &self.enums {
             let mut members = HashSet::new();
+            let mut wire_values = HashSet::new();
             for value in &enum_value.values {
                 register(&mut members, &value.name, &enum_value.name)?;
+                if !wire_values.insert(value.wire_value.as_str()) {
+                    return Err(format!(
+                        "{}: duplicate wire enum value '{}'",
+                        enum_value.name, value.wire_value
+                    ));
+                }
             }
         }
         let mut clients = HashSet::new();
         for client in &self.clients {
-            validate_client(client, None, &mut clients, &names)?;
+            validate_client(client, None, &mut clients, &model_names, &enum_names)?;
         }
         Ok(())
     }
@@ -145,14 +173,22 @@ fn register<'a>(names: &mut HashSet<&'a str>, name: &'a str, scope: &str) -> Res
 }
 
 impl Type {
-    fn validate(&self, names: &HashSet<&str>, scope: &str) -> Result<(), String> {
+    fn validate(
+        &self,
+        models: &HashSet<&str>,
+        enums: &HashSet<&str>,
+        scope: &str,
+    ) -> Result<(), String> {
         match self {
-            Self::Model { name } | Self::Enum { name } if !names.contains(name.as_str()) => {
+            Self::Model { name } if !models.contains(name.as_str()) => {
+                Err(format!("{scope}: unresolved model '{name}'"))
+            }
+            Self::Enum { name } if !enums.contains(name.as_str()) => {
                 Err(format!("{scope}: unresolved model or enum '{name}'"))
             }
             Self::Array { value_type }
             | Self::Dict { value_type }
-            | Self::Nullable { value_type } => value_type.validate(names, scope),
+            | Self::Nullable { value_type } => value_type.validate(models, enums, scope),
             _ => Ok(()),
         }
     }
@@ -162,7 +198,8 @@ fn validate_client<'a>(
     client: &'a Client,
     parent: Option<&str>,
     clients: &mut HashSet<&'a str>,
-    names: &HashSet<&str>,
+    models: &HashSet<&str>,
+    enums: &HashSet<&str>,
 ) -> Result<(), String> {
     register(clients, &client.name, "client")?;
     if client.parent.as_deref() != parent {
@@ -185,11 +222,15 @@ fn validate_client<'a>(
             ));
         }
         if let Some(response) = &operation.response_type {
-            response.validate(names, &format!("{}.{}", client.name, operation.name))?;
+            response.validate(
+                models,
+                enums,
+                &format!("{}.{}", client.name, operation.name),
+            )?;
         }
     }
     for child in &client.children {
-        validate_client(child, Some(&client.name), clients, names)?;
+        validate_client(child, Some(&client.name), clients, models, enums)?;
     }
     Ok(())
 }

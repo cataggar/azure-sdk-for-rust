@@ -2,10 +2,11 @@
 // Licensed under the MIT License.
 
 mod cli;
+mod emit;
 mod host;
 mod location;
-#[allow(dead_code)]
 mod model;
+mod output;
 mod source;
 
 use clap::Parser;
@@ -76,6 +77,17 @@ fn run(args: cli::Args) -> Result<(), String> {
     let parsed: model::Package = serde_json::from_str(&model)
         .map_err(|error| format!("Invalid TCGC code model: {error}"))?;
     parsed.validate()?;
+
+    if args.preview_models {
+        let output_root = output
+            .canonicalize()
+            .map_err(|error| format!("{}: {error}", output.display()))?;
+        if output_root == crate_dir {
+            return Err("--preview-models requires a separate scratch output crate".to_string());
+        }
+        let files = emit::render(&parsed)?;
+        return output::reconcile(&output_root, &files, args.check);
+    }
 
     Err(format!(
         "Emitter is not yet implemented; refusing to modify {} (check={})",

@@ -103,6 +103,13 @@ impl Location {
                 self.commit
             ));
         }
+        let status = git_output(&root, &["status", "--porcelain", "--untracked-files=all"])?;
+        if !status.trim().is_empty() {
+            return Err(format!(
+                "TypeSpec checkout {} has uncommitted or untracked files",
+                root.display()
+            ));
+        }
         Ok(())
     }
 

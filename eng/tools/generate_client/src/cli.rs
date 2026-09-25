@@ -39,4 +39,8 @@ pub(crate) struct Args {
     /// Target crate root; defaults to the parent of --manifest-path.
     #[arg(long)]
     pub(crate) output: Option<PathBuf>,
+
+    /// Emit the schema-1 model-only preview into a separate crate checkout.
+    #[arg(long, requires_all = ["model", "output"])]
+    pub(crate) preview_models: bool,
 }

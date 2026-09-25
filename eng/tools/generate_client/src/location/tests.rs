@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-use super::Location;
+use super::{git_output, Location};
 use std::{
     fs,
     path::PathBuf,
@@ -74,4 +74,45 @@ fn reads_pinned_location() {
     )
     .unwrap();
     assert!(Location::load(&dir.0).unwrap().is_some());
+}
+
+#[test]
+fn verifies_revision_and_rejects_dirty_checkout() {
+    let dir = TestDirectory::new();
+    let project = dir.0.join("specification").join("keyvault");
+    fs::create_dir_all(&project).unwrap();
+    fs::write(project.join("main.tsp"), "namespace Example;").unwrap();
+    git_output(&dir.0, &["init", "-q", "."]).unwrap();
+    git_output(&dir.0, &["add", "."]).unwrap();
+    git_output(
+        &dir.0,
+        &[
+            "-c",
+            "user.name=SDK Test",
+            "-c",
+            "user.email=sdk-test@example.invalid",
+            "commit",
+            "-qm",
+            "Initial fixture",
+        ],
+    )
+    .unwrap();
+    let commit = git_output(&dir.0, &["rev-parse", "HEAD"]).unwrap();
+    fs::write(
+        dir.0.join("tsp-location.yaml"),
+        format!(
+            "repo: Azure/azure-rest-api-specs\ncommit: {}\ndirectory: specification/keyvault\n",
+            commit.trim()
+        ),
+    )
+    .unwrap();
+    let location = Location::load(&dir.0).unwrap().unwrap();
+    assert!(location.verify(&project).unwrap_err().contains("untracked"));
+    fs::remove_file(dir.0.join("tsp-location.yaml")).unwrap();
+    location.verify(&project).unwrap();
+    fs::write(project.join("main.tsp"), "namespace Changed;").unwrap();
+    assert!(location
+        .verify(&project)
+        .unwrap_err()
+        .contains("uncommitted"));
 }

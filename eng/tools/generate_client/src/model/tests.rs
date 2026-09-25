@@ -50,3 +50,25 @@ fn rejects_unknown_type() {
     let source = VALID.replace("\"kind\": \"string\"", "\"kind\": \"unrecognized\"");
     assert!(serde_json::from_str::<Package>(&source).is_err());
 }
+
+#[test]
+fn rejects_wrong_reference_kind_and_duplicate_wire_names() {
+    let source = VALID.replace(
+        "\"kind\": \"string\"",
+        "\"kind\": \"enum\", \"name\": \"Widget\"",
+    );
+    let package: Package = serde_json::from_str(&source).unwrap();
+    assert!(package
+        .validate()
+        .unwrap_err()
+        .contains("unresolved model or enum"));
+
+    let source = VALID.replace(
+        "\"optional\": false, \"read_only\": false, \"doc\": null",
+        "\"optional\": false, \"read_only\": false, \"doc\": null}, {\
+         \"name\": \"other\", \"wire_name\": \"label\", \"type\": {\"kind\": \"string\"},\
+         \"optional\": false, \"read_only\": false, \"doc\": null",
+    );
+    let package: Package = serde_json::from_str(&source).unwrap();
+    assert!(package.validate().unwrap_err().contains("duplicate"));
+}

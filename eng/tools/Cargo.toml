@@ -15,6 +15,7 @@ rust-version = "1.95"
 
 [workspace.dependencies]
 clap = { version = "4.5.58", features = ["derive"] }
+proc-macro2 = "1.0.106"
 quote = "1.0.44"
 rustdoc-types = "0.57.4"
 serde = { version = "1.0", features = ["derive"] }

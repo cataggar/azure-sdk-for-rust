@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "clients": [],
+  "models": [
+    {
+      "name": "Widget",
+      "cross_language_id": null,
+      "doc": "An example model.",
+      "fields": [
+        {
+          "name": "name",
+          "wire_name": "displayName",
+          "type": { "kind": "string" },
+          "optional": false,
+          "read_only": false,
+          "doc": "A display name."
+        },
+        {
+          "name": "state",
+          "wire_name": "state",
+          "type": { "kind": "enum", "name": "WidgetState" },
+          "optional": true,
+          "read_only": false,
+          "doc": "The state."
+        }
+      ]
+    }
+  ],
+  "enums": [
+    {
+      "name": "WidgetState",
+      "cross_language_id": null,
+      "extensible": true,
+      "values": [
+        { "name": "Ready", "wire_value": "ready" }
+      ]
+    }
+  ]
+}
