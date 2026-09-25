@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-use super::render;
+use super::{render, render_basic};
 use crate::model::Package;
 use serde_json::{json, Value};
 use std::path::PathBuf;
@@ -12,7 +12,7 @@ fn package(value: Value) -> Package {
 
 fn fixture() -> Value {
     json!({
-        "schema_version": 1,
+        "schema_version": 2,
         "clients": [],
         "models": [{
             "name": "Widget", "cross_language_id": null, "doc": "A widget.",
@@ -101,10 +101,10 @@ fn refuses_clients_and_operations() {
 #[test]
 fn rejects_invalid_identifiers_and_unsupported_wire_types() {
     let mut input = fixture();
-    input["models"][0]["fields"][0]["name"] = json!("bad-name");
+    input["models"][0]["fields"][0]["name"] = json!("bad.name");
     assert!(render(&package(input))
         .unwrap_err()
-        .contains("Widget.bad-name"));
+        .contains("Widget.bad.name"));
 
     let mut input = fixture();
     input["models"][0]["fields"][0]["type"] = json!({"kind":"bytes"});
@@ -117,6 +117,24 @@ fn rejects_invalid_identifiers_and_unsupported_wire_types() {
     assert!(render(&package(input))
         .unwrap_err()
         .contains("explicit wire format"));
+}
+
+#[test]
+fn normalizes_model_field_names_without_losing_wire_names() {
+    let mut input = fixture();
+    input["models"][0]["fields"][0]["name"] = json!("nextWidget");
+    input["models"][0]["fields"][1]["name"] = json!("URLValue");
+    let models = file(&render(&package(input)).unwrap(), "models/models.rs");
+    assert!(models.contains("pub next_widget: Option<Box<Widget>>"));
+    assert!(models.contains("pub url_value: String"));
+    assert!(models.contains("rename = \"nextWidget\""));
+
+    let mut input = fixture();
+    input["models"][0]["fields"][0]["name"] = json!("nextWidget");
+    input["models"][0]["fields"][1]["name"] = json!("next_widget");
+    assert!(render(&package(input))
+        .unwrap_err()
+        .contains("duplicate Rust field"));
 }
 
 #[test]
@@ -180,4 +198,172 @@ fn rejects_duplicate_enum_wire_values() {
     assert!(render(&package(input))
         .unwrap_err()
         .contains("duplicate wire enum value"));
+}
+
+fn basic_fixture() -> Value {
+    serde_json::from_str(include_str!("../../tests/fixtures/basic-http.json")).unwrap()
+}
+
+#[test]
+fn basic_preview_emits_clients_and_preserves_model_only_guard() {
+    let input = basic_fixture();
+    assert!(render(&package(input.clone()))
+        .unwrap_err()
+        .contains("model-only slice"));
+    let files = render_basic(&package(input)).unwrap();
+    assert_eq!(files.len(), 5);
+    assert!(file(&files, "mod.rs").contains("pub mod clients;"));
+    let clients = file(&files, "clients.rs");
+    assert!(clients.contains("pub struct WidgetClient"));
+    assert!(clients.contains("A client for widgets."));
+    assert!(clients.contains("Get a widget."));
+    assert!(clients.contains("# Errors"));
+    assert!(clients.contains("pub fn new(endpoint: Url, pipeline: Pipeline)"));
+    assert!(clients.contains("pub async fn get_widget("));
+    assert!(clients.contains("widget_id: &str"));
+    assert!(clients.contains("include_history: Option<bool>"));
+    assert!(clients.contains("path_segments_mut()"));
+    assert!(clients.contains("_generated_segments.push(&value)"));
+    assert!(clients.contains("query_pairs_mut()"));
+    assert!(clients.contains("append_pair("));
+    assert!(clients.contains("\"include-history\""));
+    assert!(clients.contains("insert_header(\"accept\", \"application/json\")"));
+    assert!(clients.contains("success_codes: &[200u16]"));
+    assert!(clients.contains("Response<crate::generated::models::Widget>"));
+    assert!(clients.contains(".send("));
+}
+
+#[test]
+fn basic_preview_emits_all_methods_and_bodyless_response() {
+    let mut input = basic_fixture();
+    let operation = input["clients"][0]["operations"][0].clone();
+    let operations = input["clients"][0]["operations"].as_array_mut().unwrap();
+    operations.clear();
+    for method in ["GET", "PUT", "POST", "PATCH", "DELETE", "HEAD"] {
+        let mut op = operation.clone();
+        op["name"] = json!(format!("{method}Widget"));
+        op["http_method"] = json!(method);
+        op["response_type"] = Value::Null;
+        op["status_codes"] = json!([204, 205]);
+        operations.push(op);
+    }
+    let clients = file(&render_basic(&package(input)).unwrap(), "clients.rs");
+    for method in ["Get", "Put", "Post", "Patch", "Delete", "Head"] {
+        assert!(clients.contains(&format!("Method::{method}")));
+    }
+    assert!(clients.contains("Response<(), azure_core::http::NoFormat>"));
+    assert!(clients.contains("success_codes: &["));
+    assert!(clients.contains("204u16, 205u16"));
+}
+
+#[test]
+fn basic_preview_rejects_unsupported_bindings_before_writing() {
+    let mut input = basic_fixture();
+    input["clients"][0]["children"] = json!([{
+        "name":"Child","parent":"WidgetClient","cross_language_id":null,
+        "doc":null,"endpoint_name":"endpoint","operations":[],"children":[]
+    }]);
+    assert!(render_basic(&package(input))
+        .unwrap_err()
+        .contains("child clients"));
+
+    let mut input = basic_fixture();
+    input["clients"][0]["operations"][0]["parameters"][0]["type"] =
+        json!({"kind":"model","name":"Widget"});
+    assert!(render_basic(&package(input))
+        .unwrap_err()
+        .contains("unsupported HTTP parameter type"));
+
+    let mut input = basic_fixture();
+    input["clients"][0]["operations"][0]["parameters"][0]["optional"] = json!(true);
+    assert!(render_basic(&package(input))
+        .unwrap_err()
+        .contains("invalid path binding"));
+
+    let mut input = basic_fixture();
+    input["clients"][0]["operations"][0]["parameters"][2]["constant"] = Value::Null;
+    assert!(render_basic(&package(input))
+        .unwrap_err()
+        .contains("constant application/json"));
+
+    let mut input = basic_fixture();
+    input["clients"][0]["operations"][0]["path"] = json!("/widgets/pre{widgetId}");
+    assert!(render_basic(&package(input))
+        .unwrap_err()
+        .contains("composite binding"));
+
+    let mut input = basic_fixture();
+    input["clients"][0]["operations"][0]["parameters"][2]["wire_name"] = json!("bad header");
+    assert!(render_basic(&package(input))
+        .unwrap_err()
+        .contains("invalid header name"));
+
+    let mut input = basic_fixture();
+    input["clients"][0]["operations"][0]["status_codes"] = json!([202]);
+    assert!(render_basic(&package(input))
+        .unwrap_err()
+        .contains("JSON response requires"));
+}
+
+#[test]
+fn basic_preview_handles_optional_headers_constants_and_escaped_paths() {
+    let mut input = basic_fixture();
+    input["clients"][0]["operations"][0]["parameters"]
+        .as_array_mut()
+        .unwrap()
+        .extend([
+            json!({"name":"mode","wire_name":"mode","location":"query",
+                   "type":{"kind":"string"},"optional":false,"constant":"safe mode"}),
+            json!({"name":"traceId","wire_name":"X-TRACE-ID","location":"header",
+                   "type":{"kind":"string"},"optional":true,"constant":null}),
+        ]);
+    let clients = file(&render_basic(&package(input)).unwrap(), "clients.rs");
+    assert!(clients.contains("append_pair(\"mode\", \"safe mode\")"));
+    assert!(clients.contains("trace_id: Option<&str>"));
+    assert!(clients.contains("insert_header(\"x-trace-id\", value)"));
+    assert!(clients.contains("value == \"..\""));
+    assert!(clients.contains("_generated_segments.push(&value)"));
+    assert!(!clients.contains("path.replace("));
+}
+
+#[test]
+fn basic_preview_rejects_ambiguous_and_unsafe_header_parameters() {
+    let mut input = basic_fixture();
+    input["clients"][0]["operations"][0]["parameters"][2]["optional"] = json!(true);
+    assert!(render_basic(&package(input))
+        .unwrap_err()
+        .contains("optional constant"));
+
+    let mut input = basic_fixture();
+    input["clients"][0]["operations"][0]["parameters"][2]["wire_name"] = json!("authorization");
+    assert!(render_basic(&package(input))
+        .unwrap_err()
+        .contains("unsupported or invalid header"));
+
+    let mut input = basic_fixture();
+    input["clients"][0]["operations"][0]["parameters"][2]["wire_name"] = json!("x-custom");
+    input["clients"][0]["operations"][0]["parameters"][2]["constant"] = json!("bad\u{0}value");
+    assert!(render_basic(&package(input))
+        .unwrap_err()
+        .contains("invalid constant header"));
+
+    let mut input = basic_fixture();
+    let header = input["clients"][0]["operations"][0]["parameters"][2].clone();
+    let mut second = header.clone();
+    second["name"] = json!("accept2");
+    second["wire_name"] = json!("ACCEPT");
+    input["clients"][0]["operations"][0]["parameters"]
+        .as_array_mut()
+        .unwrap()
+        .push(second);
+    assert!(render_basic(&package(input))
+        .unwrap_err()
+        .contains("duplicate case-insensitive header"));
+
+    let mut input = basic_fixture();
+    input["clients"][0]["operations"][0]["parameters"][1]["optional"] = json!(false);
+    input["clients"][0]["operations"][0]["parameters"][1]["constant"] = json!("not-a-bool");
+    assert!(render_basic(&package(input))
+        .unwrap_err()
+        .contains("invalid or unsupported constant"));
 }

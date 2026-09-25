@@ -40,7 +40,11 @@ pub(crate) struct Args {
     #[arg(long)]
     pub(crate) output: Option<PathBuf>,
 
-    /// Emit the schema-1 model-only preview into a separate crate checkout.
-    #[arg(long, requires_all = ["model", "output"])]
+    /// Emit the schema-2 model-only preview into a separate scratch crate.
+    #[arg(long, requires_all = ["model", "output"], conflicts_with = "preview_basic")]
     pub(crate) preview_models: bool,
+
+    /// Emit the guarded schema-2 basic-client preview into a separate scratch crate.
+    #[arg(long, requires_all = ["model", "output"], conflicts_with = "preview_models")]
+    pub(crate) preview_basic: bool,
 }

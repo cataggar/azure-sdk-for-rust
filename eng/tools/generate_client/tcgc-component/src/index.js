@@ -91,6 +91,102 @@ function adaptEnum(value) {
   };
 }
 
+function adaptParameter(param, method, path) {
+  const location = param.kind;
+  const binding = `${path}.${param.name ?? location}`;
+  if (!["path", "query", "header"].includes(location)) {
+    throw new Error(`${binding}: unsupported request binding ${location}`);
+  }
+  const wireName = required(param.serializedName, `${binding}.serializedName`);
+  if (param.encode !== undefined || param.collectionFormat !== undefined ||
+      (location !== "header" && param.explode !== false) ||
+      (location === "header" && param.explode !== undefined) ||
+      (location === "path" && (param.style !== "simple" || param.allowReserved !== false))) {
+    throw new Error(`${binding}: unsupported wire encoding, style, explode, or collection format`);
+  }
+  if (param.type?.kind === "constant" && location === "header" &&
+      typeof param.type.value === "string") {
+    if (param.optional === true || (param.correspondingMethodParams ?? []).length > 1 ||
+        (param.methodParameterSegments ?? []).length > 1) {
+      throw new Error(`${binding}: optional or ambiguous constant header`);
+    }
+    return {
+      name: required(param.name, binding), wire_name: wireName, location,
+      type: { kind: "string" }, optional: false, constant: param.type.value,
+    };
+  }
+  if (param.type?.kind === "constant") {
+    throw new Error(`${binding}: unsupported constant request binding`);
+  }
+  const segments = param.methodParameterSegments;
+  if (!Array.isArray(segments) || segments.length !== 1 ||
+      !Array.isArray(segments[0]) || segments[0].length !== 1 ||
+      segments[0][0]?.kind !== "method") {
+    throw new Error(`${binding}: expected exactly one direct method parameter segment`);
+  }
+  const source = segments[0][0];
+  if (!method.parameters?.includes(source)) {
+    throw new Error(`${binding}: method parameter segment is not in method.parameters`);
+  }
+  const corresponding = param.correspondingMethodParams;
+  if (corresponding !== undefined &&
+      (!Array.isArray(corresponding) || corresponding.length > 1 ||
+       (corresponding.length === 1 && corresponding[0] !== source))) {
+    throw new Error(`${binding}: ambiguous correspondingMethodParams`);
+  }
+  if (source.encode !== undefined || source.clientDefaultValue !== undefined ||
+      source.onClient === true || source.type?.kind !== param.type?.kind ||
+      source.optional !== param.optional ||
+      typeof source.optional !== "boolean" ||
+      (location === "path" && source.optional)) {
+    throw new Error(`${binding}: unsupported method parameter type, default, or optionality`);
+  }
+  const type = adaptType(source.type, binding);
+  if (JSON.stringify(type) !== JSON.stringify(adaptType(param.type, binding))) {
+    throw new Error(`${binding}: method and wire parameter types differ`);
+  }
+  if (!["string", "boolean", "int32", "int64", "float64", "enum"].includes(type.kind)) {
+    throw new Error(`${binding}: unsupported request parameter type ${type.kind}`);
+  }
+  return {
+    name: required(source.name, binding), wire_name: wireName, location,
+    type, optional: source.optional, constant: null,
+  };
+}
+
+function validatePathBindings(route, parameters, path) {
+  const placeholders = [...route.matchAll(/\{([^{}]+)\}/g)].map((match) => match[1]);
+  if (route.replaceAll(/\{[^{}]+\}/g, "").match(/[{}]/) ||
+      placeholders.some((name) => !/^[a-zA-Z_][a-zA-Z_0-9]*$/.test(name))) {
+    throw new Error(`${path}: unsupported path template`);
+  }
+  const bindings = parameters.filter((param) => param.location === "path");
+  for (const name of new Set([...placeholders, ...bindings.map((param) => param.wire_name)])) {
+    if (!placeholders.includes(name) || bindings.filter((param) => param.wire_name === name).length !== 1) {
+      throw new Error(`${path}: path placeholder ${name} must have exactly one matching binding`);
+    }
+  }
+}
+
+function adaptResponseType(response, path) {
+  const type = response.type ? adaptType(response.type, `${path}.response`) : null;
+  if (response.contentTypes !== undefined && !Array.isArray(response.contentTypes)) {
+    throw new Error(`${path}: unsupported response content types`);
+  }
+  const contentTypes = [...(response.contentTypes ?? []),
+    ...(response.defaultContentType === undefined ? [] : [response.defaultContentType])];
+  if (type && !contentTypes.length) {
+    throw new Error(`${path}: typed response requires an explicit JSON content type`);
+  }
+  for (const contentType of contentTypes) {
+    if (!type || typeof contentType !== "string" || contentType.toLowerCase() !== "application/json") {
+      throw new Error(`${path}: unsupported response content type ${contentType}`);
+    }
+  }
+  if (response.streamMetadata) throw new Error(`${path}: streaming responses are not supported`);
+  return type;
+}
+
 function adaptOperation(method, clientPath) {
   const path = `${clientPath}.${required(method.name, clientPath)}`;
   if (method.kind !== "basic") throw new Error(`${path}: unsupported operation kind ${method.kind}`);
@@ -99,23 +195,28 @@ function adaptOperation(method, clientPath) {
     throw new Error(`${path}: unsupported or missing HTTP verb ${operation?.verb}`);
   }
   if (operation.bodyParam) throw new Error(`${path}: request bodies are not yet supported`);
-  const headers = (operation.parameters ?? []).map((param) => {
-    if (param.kind !== "header" || param.type?.kind !== "constant" ||
-        typeof param.type.value !== "string") {
-      throw new Error(`${path}: unsupported request binding ${param.kind}:${param.name}`);
-    }
-    return {
-      wire_name: required(param.serializedName ?? param.name, path),
-      value: param.type.value,
-    };
-  });
-  if ((operation.exceptions ?? []).length || (operation.responses ?? []).length !== 1) {
-    throw new Error(`${path}: expected exactly one success response and no explicit exceptions`);
+  const parameters = (operation.parameters ?? []).map((param) => adaptParameter(param, method, path));
+  validatePathBindings(required(operation.path, path), parameters, path);
+  if ((operation.exceptions ?? []).length || !(operation.responses ?? []).length) {
+    throw new Error(`${path}: expected success responses and no explicit exceptions`);
   }
-  const response = operation.responses[0];
-  const codes = Array.isArray(response.statusCodes) ? response.statusCodes : [response.statusCodes];
-  if (codes.length !== 1 || !Number.isInteger(codes[0])) {
-    throw new Error(`${path}: unsupported success status codes`);
+  const codes = [];
+  let responseType;
+  for (const response of operation.responses) {
+    if (!Number.isInteger(response.statusCodes) ||
+        response.statusCodes < 200 || response.statusCodes >= 300 ||
+        codes.includes(response.statusCodes)) {
+      throw new Error(`${path}: unsupported success status codes`);
+    }
+    codes.push(response.statusCodes);
+    const type = adaptResponseType(response, path);
+    if (responseType !== undefined && JSON.stringify(responseType) !== JSON.stringify(type)) {
+      throw new Error(`${path}: success responses must have the same type`);
+    }
+    responseType = type;
+  }
+  if (method.response?.optional && responseType !== null) {
+    throw new Error(`${path}: optional response bodies are not supported`);
   }
   return {
     name: method.name,
@@ -123,9 +224,9 @@ function adaptOperation(method, clientPath) {
     doc: method.doc ?? null,
     http_method: operation.verb.toUpperCase(),
     path: required(operation.path, path),
-    headers,
-    status_code: codes[0],
-    response_type: response.type ? adaptType(response.type, `${path}.response`) : null,
+    parameters,
+    status_codes: codes,
+    response_type: responseType,
   };
 }
 
@@ -158,7 +259,7 @@ export function adaptPackage(sdkPackage) {
     throw new Error(`union ${sdkPackage.unions[0].name ?? "<anonymous>"}: unsupported`);
   }
   return {
-    schema_version: 1,
+    schema_version: 2,
     clients: sdkPackage.clients.map((client) => adaptClient(client)),
     models: sdkPackage.models.map(adaptModel),
     enums: (sdkPackage.enums ?? []).map(adaptEnum),

@@ -2,7 +2,7 @@
 // Licensed under the MIT License.
 
 use crate::{
-    emit::{ident, types::rust_type},
+    emit::{field_ident, ident, types::rust_type},
     model::{Package, Type},
 };
 use proc_macro2::TokenStream;
@@ -55,7 +55,7 @@ pub(super) fn render(
         let mut rust_names = BTreeSet::new();
         for field in sorted_fields {
             let scope = format!("{}.{}", model.name, field.name);
-            let field_name = ident(&field.name, &scope)?;
+            let field_name = field_ident(&field.name, &scope)?;
             if !rust_names.insert(field_name.to_string().trim_start_matches("r#").to_owned()) {
                 return Err(format!("{scope}: duplicate Rust field identifier"));
             }

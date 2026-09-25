@@ -78,14 +78,18 @@ fn run(args: cli::Args) -> Result<(), String> {
         .map_err(|error| format!("Invalid TCGC code model: {error}"))?;
     parsed.validate()?;
 
-    if args.preview_models {
+    if args.preview_models || args.preview_basic {
         let output_root = output
             .canonicalize()
             .map_err(|error| format!("{}: {error}", output.display()))?;
         if output_root == crate_dir {
-            return Err("--preview-models requires a separate scratch output crate".to_string());
+            return Err("preview requires a separate scratch output crate".to_string());
         }
-        let files = emit::render(&parsed)?;
+        let files = if args.preview_basic {
+            emit::render_basic(&parsed)?
+        } else {
+            emit::render(&parsed)?
+        };
         return output::reconcile(&output_root, &files, args.check);
     }
 

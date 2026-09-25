@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-use super::reconcile;
+use super::{reconcile, reconcile_with_hook};
 use std::{
     collections::BTreeMap,
     fs,
@@ -107,4 +107,99 @@ fn check_ignores_line_ending_differences() {
     let path = dir.0.join("src/generated/mod.rs");
     fs::write(&path, GENERATED.replace('\n', "\r\n")).unwrap();
     reconcile(&dir.0, &files, true).unwrap();
+}
+
+#[test]
+fn rolls_back_partial_commit_and_restores_existing_files() {
+    let dir = TestDirectory::new();
+    let generated = dir.0.join("src/generated");
+    fs::create_dir_all(&generated).unwrap();
+    let original = format!("{GENERATED}// original\n");
+    fs::write(generated.join("a.rs"), &original).unwrap();
+    fs::write(generated.join("custom.rs"), "handwritten").unwrap();
+    let files = BTreeMap::from([
+        (PathBuf::from("a.rs"), format!("{GENERATED}// updated\n")),
+        (PathBuf::from("nested").join("b.rs"), GENERATED.to_string()),
+        (PathBuf::from("z.rs"), GENERATED.to_string()),
+    ]);
+    let mut installed = 0;
+    let error = reconcile_with_hook(&dir.0, &files, false, |_| {
+        installed += 1;
+        if installed == 3 {
+            Err("injected commit failure".to_string())
+        } else {
+            Ok(())
+        }
+    })
+    .unwrap_err();
+    assert!(error.contains("injected commit failure"), "{error}");
+    assert_eq!(
+        fs::read_to_string(generated.join("a.rs")).unwrap(),
+        original
+    );
+    assert!(!generated.join("nested").exists());
+    assert!(!generated.join("z.rs").exists());
+    assert_eq!(
+        fs::read_to_string(generated.join("custom.rs")).unwrap(),
+        "handwritten"
+    );
+    assert!(fs::read_dir(dir.0.join("src")).unwrap().all(|entry| !entry
+        .unwrap()
+        .file_name()
+        .to_string_lossy()
+        .starts_with(".generate-client-staging-")));
+}
+
+#[test]
+fn reports_failed_rollback_and_retains_original_backup() {
+    let dir = TestDirectory::new();
+    let generated = dir.0.join("src/generated");
+    fs::create_dir_all(&generated).unwrap();
+    fs::write(generated.join("mod.rs"), GENERATED).unwrap();
+    let files = BTreeMap::from([(PathBuf::from("mod.rs"), format!("{GENERATED}// updated\n"))]);
+    let error = reconcile_with_hook(&dir.0, &files, false, |destination| {
+        fs::write(destination, "handwritten").unwrap();
+        Err("injected failure".to_string())
+    })
+    .unwrap_err();
+    assert!(error.contains("rollback failed"), "{error}");
+    assert!(error.contains("backups retained at"), "{error}");
+    assert_eq!(
+        fs::read_to_string(generated.join("mod.rs")).unwrap(),
+        "handwritten"
+    );
+    let staging = fs::read_dir(dir.0.join("src"))
+        .unwrap()
+        .map(|entry| entry.unwrap().path())
+        .find(|path| {
+            path.file_name()
+                .unwrap()
+                .to_string_lossy()
+                .starts_with(".generate-client-staging-")
+        })
+        .unwrap();
+    assert_eq!(
+        fs::read_to_string(staging.join("backups").join("0")).unwrap(),
+        GENERATED
+    );
+}
+
+#[test]
+fn rejects_file_as_destination_parent_without_writing() {
+    let dir = TestDirectory::new();
+    let generated = dir.0.join("src/generated");
+    fs::create_dir_all(&generated).unwrap();
+    fs::write(generated.join("nested"), "handwritten").unwrap();
+    let files = BTreeMap::from([
+        (PathBuf::from("a.rs"), GENERATED.to_string()),
+        (PathBuf::from("nested").join("b.rs"), GENERATED.to_string()),
+    ]);
+    assert!(reconcile(&dir.0, &files, false)
+        .unwrap_err()
+        .contains("not a directory"));
+    assert!(!generated.join("a.rs").exists());
+    assert_eq!(
+        fs::read_to_string(generated.join("nested")).unwrap(),
+        "handwritten"
+    );
 }

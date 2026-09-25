@@ -26,10 +26,28 @@ test("Wasm export compiles a virtual project and returns diagnostics", async () 
     import "@typespec/http";
     using TypeSpec.Http;
     @service namespace Example;
-    @route("/ping") op ping(): string;
+    model PingResult { message: string; }
+    @route("/ping") op ping(): PingResult;
   `)));
-  assert.equal(result.schema_version, 1);
+  assert.equal(result.schema_version, 2);
   assert.ok(result.clients.some((client) => client.operations.some((op) => op.name === "ping")));
+  const withPath = JSON.parse(tcgc.compile("/spec", options(`
+    import "@typespec/http";
+    using TypeSpec.Http;
+    @service namespace Example;
+    model Widget { name: string; }
+    @route("/widgets/{widget_id}")
+    op getWidget(@path widget_id: string): Widget;
+  `)));
+  assert.equal(withPath.schema_version, 2);
+  const getWidget = withPath.clients.flatMap((client) => client.operations)
+    .find((op) => op.name === "getWidget");
+  assert.ok(getWidget);
+  assert.equal(getWidget.path, "/widgets/{widget_id}");
+  assert.deepEqual(getWidget.parameters.find((param) => param.location === "path"), {
+    name: "widget_id", wire_name: "widget_id", location: "path",
+    type: { kind: "string" }, optional: false, constant: null,
+  });
   assert.throws(() => tcgc.compile("/spec", options("model Broken { invalid: ; }")),
     /TypeSpec compilation failed/);
 });

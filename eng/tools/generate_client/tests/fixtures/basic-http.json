@@ -1,0 +1,68 @@
+{
+  "schema_version": 2,
+  "clients": [
+    {
+      "name": "WidgetClient",
+      "parent": null,
+      "cross_language_id": "Example.WidgetClient",
+      "doc": "A client for widgets.",
+      "endpoint_name": "endpoint",
+      "operations": [
+        {
+          "name": "getWidget",
+          "cross_language_id": "Example.WidgetClient.getWidget",
+          "doc": "Get a widget.",
+          "http_method": "GET",
+          "path": "/widgets/{widgetId}",
+          "parameters": [
+            {
+              "name": "widgetId",
+              "wire_name": "widgetId",
+              "location": "path",
+              "type": { "kind": "string" },
+              "optional": false,
+              "constant": null
+            },
+            {
+              "name": "includeHistory",
+              "wire_name": "include-history",
+              "location": "query",
+              "type": { "kind": "boolean" },
+              "optional": true,
+              "constant": null
+            },
+            {
+              "name": "accept",
+              "wire_name": "accept",
+              "location": "header",
+              "type": { "kind": "string" },
+              "optional": false,
+              "constant": "application/json"
+            }
+          ],
+          "status_codes": [200],
+          "response_type": { "kind": "model", "name": "Widget" }
+        }
+      ],
+      "children": []
+    }
+  ],
+  "models": [
+    {
+      "name": "Widget",
+      "cross_language_id": "Example.Widget",
+      "doc": "A widget.",
+      "fields": [
+        {
+          "name": "id",
+          "wire_name": "id",
+          "type": { "kind": "string" },
+          "optional": false,
+          "read_only": false,
+          "doc": "The widget ID."
+        }
+      ]
+    }
+  ],
+  "enums": []
+}

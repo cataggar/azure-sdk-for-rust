@@ -4,14 +4,16 @@
 use super::Package;
 
 const VALID: &str = r#"{
-    "schema_version": 1,
+    "schema_version": 2,
     "clients": [{
         "name": "WidgetClient", "parent": null, "cross_language_id": null,
         "doc": null, "endpoint_name": "endpoint",
         "operations": [{
             "name": "get", "cross_language_id": null, "doc": null,
-            "http_method": "GET", "path": "/widgets", "headers": [],
-            "status_code": 200, "response_type": {"kind": "model", "name": "Widget"}
+            "http_method": "GET", "path": "/widgets/{widgetId}",
+            "parameters": [{"name":"widget_id","wire_name":"widgetId","location":"path",
+                            "type":{"kind":"string"},"optional":false,"constant":null}],
+            "status_codes": [200, 201], "response_type": {"kind": "model", "name": "Widget"}
         }],
         "children": []
     }],
@@ -32,10 +34,68 @@ fn validates_forward_references() {
 }
 
 #[test]
+fn validates_basic_http_fixture() {
+    let package: Package =
+        serde_json::from_str(include_str!("../../tests/fixtures/basic-http.json")).unwrap();
+    package.validate().unwrap();
+}
+
+#[test]
+fn validates_bodyless_http_fixture() {
+    let package: Package =
+        serde_json::from_str(include_str!("../../tests/fixtures/bodyless-http.json")).unwrap();
+    package.validate().unwrap();
+}
+
+#[test]
 fn rejects_unknown_schema_version() {
-    let source = VALID.replace("\"schema_version\": 1", "\"schema_version\": 2");
+    let source = VALID.replace("\"schema_version\": 2", "\"schema_version\": 3");
     let package: Package = serde_json::from_str(&source).unwrap();
-    assert!(package.validate().unwrap_err().contains("schema version 2"));
+    assert!(package.validate().unwrap_err().contains("schema version 3"));
+}
+
+#[test]
+fn requires_matching_path_bindings_and_success_codes() {
+    let source = VALID.replace("\"wire_name\":\"widgetId\"", "\"wire_name\":\"wrong\"");
+    let package: Package = serde_json::from_str(&source).unwrap();
+    assert!(package
+        .validate()
+        .unwrap_err()
+        .contains("path template and parameter bindings differ"));
+
+    let source = VALID.replace(
+        "\"status_codes\": [200, 201]",
+        "\"status_codes\": [200, 200]",
+    );
+    let package: Package = serde_json::from_str(&source).unwrap();
+    assert!(package
+        .validate()
+        .unwrap_err()
+        .contains("duplicate success status"));
+
+    let source = VALID.replace(
+        "\"status_codes\": [200, 201]",
+        "\"status_codes\": [200, 204]",
+    );
+    let package: Package = serde_json::from_str(&source).unwrap();
+    assert!(package
+        .validate()
+        .unwrap_err()
+        .contains("no-content success"));
+
+    let source = VALID.replace("/widgets/{widgetId}", "/widgets/{widgetId");
+    let package: Package = serde_json::from_str(&source).unwrap();
+    assert!(package
+        .validate()
+        .unwrap_err()
+        .contains("malformed path template"));
+
+    let source = VALID.replace("/widgets/{widgetId}", "/widgets/{widgetId}?debug=1");
+    let package: Package = serde_json::from_str(&source).unwrap();
+    assert!(package
+        .validate()
+        .unwrap_err()
+        .contains("query and fragment"));
 }
 
 #[test]

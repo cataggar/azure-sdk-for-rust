@@ -1,0 +1,36 @@
+{
+  "schema_version": 2,
+  "clients": [
+    {
+      "name": "WidgetClient",
+      "parent": null,
+      "cross_language_id": null,
+      "doc": "A client for widgets.",
+      "endpoint_name": "endpoint",
+      "operations": [
+        {
+          "name": "deleteWidget",
+          "cross_language_id": null,
+          "doc": "Delete a widget.",
+          "http_method": "DELETE",
+          "path": "/widgets/{widgetId}",
+          "parameters": [
+            {
+              "name": "widgetId",
+              "wire_name": "widgetId",
+              "location": "path",
+              "type": { "kind": "string" },
+              "optional": false,
+              "constant": null
+            }
+          ],
+          "status_codes": [204, 205],
+          "response_type": null
+        }
+      ],
+      "children": []
+    }
+  ],
+  "models": [],
+  "enums": []
+}
