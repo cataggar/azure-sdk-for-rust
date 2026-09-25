@@ -44,3 +44,6 @@ sdk/cosmos/.temp/
 
 # Coding Agent Harness local artifacts (gitignored on purpose).
 .coding-harness/
+
+# Local planning artifacts.
+thoughts/
