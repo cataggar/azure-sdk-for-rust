@@ -25,6 +25,9 @@ encoding use the matching Azure Core serde helpers; other encodings fail closed.
 Direct JSON model arrays of encoded bytes use per-element base64 serde helpers.
 Unconstrained JSON values use `azure_core::Value`, including fields such as
 `Record<unknown>` certificate metadata.
+XML model roots and fields are rejected rather than emitted with JSON wire
+names; the pinned Storage Queue `setProperties` body uses XML and remains
+unsupported by this preview.
 Direct `utcDateTime` model fields with an explicit integer Unix-timestamp
 format use Azure Core's Unix-time serde helpers.
 Verified GET pagers return `azure_core::http::Pager` with the original response

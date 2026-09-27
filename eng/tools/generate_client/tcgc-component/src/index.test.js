@@ -62,6 +62,23 @@ test("retains intentionally unconstrained JSON record values", () => {
   });
 });
 
+test("rejects XML models before JSON field names can be emitted", () => {
+  const model = {
+    name: "QueueServiceProperties",
+    serializationOptions: { xml: { name: "StorageServiceProperties" } },
+    properties: [{
+      name: "logging", serializedName: "logging",
+      serializationOptions: { xml: { name: "Logging" } },
+      type: { kind: "string" },
+    }],
+  };
+  const run = (value) => adaptPackage({ clients: [], models: [value] });
+  assert.throws(() => run(model),
+    /model QueueServiceProperties: XML root serialization is not supported/);
+  assert.throws(() => run({ ...model, serializationOptions: undefined }),
+    /model QueueServiceProperties\.logging: XML field serialization is not supported/);
+});
+
 test("preserves only verified JSON base64 encodings on direct bytes fields", () => {
   const field = { name: "secretBackup", serializedName: "value", optional: true,
     type: { kind: "bytes", encode: "base64url" },
@@ -115,10 +132,11 @@ test("retains encoded bytes arrays only as direct JSON model fields", () => {
   for (const candidate of [
     { ...field, type: { kind: "array", valueType: { kind: "bytes" } } },
     { ...field, type: { kind: "array", valueType: { kind: "bytes", encode: "hex" } } },
-    { ...field, serializationOptions: { xml: { name: "x5c" } } },
   ]) {
     assert.throws(() => run(candidate), /unsupported array bytes field encoding|unsupported array field encoding/);
   }
+  assert.throws(() => run({ ...field, serializationOptions: { xml: { name: "x5c" } } }),
+    /XML field serialization is not supported/);
   assert.throws(() => adaptType(field.type, "nested"), /verified model field encoding/);
 });
 

@@ -69,12 +69,18 @@ function adaptModel(model, unions) {
   if (model.baseModel || model.additionalProperties || model.discriminatorProperty) {
     throw new Error(`${path}: inheritance, additional properties, and discriminators are not supported`);
   }
+  if (model.serializationOptions?.xml) {
+    throw new Error(`${path}: XML root serialization is not supported`);
+  }
   return {
     name: model.name,
     cross_language_id: model.crossLanguageDefinitionId ?? null,
     doc: model.doc ?? null,
     fields: (model.properties ?? []).map((field) => {
       const fieldPath = `${path}.${required(field.name, path)}`;
+      if (field.serializationOptions?.xml) {
+        throw new Error(`${fieldPath}: XML field serialization is not supported`);
+      }
       const wireName = required(field.serializedName ?? field.name, fieldPath);
       let type;
       if (["bytes", "utcDateTime"].includes(field.type?.kind) ||
@@ -318,7 +324,9 @@ function adaptBody(body, method, operation, models, path) {
          contentTypeHeaders[0].optional !== false)) ||
       (operation.parameters ?? []).some((param) =>
         param.methodParameterSegments?.some((segment) => segment.includes(source)))) {
-    throw new Error(`${path}: unsupported request body binding or JSON encoding`);
+    throw new Error(`${path}: unsupported request body binding or JSON encoding ` +
+      `(type=${body.type?.kind}, formats=${Object.keys(serialization ?? {}).join(",")}, ` +
+      `contentTypes=${JSON.stringify(body.contentTypes)}, default=${body.defaultContentType})`);
   }
   return {
     name: required(source.name, `${path}.body`),
