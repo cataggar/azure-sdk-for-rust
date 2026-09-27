@@ -16,6 +16,7 @@ pub(super) fn rust_type(value: &Type, scope: &str, boxed: bool) -> Result<RustTy
         Type::Int32 => quote!(i32),
         Type::Int64 => quote!(i64),
         Type::Float64 => quote!(f64),
+        Type::Unknown => quote!(azure_core::Value),
         Type::Model { name } | Type::Enum { name } => {
             let name = ident(name, scope)?;
             if boxed {

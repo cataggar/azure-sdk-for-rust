@@ -71,6 +71,7 @@ pub(super) fn render(
         Ok(())
     }
     collect_pages(&package.clients, &mut pages)?;
+    let mut bytes_arrays = BTreeSet::new();
     let mut sorted: Vec<_> = package.models.iter().collect();
     sorted.sort_by(|a, b| a.name.cmp(&b.name));
     for model in sorted {
@@ -126,26 +127,41 @@ pub(super) fn render(
             if is_nullable && !field.optional {
                 attributes.append_all(quote!(, deserialize_with = "Option::deserialize"));
             }
-            if matches!(
-                field.field_type,
-                Type::Bytes {
-                    encoding: BytesEncoding::Base64Url
-                }
-            ) {
-                let (serialize, deserialize) = if field.optional {
-                    (
-                        "azure_core::base64::option::serialize_url_safe",
-                        "azure_core::base64::option::deserialize_url_safe",
-                    )
-                } else {
-                    (
+            if let Type::Bytes { encoding } = &field.field_type {
+                let (serialize, deserialize) = match (encoding, field.optional) {
+                    (BytesEncoding::Base64, false) => (
+                        "azure_core::base64::serialize",
+                        "azure_core::base64::deserialize",
+                    ),
+                    (BytesEncoding::Base64, true) => (
+                        "azure_core::base64::option::serialize",
+                        "azure_core::base64::option::deserialize",
+                    ),
+                    (BytesEncoding::Base64Url, false) => (
                         "azure_core::base64::serialize_url_safe",
                         "azure_core::base64::deserialize_url_safe",
-                    )
+                    ),
+                    (BytesEncoding::Base64Url, true) => (
+                        "azure_core::base64::option::serialize_url_safe",
+                        "azure_core::base64::option::deserialize_url_safe",
+                    ),
                 };
                 attributes.append_all(
                     quote!(, serialize_with = #serialize, deserialize_with = #deserialize),
                 );
+            }
+            if let Type::Array { value_type } = &field.field_type {
+                if let Type::Bytes { encoding } = value_type.as_ref() {
+                    let url_safe = matches!(encoding, BytesEncoding::Base64Url);
+                    bytes_arrays.insert((url_safe, field.optional));
+                    let helper = match (url_safe, field.optional) {
+                        (false, false) => "encoded_bytes::vec_base64",
+                        (false, true) => "encoded_bytes::option_vec_base64",
+                        (true, false) => "encoded_bytes::vec_base64url",
+                        (true, true) => "encoded_bytes::option_vec_base64url",
+                    };
+                    attributes.append_all(quote!(, with = #helper));
+                }
             }
             if matches!(
                 field.field_type,
@@ -198,6 +214,87 @@ pub(super) fn render(
                 }
             });
         }
+    }
+    if !bytes_arrays.is_empty() {
+        let helpers: Vec<_> = bytes_arrays
+            .into_iter()
+            .map(|(url_safe, optional)| {
+                let module = match (url_safe, optional) {
+                    (false, false) => quote!(vec_base64),
+                    (false, true) => quote!(option_vec_base64),
+                    (true, false) => quote!(vec_base64url),
+                    (true, true) => quote!(option_vec_base64url),
+                };
+                let encode = if url_safe {
+                    quote!(azure_core::base64::encode_url_safe)
+                } else {
+                    quote!(azure_core::base64::encode)
+                };
+                let decode = if url_safe {
+                    quote!(azure_core::base64::decode_url_safe)
+                } else {
+                    quote!(azure_core::base64::decode)
+                };
+                let value_type = if optional {
+                    quote!(Option<Vec<Vec<u8>>>)
+                } else {
+                    quote!(Vec<Vec<u8>>)
+                };
+                let serialize_type = if optional {
+                    quote!(Option<Vec<Vec<u8>>>)
+                } else {
+                    quote!([Vec<u8>])
+                };
+                let serialize = if optional {
+                    quote! {
+                        let encoded: Option<Vec<String>> = value.as_ref()
+                            .map(|parts| parts.iter().map(#encode).collect());
+                        encoded.serialize(serializer)
+                    }
+                } else {
+                    quote! {
+                        let encoded: Vec<String> = value.iter().map(#encode).collect();
+                        encoded.serialize(serializer)
+                    }
+                };
+                let deserialize = if optional {
+                    quote! {
+                        Option::<Vec<String>>::deserialize(deserializer)?
+                            .map(|parts| parts.into_iter()
+                                .map(|part| #decode(part).map_err(serde::de::Error::custom))
+                                .collect::<Result<Vec<_>, D::Error>>())
+                            .transpose()
+                    }
+                } else {
+                    quote! {
+                        Vec::<String>::deserialize(deserializer)?
+                            .into_iter()
+                            .map(|part| #decode(part).map_err(serde::de::Error::custom))
+                            .collect()
+                    }
+                };
+                quote! {
+                    pub(super) mod #module {
+                        use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+                        pub fn serialize<S>(value: &#serialize_type, serializer: S) -> Result<S::Ok, S::Error>
+                        where S: Serializer {
+                            #serialize
+                        }
+
+                        pub fn deserialize<'de, D>(deserializer: D) -> Result<#value_type, D::Error>
+                        where D: Deserializer<'de> {
+                            #deserialize
+                        }
+                    }
+                }
+            })
+            .collect();
+        output.extend(quote! {
+            mod encoded_bytes {
+                #(#helpers)*
+            }
+        });
     }
     Ok(output)
 }

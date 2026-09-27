@@ -141,6 +141,8 @@ pub(crate) struct Parameter {
     pub(crate) constant: Option<String>,
     #[serde(default)]
     pub(crate) client_owned: bool,
+    #[serde(default)]
+    pub(crate) allow_empty: bool,
 }
 
 #[derive(Deserialize, Hash, PartialEq, Eq)]
@@ -198,6 +200,7 @@ pub(crate) enum Type {
     Int32,
     Int64,
     Float64,
+    Unknown,
     Bytes {
         encoding: BytesEncoding,
     },
@@ -225,6 +228,7 @@ pub(crate) enum Type {
 #[derive(Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub(crate) enum BytesEncoding {
+    Base64,
     Base64Url,
 }
 
@@ -274,9 +278,14 @@ impl Package {
                     &enum_names,
                     &format!("{}.{}", model.name, field.name),
                 )?;
-                if !matches!(field.field_type, Type::Bytes { .. }) && field.field_type.has_bytes() {
+                let direct_bytes = match &field.field_type {
+                    Type::Bytes { .. } => true,
+                    Type::Array { value_type } => matches!(**value_type, Type::Bytes { .. }),
+                    _ => false,
+                };
+                if !direct_bytes && field.field_type.has_bytes() {
                     return Err(format!(
-                        "{}.{}: encoded bytes require a direct model field",
+                        "{}.{}: encoded bytes require a direct model field or array",
                         model.name, field.name
                     ));
                 }
@@ -401,16 +410,16 @@ fn validate_client<'a>(
                 client.name
             ));
         }
-        if let Some(version) = &client.api_version {
-            if version.name.is_empty()
-                || version.default.is_empty()
-                || version.default.chars().any(char::is_control)
-            {
-                return Err(format!(
-                    "client {}: invalid API version initializer",
-                    client.name
-                ));
-            }
+    }
+    if let Some(version) = &client.api_version {
+        if version.name.is_empty()
+            || version.default.is_empty()
+            || version.default.chars().any(char::is_control)
+        {
+            return Err(format!(
+                "client {}: invalid API version initializer",
+                client.name
+            ));
         }
     }
     let mut methods = HashSet::new();
@@ -470,6 +479,18 @@ fn validate_client<'a>(
                     parameter.name
                 ));
             }
+            if parameter.allow_empty
+                && (parameter.location != ParameterLocation::Path
+                    || !matches!(parameter.parameter_type, Type::String)
+                    || parameter.optional
+                    || parameter.client_owned
+                    || parameter.constant.is_some())
+            {
+                return Err(format!(
+                    "{scope}.{}: invalid allow-empty path binding",
+                    parameter.name
+                ));
+            }
             if parameter.wire_name.is_empty()
                 || !wire_bindings.insert((&parameter.location, parameter.wire_name.as_str()))
             {
@@ -504,11 +525,7 @@ fn validate_client<'a>(
             }
             if parameter.location == ParameterLocation::Path
                 && (!path_bindings.insert(parameter.wire_name.as_str())
-                    || (parameter.optional
-                        && (!matches!(parameter.parameter_type, Type::String)
-                            || !operation
-                                .path
-                                .ends_with(&format!("/{{{}}}", parameter.wire_name)))))
+                    || (parameter.optional && !matches!(parameter.parameter_type, Type::String)))
             {
                 return Err(format!("{scope}.{}: invalid path binding", parameter.name));
             }

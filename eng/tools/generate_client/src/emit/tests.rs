@@ -190,9 +190,17 @@ fn emits_url_safe_base64_for_explicit_encoded_bytes() {
 
     input["models"][0]["fields"][0]["type"] =
         json!({"kind":"array","value_type":{"kind":"bytes","encoding":"base64url"}});
+    let models = file(
+        &render(&package(input.clone())).unwrap(),
+        "models/models.rs",
+    );
+    assert!(models.contains("with = \"encoded_bytes::vec_base64url\""));
+
+    input["models"][0]["fields"][0]["type"] =
+        json!({"kind":"dict","value_type":{"kind":"bytes","encoding":"base64url"}});
     assert!(render(&package(input))
         .unwrap_err()
-        .contains("encoded bytes require a direct model field"));
+        .contains("encoded bytes require a direct model field or array"));
 }
 
 #[test]
@@ -301,7 +309,7 @@ fn basic_preview_emits_clients_and_preserves_model_only_guard() {
         .unwrap_err()
         .contains("model-only slice"));
     let files = render_basic(&package(input)).unwrap();
-    assert_eq!(files.len(), 5);
+    assert_eq!(files.len(), 6);
     assert!(file(&files, "mod.rs").contains("pub mod clients;"));
     let clients = file(&files, "clients.rs");
     assert!(clients.contains("pub struct WidgetClient"));
@@ -311,7 +319,9 @@ fn basic_preview_emits_clients_and_preserves_model_only_guard() {
     assert!(clients.contains("pub fn new(endpoint: Url, pipeline: Pipeline)"));
     assert!(clients.contains("pub async fn get_widget("));
     assert!(clients.contains("widget_id: &str"));
-    assert!(clients.contains("include_history: Option<bool>"));
+    assert!(clients
+        .contains("options: Option<crate::generated::models::WidgetClientGetWidgetOptions<'_>>"));
+    assert!(file(&files, "models/method_options.rs").contains("pub include_history: Option<bool>"));
     assert!(clients.contains("path_segments_mut()"));
     assert!(clients.contains("_generated_segments.push(&value)"));
     assert!(clients.contains("query_pairs_mut()"));
@@ -379,6 +389,7 @@ fn basic_preview_rejects_unsupported_bindings_before_writing() {
 
     let mut input = basic_fixture();
     input["clients"][0]["operations"][0]["parameters"][0]["optional"] = json!(true);
+    input["clients"][0]["operations"][0]["parameters"][0]["type"] = json!({"kind":"int32"});
     input["clients"][0]["operations"][0]["path"] = json!("/widgets/{widgetId}/details");
     assert!(render_basic(&package(input))
         .unwrap_err()
@@ -419,11 +430,14 @@ fn basic_preview_emits_nested_client_accessors() {
         "doc":"A client for widget operations.","endpoint_name":"endpoint",
         "operations":operations,"children":[]
     }]);
-    let clients = file(&render_basic(&package(input)).unwrap(), "clients.rs");
+    let files = render_basic(&package(input)).unwrap();
+    let clients = file(&files, "clients.rs");
     assert!(clients.contains("pub struct WidgetClient"));
     assert!(clients.contains("pub struct WidgetsClient"));
     assert!(clients.contains("pub fn get_widgets_client(&self) -> WidgetsClient"));
     assert!(clients.contains("pub async fn get_widget("));
+    assert!(file(&files, "models/method_options.rs")
+        .contains("pub struct WidgetsClientGetWidgetOptions<'a>"));
 }
 
 #[test]
@@ -486,8 +500,10 @@ fn basic_preview_serializes_optional_enum_query() {
             "name":"outContentType", "wire_name":"outContentType", "location":"query",
             "type":{"kind":"enum","name":"Color"}, "optional":true, "constant":null
         }));
-    let clients = file(&render_basic(&package(input)).unwrap(), "clients.rs");
-    assert!(clients.contains("out_content_type: Option<&crate::generated::models::Color>"));
+    let files = render_basic(&package(input)).unwrap();
+    let clients = file(&files, "clients.rs");
+    let options = file(&files, "models/method_options.rs");
+    assert!(options.contains("pub out_content_type: Option<crate::generated::models::Color>"));
     assert!(clients.contains("append_pair(\"outContentType\", value.as_ref())"));
 
     let mut invalid = basic_fixture();
@@ -544,6 +560,53 @@ fn basic_preview_renders_complete_versioned_json_body_fixture() {
 }
 
 #[test]
+fn basic_preview_uses_standard_base64_for_certificate_bytes() {
+    let mut input: Value =
+        serde_json::from_str(include_str!("../../tests/fixtures/basic-json-body.json")).unwrap();
+    input["models"][0]["fields"][1]["type"]["encoding"] = json!("base64");
+    let models = file(
+        &render_basic(&package(input.clone())).unwrap(),
+        "models/models.rs",
+    );
+    assert!(models.contains("azure_core::base64::option::serialize"));
+    assert!(!models.contains("azure_core::base64::option::serialize_url_safe"));
+    input["models"][0]["fields"][1]["optional"] = json!(false);
+    let models = file(&render_basic(&package(input)).unwrap(), "models/models.rs");
+    assert!(models.contains("azure_core::base64::serialize"));
+    assert!(!models.contains("azure_core::base64::option::serialize"));
+}
+
+#[test]
+fn basic_preview_preserves_unknown_json_record_values() {
+    let mut input: Value =
+        serde_json::from_str(include_str!("../../tests/fixtures/basic-json-body.json")).unwrap();
+    input["models"][0]["fields"][0]["type"] = json!({
+        "kind": "dict", "value_type": {"kind":"unknown"}
+    });
+    let models = file(&render_basic(&package(input)).unwrap(), "models/models.rs");
+    assert!(models.contains("pub label: std::collections::HashMap<String, azure_core::Value>"));
+}
+
+#[test]
+fn basic_preview_serializes_standard_base64_arrays() {
+    let mut input: Value =
+        serde_json::from_str(include_str!("../../tests/fixtures/basic-json-body.json")).unwrap();
+    input["models"][0]["fields"][1]["type"] = json!({
+        "kind": "array", "value_type": {"kind":"bytes", "encoding":"base64"}
+    });
+    let models = file(
+        &render_basic(&package(input.clone())).unwrap(),
+        "models/models.rs",
+    );
+    assert!(models.contains("with = \"encoded_bytes::option_vec_base64\""));
+    assert!(models.contains("azure_core::base64::decode(part)"));
+    input["models"][0]["fields"][1]["optional"] = json!(false);
+    let models = file(&render_basic(&package(input)).unwrap(), "models/models.rs");
+    assert!(models.contains("with = \"encoded_bytes::vec_base64\""));
+    assert!(!models.contains("mod option_vec_base64"));
+}
+
+#[test]
 fn basic_preview_adds_json_content_type_without_explicit_header() {
     let mut input: Value =
         serde_json::from_str(include_str!("../../tests/fixtures/basic-json-body.json")).unwrap();
@@ -566,6 +629,11 @@ fn basic_preview_emits_pager_and_default_empty_items() {
     assert!(clients.contains("first_url.join(&link)?"));
     assert!(clients.contains("set_pair(\"api-version\", &api_version)"));
     assert!(clients.contains("PagerResult::More"));
+    let options = file(&files, "models/method_options.rs");
+    assert!(options.contains("pub struct WidgetClientListWidgetsOptions<'a>"));
+    assert!(options.contains("pub method_options: PagerOptions<'a>"));
+    assert!(options.contains("context: self.method_options.context.into_owned()"));
+    assert!(clients.contains("Some(options.into_owned().method_options)"));
     let models = file(&files, "models/models.rs");
     assert!(models.contains("pub value: Vec<Widget>"));
     assert!(models.contains("impl azure_core::http::pager::Page for ListWidgetsResult"));
@@ -585,10 +653,56 @@ fn basic_preview_renders_pinned_keyvault_secrets_without_adopting_sdk_source() {
     assert!(clients.contains("pub async fn set_secret("));
     assert!(clients.contains("pub fn list_secret_properties("));
     assert!(clients.contains("pub async fn get_secret("));
-    assert!(clients.contains("out_content_type: Option<&crate::generated::models::ContentType>"));
+    let options = file(&files, "models/method_options.rs");
+    assert!(options.contains("pub out_content_type: Option<crate::generated::models::ContentType>"));
+    assert!(options.contains("pub secret_version: Option<String>"));
+    assert!(options.contains("pub maxresults: Option<i32>"));
+    assert_eq!(options.matches("pub struct SecretClient").count(), 12);
+    assert_eq!(
+        options
+            .matches("pub method_options: PagerOptions<'a>")
+            .count(),
+        3
+    );
+    assert_eq!(
+        options
+            .matches("pub method_options: ClientMethodOptions<'a>")
+            .count(),
+        9
+    );
+    assert!(clients.contains("options.out_content_type.as_ref()"));
+    assert!(clients.contains("options.secret_version.as_deref().unwrap_or(\"\")"));
+    assert!(clients.contains("options.maxresults.as_ref()"));
+    assert!(file(&files, "models/mod.rs").contains("pub use method_options::*;"));
     let models = file(&files, "models/models.rs");
     assert!(models.contains("base64::option::deserialize_url_safe"));
     assert!(models.contains("with = \"azure_core::time::unix_time::option\""));
+}
+
+#[test]
+fn basic_preview_renders_pinned_keys_and_certificates() {
+    for (source, client, options) in [
+        (
+            include_str!("../../tests/fixtures/keyvault-keys-8d521358.json"),
+            "pub struct KeyClient {",
+            27,
+        ),
+        (
+            include_str!("../../tests/fixtures/keyvault-certificates-8d521358.json"),
+            "pub struct CertificateClient {",
+            26,
+        ),
+    ] {
+        let input: Value = serde_json::from_str(source).unwrap();
+        let files = render_basic(&package(input)).unwrap();
+        assert!(file(&files, "clients.rs").contains(client));
+        assert_eq!(
+            file(&files, "models/method_options.rs")
+                .matches("pub struct ")
+                .count(),
+            options
+        );
+    }
 }
 
 #[test]
@@ -603,9 +717,34 @@ fn basic_preview_preserves_empty_terminal_optional_path_segment() {
             "type":{"kind":"string"}, "optional":true, "constant":null
         }));
     let clients = file(&render_basic(&package(input)).unwrap(), "clients.rs");
-    assert!(clients.contains("secret_version: Option<&str>"));
-    assert!(clients.contains("secret_version.unwrap_or(\"\").to_string()"));
+    assert!(clients.contains("options.secret_version.as_deref().unwrap_or(\"\").to_string()"));
     assert!(clients.contains("_generated_segments.push(&value)"));
+}
+
+#[test]
+fn basic_preview_preserves_empty_nonterminal_optional_path_segment() {
+    let mut input: Value =
+        serde_json::from_str(include_str!("../../tests/fixtures/basic-json-body.json")).unwrap();
+    input["clients"][0]["operations"][0]["path"] =
+        json!("/widgets/{widget-name}/{version}/encrypt");
+    let clients = file(&render_basic(&package(input)).unwrap(), "clients.rs");
+    assert!(clients.contains("options.version.as_deref().unwrap_or(\"\").to_string()"));
+    assert!(clients.contains("_generated_segments.push(&value)"));
+    assert!(clients.contains("_generated_segments.push(\"encrypt\")"));
+}
+
+#[test]
+fn basic_preview_allows_explicit_empty_required_version_segment() {
+    let mut input: Value =
+        serde_json::from_str(include_str!("../../tests/fixtures/basic-json-body.json")).unwrap();
+    input["clients"][0]["operations"][0]["path"] =
+        json!("/widgets/{widget-name}/{version}/encrypt");
+    input["clients"][0]["operations"][0]["parameters"][1]["optional"] = json!(false);
+    input["clients"][0]["operations"][0]["parameters"][1]["allow_empty"] = json!(true);
+    let clients = file(&render_basic(&package(input)).unwrap(), "clients.rs");
+    assert!(clients.contains("version: &str"));
+    assert!(!clients.contains("options.version.as_deref()"));
+    assert!(clients.contains("value == \".\" || value == \"..\""));
 }
 
 #[test]
@@ -622,11 +761,35 @@ fn basic_preview_handles_optional_headers_constants_and_escaped_paths() {
         ]);
     let clients = file(&render_basic(&package(input)).unwrap(), "clients.rs");
     assert!(clients.contains("append_pair(\"mode\", \"safe mode\")"));
-    assert!(clients.contains("trace_id: Option<&str>"));
+    assert!(clients.contains("options.trace_id.as_ref()"));
+    let options = file(
+        &render_basic(&package(basic_fixture())).unwrap(),
+        "models/method_options.rs",
+    );
+    assert!(options.contains("pub method_options: ClientMethodOptions<'a>"));
+    assert!(clients.contains("&options.method_options.context"));
     assert!(clients.contains("insert_header(\"x-trace-id\", value)"));
     assert!(clients.contains("value == \"..\""));
     assert!(clients.contains("_generated_segments.push(&value)"));
     assert!(!clients.contains("path.replace("));
+}
+
+#[test]
+fn basic_preview_rejects_options_name_and_field_collisions() {
+    let mut input = basic_fixture();
+    input["models"].as_array_mut().unwrap().push(json!({
+        "name":"WidgetClientGetWidgetOptions","cross_language_id":null,
+        "doc":null,"fields":[]
+    }));
+    assert!(render_basic(&package(input))
+        .unwrap_err()
+        .contains("duplicate Rust options type"));
+
+    let mut input = basic_fixture();
+    input["clients"][0]["operations"][0]["parameters"][1]["name"] = json!("methodOptions");
+    assert!(render_basic(&package(input))
+        .unwrap_err()
+        .contains("reserved Rust options field"));
 }
 
 #[test]

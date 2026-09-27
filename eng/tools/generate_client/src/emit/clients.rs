@@ -2,7 +2,7 @@
 // Licensed under the MIT License.
 
 use crate::{
-    emit::{field_ident, ident, types},
+    emit::{field_ident, ident, options, types},
     model::{
         Authentication, Client, OAuth2Flow, Operation, OperationKind, Package, ParameterLocation,
         Type,
@@ -45,7 +45,7 @@ pub(super) fn render(package: &Package) -> Result<TokenStream, String> {
         });
     let basic_imports = basic.then(|| {
         quote!(
-            use azure_core::http::{Context, Response};
+            use azure_core::http::Response;
         )
     });
     let paging_import = paging.then(|| {
@@ -216,7 +216,7 @@ fn render_client(
     Ok(())
 }
 
-fn client_ident(name: &str) -> Result<syn::Ident, String> {
+pub(super) fn client_ident(name: &str) -> Result<syn::Ident, String> {
     let name_with_suffix = if name.ends_with("Client") {
         name.to_owned()
     } else {
@@ -267,6 +267,7 @@ fn render_operation(
         }
     };
     let mut args = Vec::new();
+    let options_name = options::name(client, operation)?;
     let mut names = HashSet::new();
     let mut paths = Vec::new();
     let mut queries = Vec::new();
@@ -278,7 +279,7 @@ fn render_operation(
     for parameter in &operation.parameters {
         let binding = format!("{scope}.{}", parameter.name);
         let name = field_ident(&parameter.name, &binding)?;
-        if !names.insert(name.to_string()) || name == "context" {
+        if !names.insert(name.to_string()) || name == "options" {
             return Err(format!(
                 "{binding}: duplicate or reserved Rust parameter name"
             ));
@@ -309,9 +310,7 @@ fn render_operation(
                 }
                 _ => return Err(format!("{binding}: unsupported HTTP parameter")),
             };
-            if parameter.optional {
-                args.push(quote!(#name: Option<#ty>));
-            } else {
+            if !parameter.optional {
                 args.push(quote!(#name: #ty));
             }
             quote!(#name.to_string())
@@ -319,14 +318,10 @@ fn render_operation(
         match parameter.location {
             ParameterLocation::Path => {
                 let value = if parameter.optional {
-                    if !matches!(parameter.parameter_type, Type::String)
-                        || !operation
-                            .path
-                            .ends_with(&format!("/{{{}}}", parameter.wire_name))
-                    {
+                    if !matches!(parameter.parameter_type, Type::String) {
                         return Err(format!("{binding}: unsupported optional path parameter"));
                     }
-                    quote!(#name.unwrap_or("").to_string())
+                    quote!(options.#name.as_deref().unwrap_or("").to_string())
                 } else {
                     value
                 };
@@ -337,7 +332,7 @@ fn render_operation(
                 });
                 path_bindings.insert(
                     parameter.wire_name.as_str(),
-                    (value, finite, parameter.optional),
+                    (value, finite, parameter.optional, parameter.allow_empty),
                 );
             }
             ParameterLocation::Query => {
@@ -363,7 +358,7 @@ fn render_operation(
                             }
                         });
                         queries.push(quote! {
-                            if let Some(value) = #name {
+                            if let Some(value) = options.#name.as_ref() {
                                 #finite
                                 _generated_url.query_pairs_mut().append_pair(#wire, #text);
                             }
@@ -428,7 +423,7 @@ fn render_operation(
                     });
                     if parameter.optional {
                         headers.push(quote! {
-                            if let Some(value) = #name {
+                            if let Some(value) = options.#name.as_ref() {
                                 #optional_finite
                                 let value = value.to_string();
                                 if value.chars().any(char::is_control) {
@@ -459,7 +454,7 @@ fn render_operation(
     let body_request = if let Some(body) = &operation.body {
         let binding = format!("{scope}.{}", body.name);
         let name = field_ident(&body.name, &binding)?;
-        if !names.insert(name.to_string()) || name == "context" {
+        if !names.insert(name.to_string()) || name == "options" {
             return Err(format!(
                 "{binding}: duplicate or reserved Rust parameter name"
             ));
@@ -504,10 +499,10 @@ fn render_operation(
             paths.push(quote!(_generated_segments.push("");));
         } else if segment.starts_with('{') && segment.ends_with('}') && segment.len() > 2 {
             let wire = &segment[1..segment.len() - 1];
-            let (value, finite, optional) = path_bindings
+            let (value, finite, optional, allow_empty) = path_bindings
                 .remove(wire)
                 .ok_or_else(|| format!("{scope}: missing path binding {wire}"))?;
-            let nonempty = (!optional).then(|| quote!(value.is_empty() ||));
+            let nonempty = (!optional && !allow_empty).then(|| quote!(value.is_empty() ||));
             paths.push(quote! {
                 {
                     #finite
@@ -561,7 +556,8 @@ fn render_operation(
             /// # Errors
             ///
             /// Returns an error for invalid request parameters or endpoint path.
-            pub fn #method_name(&self, options: Option<azure_core::http::pager::PagerOptions<'static>>, #(#args),*) -> azure_core::Result<azure_core::http::Pager<crate::generated::models::#page>> {
+            pub fn #method_name(&self, #(#args,)* options: Option<crate::generated::models::#options_name<'_>>) -> azure_core::Result<azure_core::http::Pager<crate::generated::models::#page>> {
+                let options = options.unwrap_or_default();
                 let mut _generated_url = self.endpoint.clone();
                 {
                     let mut _generated_segments = _generated_url.path_segments_mut().map_err(|_| {
@@ -617,7 +613,7 @@ fn render_operation(
                             })
                         })
                     },
-                    options,
+                    Some(options.into_owned().method_options),
                 ))
             }
         });
@@ -628,7 +624,8 @@ fn render_operation(
         /// # Errors
         ///
         /// Returns an error if a path or header value is invalid, the request fails, or the response has an unexpected status.
-        pub async fn #method_name(&self, context: &Context<'_>, #(#args),*) -> azure_core::Result<#response> {
+        pub async fn #method_name(&self, #(#args,)* options: Option<crate::generated::models::#options_name<'_>>) -> azure_core::Result<#response> {
+            let options = options.unwrap_or_default();
             let mut _generated_url = self.endpoint.clone();
             {
                 let mut _generated_segments = _generated_url.path_segments_mut().map_err(|_| {
@@ -642,7 +639,7 @@ fn render_operation(
             #(#headers)*
             #body_request
             let _generated_response = self.pipeline.send(
-                context,
+                &options.method_options.context,
                 &mut _generated_request,
                 Some(PipelineSendOptions {
                     check_success: CheckSuccessOptions { success_codes: &[#(#statuses),*] },

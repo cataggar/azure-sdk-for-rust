@@ -56,6 +56,55 @@ fn validates_basic_json_body_fixture() {
 }
 
 #[test]
+fn accepts_optional_nonterminal_path_placeholder() {
+    let mut source: Value =
+        serde_json::from_str(include_str!("../../tests/fixtures/basic-json-body.json")).unwrap();
+    source["clients"][0]["operations"][0]["path"] =
+        json!("/widgets/{widget-name}/{version}/encrypt");
+    let package: Package = serde_json::from_value(source).unwrap();
+    package.validate().unwrap();
+}
+
+#[test]
+fn allow_empty_requires_a_required_string_path_binding() {
+    let mut source: Value = serde_json::from_str(VALID).unwrap();
+    source["clients"][0]["operations"][0]["parameters"][0]["allow_empty"] = json!(true);
+    let package: Package = serde_json::from_value(source.clone()).unwrap();
+    package.validate().unwrap();
+
+    source["clients"][0]["operations"][0]["parameters"][0]["optional"] = json!(true);
+    let package: Package = serde_json::from_value(source.clone()).unwrap();
+    assert!(package.validate().unwrap_err().contains("allow-empty"));
+
+    source["clients"][0]["operations"][0]["parameters"][0]["optional"] = json!(false);
+    source["clients"][0]["operations"][0]["parameters"][0]["type"] = json!({"kind":"int32"});
+    let package: Package = serde_json::from_value(source).unwrap();
+    assert!(package.validate().unwrap_err().contains("allow-empty"));
+}
+
+#[test]
+fn rejects_invalid_api_version_initializers_without_oauth2() {
+    let source: Value =
+        serde_json::from_str(include_str!("../../tests/fixtures/basic-json-body.json")).unwrap();
+    for authentication in [Value::Null, json!({"kind":"bearer"})] {
+        for version in [
+            json!({"name":"","default":"2026-05-01-preview"}),
+            json!({"name":"apiVersion","default":""}),
+            json!({"name":"apiVersion","default":"invalid\nversion"}),
+        ] {
+            let mut input = source.clone();
+            input["clients"][0]["authentication"] = authentication.clone();
+            input["clients"][0]["api_version"] = version;
+            let package: Package = serde_json::from_value(input).unwrap();
+            assert!(package
+                .validate()
+                .unwrap_err()
+                .contains("invalid API version initializer"));
+        }
+    }
+}
+
+#[test]
 fn validates_pinned_keyvault_secrets_model() {
     let package: Package = serde_json::from_str(include_str!(
         "../../tests/fixtures/keyvault-secrets-8d521358.json"
@@ -74,6 +123,31 @@ fn validates_pinned_keyvault_secrets_model() {
             .count(),
         3
     );
+}
+
+#[test]
+fn validates_pinned_keyvault_keys_and_certificates_models() {
+    for (source, operations, models, enums) in [
+        (
+            include_str!("../../tests/fixtures/keyvault-keys-8d521358.json"),
+            27,
+            35,
+            11,
+        ),
+        (
+            include_str!("../../tests/fixtures/keyvault-certificates-8d521358.json"),
+            26,
+            38,
+            6,
+        ),
+    ] {
+        let package: Package = serde_json::from_str(source).unwrap();
+        package.validate().unwrap();
+        assert_eq!(package.clients.len(), 1);
+        assert_eq!(package.clients[0].operations.len(), operations);
+        assert_eq!(package.models.len(), models);
+        assert_eq!(package.enums.len(), enums);
+    }
 }
 
 #[test]
@@ -212,7 +286,7 @@ fn validates_client_owned_api_version_bindings() {
 }
 
 #[test]
-fn optional_path_requires_final_string_segment() {
+fn optional_path_preserves_nonterminal_string_segments() {
     let mut input: Value = serde_json::from_str(VALID).unwrap();
     input["clients"][0]["operations"][0]["path"] = json!("/widgets/{widgetId}/{version}");
     input["clients"][0]["operations"][0]["parameters"]
@@ -226,6 +300,10 @@ fn optional_path_requires_final_string_segment() {
     package.validate().unwrap();
 
     input["clients"][0]["operations"][0]["path"] = json!("/widgets/{version}/{widgetId}");
+    let package: Package = serde_json::from_value(input.clone()).unwrap();
+    package.validate().unwrap();
+
+    input["clients"][0]["operations"][0]["parameters"][1]["type"] = json!({"kind":"int32"});
     let package: Package = serde_json::from_value(input).unwrap();
     assert!(package
         .validate()

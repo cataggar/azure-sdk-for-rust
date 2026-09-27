@@ -14,11 +14,17 @@ supported workflow until semantic parity has been verified.
 The schema-2 TCGC adapter also records basic HTTP path, query, and header
 bindings and explicit success status codes. `--preview-basic` supports GET,
 PUT, POST, PATCH, DELETE, and HEAD; required path and
-optional final string path segments; optional or required query/header primitive
+optional string path segments (absent values preserve an empty segment);
+optional or required query/header primitive
 parameters; typed string-enum query values; string constants;
+required string path values can be empty only when the pinned spec carries an
+explicit Rust `minLength: 0` client option;
 verified JSON model request bodies; and JSON-typed or bodyless responses.
-Direct model bytes fields with an explicit `base64url` JSON encoding use
-Azure Core's URL-safe base64 serde helpers; other encodings fail closed.
+Direct model bytes fields with TCGC `base64` or explicit `base64url` JSON
+encoding use the matching Azure Core serde helpers; other encodings fail closed.
+Direct JSON model arrays of encoded bytes use per-element base64 serde helpers.
+Unconstrained JSON values use `azure_core::Value`, including fields such as
+`Record<unknown>` certificate metadata.
 Direct `utcDateTime` model fields with an explicit integer Unix-timestamp
 format use Azure Core's Unix-time serde helpers.
 Verified GET pagers return `azure_core::http::Pager` with the original response
@@ -36,9 +42,16 @@ to the pipeline by this preview. Client-owned API-version bindings use the
 TypeSpec default and can be changed with `with_api_version`; same-named
 method-owned parameters remain operation arguments. Nested clients use cloned
 endpoints and pipelines.
+Each preview operation exposes a typed `models::*Options` struct. Optional
+method-owned bindings live in that struct, along with `ClientMethodOptions` or
+`PagerOptions`; required bindings remain method arguments. Pager options are
+made owned before an asynchronous continuation.
 Client names without a `Client` suffix receive one in the preview, so the
 pinned TypeSpec `Secret` client renders as `SecretClient`; constructor and
 options parity still requires a separate review.
+The pinned TypeSpec controls generated API-version defaults and model field
+requiredness. Differences from checked-in SDK releases require an explicit API
+review; the preview does not silently change the spec to match older clients.
 Composite path placeholders, unsupported response statuses or types, and
 ambiguous parameter constructs fail closed.
 The pinned Key Vault catch-all JSON exception is retained in the code model;
@@ -81,11 +94,11 @@ invoking the component. For a tracked SDK crate, `--spec-dir` must refer to
 the exact repository commit and project directory in its `tsp-location.yaml`.
 `--sync` fetches that pinned commit into a local cache instead of taking
 `--spec-dir`. `--model` accepts a JSON code model without loading a component.
-`tests/fixtures/keyvault-secrets-8d521358.json` is a pinned Key Vault Secrets
-regression model; its upstream commit, TCGC version, and SHA-256 are recorded
-in the adjacent metadata file. It covers 12 operations, including three GET
-pagers, but compiling this subset is **not** API or runtime parity with the
-current SDK.
+`tests/fixtures/keyvault-{secrets,keys,certificates}-8d521358.json` are
+pinned Key Vault regression models. Their upstream commit, TCGC version, and
+SHA-256 are recorded in adjacent metadata files. They cover 12 Secrets,
+27 Keys, and 26 Certificates operations, but compiling this subset is **not**
+API or runtime parity with the current SDK.
 For a pinned TypeSpec input, `--export-model --output <scratch-crate>` writes
 the validated model to a new `tcgc-model.json` in that separate scratch crate;
 it refuses to overwrite an existing export. This makes repeatable offline

@@ -41,6 +41,7 @@ export function adaptType(type, path, unions = new Map()) {
     case "int32":
     case "int64":
     case "float64":
+    case "unknown":
       return { kind: type.kind };
     case "bytes":
       throw new Error(`${path}: bytes require a verified model field encoding`);
@@ -76,20 +77,30 @@ function adaptModel(model, unions) {
       const fieldPath = `${path}.${required(field.name, path)}`;
       const wireName = required(field.serializedName ?? field.name, fieldPath);
       let type;
-      if (["bytes", "utcDateTime"].includes(field.type?.kind)) {
+      if (["bytes", "utcDateTime"].includes(field.type?.kind) ||
+          (field.type?.kind === "array" && field.type.valueType?.kind === "bytes")) {
         const serialization = field.serializationOptions;
         if (field.encode !== undefined || field.clientDefaultValue !== undefined ||
             field.isMultipartFileInput === true ||
             !serialization || Object.keys(serialization).length !== 1 ||
             !serialization.json || Object.keys(serialization.json).length !== 1 ||
             serialization.json.name !== wireName) {
-          throw new Error(`${fieldPath}: unsupported ${field.type.kind} field encoding`);
+          throw new Error(`${fieldPath}: unsupported ${field.type.kind} field encoding ` +
+            `(type=${field.type.encode ?? "<unset>"}, serialization=${Object.keys(serialization ?? {}).join(",")})`);
         }
-        if (field.type.kind === "bytes") {
-          if (field.type.encode !== "base64url") {
-            throw new Error(`${fieldPath}: unsupported bytes field encoding`);
+        if (field.type.kind === "array") {
+          if (!["base64", "base64url"].includes(field.type.valueType.encode)) {
+            throw new Error(`${fieldPath}: unsupported array bytes field encoding`);
           }
-          type = { kind: "bytes", encoding: "base64url" };
+          type = {
+            kind: "array",
+            value_type: { kind: "bytes", encoding: field.type.valueType.encode },
+          };
+        } else if (field.type.kind === "bytes") {
+          if (!["base64", "base64url"].includes(field.type.encode)) {
+            throw new Error(`${fieldPath}: unsupported bytes field encoding ${field.type.encode ?? "<unset>"}`);
+          }
+          type = { kind: "bytes", encoding: field.type.encode };
         } else {
           if (field.type.encode !== "unixTimestamp" ||
               field.type.wireType?.kind !== "int32" ||
@@ -191,11 +202,22 @@ function adaptParameter(param, method, path, unions, apiVersion) {
        (corresponding.length === 1 && corresponding[0] !== source))) {
     throw new Error(`${binding}: ambiguous correspondingMethodParams`);
   }
+  const allowEmpty = location === "path" && source.type?.kind === "string" &&
+    source.optional === false && source.decorators?.some((decorator) =>
+      decorator.name === "Azure.ClientGenerator.Core.@clientOption" &&
+      Object.keys(decorator.arguments ?? {}).length === 3 &&
+      decorator.arguments.name === "minLength" &&
+      decorator.arguments.value === 0 &&
+      decorator.arguments.scope === "rust") === true;
   if (source.encode !== undefined || source.clientDefaultValue !== undefined ||
       source.onClient === true || source.type?.kind !== param.type?.kind ||
-      source.optional !== param.optional ||
+      (source.optional !== param.optional &&
+       !(allowEmpty && param.optional === true)) ||
       typeof source.optional !== "boolean") {
-    throw new Error(`${binding}: unsupported method parameter type, default, or optionality`);
+    throw new Error(`${binding}: unsupported method parameter type, default, or optionality ` +
+      `(method ${source.type?.kind}/${source.optional}, wire ${param.type?.kind}/${param.optional}, ` +
+      `default ${source.clientDefaultValue !== undefined}, encoded ${source.encode !== undefined}, ` +
+      `client-owned ${source.onClient === true}, decorators ${JSON.stringify(source.decorators ?? [])})`);
   }
   if (location === "path" && source.optional &&
       (source.type.kind !== "string" || param.clientDefaultValue !== undefined ||
@@ -212,6 +234,7 @@ function adaptParameter(param, method, path, unions, apiVersion) {
   return {
     name: required(source.name, binding), wire_name: wireName, location,
     type, optional: source.optional, constant: null, client_owned: false,
+    ...(allowEmpty ? { allow_empty: true } : {}),
   };
 }
 
@@ -232,11 +255,6 @@ function validatePathBindings(route, parameters, path) {
     }
   }
   const bindings = parameters.filter((param) => param.location === "path");
-  for (const binding of bindings.filter((param) => param.optional)) {
-    if (!route.endsWith(`/{${binding.wire_name}}`)) {
-      throw new Error(`${path}: optional path binding must be the final segment`);
-    }
-  }
   for (const name of new Set([...placeholders, ...bindings.map((param) => param.wire_name)])) {
     if (placeholders.filter((placeholder) => placeholder === name).length !== 1 ||
         bindings.filter((param) => param.wire_name === name).length !== 1) {

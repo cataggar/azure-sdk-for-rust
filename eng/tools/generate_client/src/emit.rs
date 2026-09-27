@@ -4,6 +4,7 @@
 mod clients;
 mod enums;
 mod models;
+mod options;
 mod types;
 
 use crate::model::Package;
@@ -83,6 +84,12 @@ fn render_preview(package: &Package, basic: bool) -> Result<BTreeMap<PathBuf, St
             pub mod clients;
         )
     });
+    let options_export = (basic && !package.clients.is_empty()).then(|| {
+        quote! {
+            mod method_options;
+            pub use method_options::*;
+        }
+    });
     let mut rendered = vec![
         (
             "mod.rs",
@@ -100,6 +107,7 @@ fn render_preview(package: &Package, basic: bool) -> Result<BTreeMap<PathBuf, St
                 mod models;
                 #enum_export
                 #model_export
+                #options_export
             },
         ),
         ("models/models.rs", models::render(package, &recursive)?),
@@ -107,6 +115,7 @@ fn render_preview(package: &Package, basic: bool) -> Result<BTreeMap<PathBuf, St
     ];
     if basic && !package.clients.is_empty() {
         rendered.push(("clients.rs", clients::render(package)?));
+        rendered.push(("models/method_options.rs", options::render(package)?));
     }
     let mut files = BTreeMap::new();
     for (path, tokens) in rendered {

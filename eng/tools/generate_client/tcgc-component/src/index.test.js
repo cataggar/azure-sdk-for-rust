@@ -46,7 +46,23 @@ test("normalizes a minimal client and model with explicit wire metadata", () => 
   });
 });
 
-test("preserves only verified JSON base64url encoding on direct bytes fields", () => {
+test("retains intentionally unconstrained JSON record values", () => {
+  const result = adaptPackage({
+    clients: [],
+    models: [{
+      name: "PlatformManaged",
+      properties: [{
+        name: "metadata", serializedName: "metadata", optional: true,
+        type: { kind: "dict", valueType: { kind: "unknown" } },
+      }],
+    }],
+  });
+  assert.deepEqual(result.models[0].fields[0].type, {
+    kind: "dict", value_type: { kind: "unknown" },
+  });
+});
+
+test("preserves only verified JSON base64 encodings on direct bytes fields", () => {
   const field = { name: "secretBackup", serializedName: "value", optional: true,
     type: { kind: "bytes", encode: "base64url" },
     serializationOptions: { json: { name: "value" } } };
@@ -60,9 +76,11 @@ test("preserves only verified JSON base64url encoding on direct bytes fields", (
   });
   assert.deepEqual(run({ ...field, optional: false }).type,
     { kind: "bytes", encoding: "base64url" });
+  assert.deepEqual(run({ ...field, type: { kind: "bytes", encode: "base64" } }).type,
+    { kind: "bytes", encoding: "base64" });
   for (const candidate of [
     { ...field, type: { kind: "bytes" } },
-    { ...field, type: { kind: "bytes", encode: "base64" } },
+    { ...field, type: { kind: "bytes", encode: "base64url-nopad" } },
     { ...field, encode: "base64url" },
     { ...field, serializationOptions: undefined },
     { ...field, serializationOptions: { json: { name: "other" } } },
@@ -77,6 +95,31 @@ test("preserves only verified JSON base64url encoding on direct bytes fields", (
   assert.throws(() => adaptType({ kind: "array", valueType: {
     kind: "bytes", encode: "base64url",
   } }, "nested"), /bytes require a verified model field encoding/);
+});
+
+test("retains encoded bytes arrays only as direct JSON model fields", () => {
+  const field = {
+    name: "x509Certificates", serializedName: "x5c", optional: false,
+    type: { kind: "array", valueType: { kind: "bytes", encode: "base64" } },
+    serializationOptions: { json: { name: "x5c" } },
+  };
+  const run = (candidate) => adaptPackage({
+    clients: [], models: [{ name: "MergeCertificateParameters", properties: [candidate] }],
+  }).models[0].fields[0];
+  assert.deepEqual(run(field).type, {
+    kind: "array", value_type: { kind: "bytes", encoding: "base64" },
+  });
+  assert.deepEqual(run({ ...field, optional: true }).type, {
+    kind: "array", value_type: { kind: "bytes", encoding: "base64" },
+  });
+  for (const candidate of [
+    { ...field, type: { kind: "array", valueType: { kind: "bytes" } } },
+    { ...field, type: { kind: "array", valueType: { kind: "bytes", encode: "hex" } } },
+    { ...field, serializationOptions: { xml: { name: "x5c" } } },
+  ]) {
+    assert.throws(() => run(candidate), /unsupported array bytes field encoding|unsupported array field encoding/);
+  }
+  assert.throws(() => adaptType(field.type, "nested"), /verified model field encoding/);
 });
 
 test("preserves only explicit int32 Unix timestamps on direct time fields", () => {
@@ -182,7 +225,7 @@ test("preserves a whole-segment hyphenated path name without changing wire encod
   }
 });
 
-test("retains a terminal optional path segment and rejects ambiguous omission", () => {
+test("retains optional path placeholders as empty segments", () => {
   const name = { kind: "method", name: "secretName", type: { kind: "string" }, optional: false };
   const version = { kind: "method", name: "secretVersion", type: { kind: "string" }, optional: true };
   const nameBinding = binding("path", "secretName", "secret-name", name);
@@ -197,10 +240,10 @@ test("retains a terminal optional path segment and rejects ambiguous omission", 
     name: "secretVersion", wire_name: "secret-version", location: "path",
     type: { kind: "string" }, optional: true, constant: null, client_owned: false,
   });
-  assert.throws(() => run("/secrets/{secret-version}/{secret-name}"),
-    /optional path binding must be the final segment/);
-  assert.throws(() => run("/secrets/{secret-name}/{secret-version}/items"),
-    /optional path binding must be the final segment/);
+  assert.equal(run("/secrets/{secret-version}/{secret-name}").path,
+    "/secrets/{secret-version}/{secret-name}");
+  assert.equal(run("/secrets/{secret-name}/{secret-version}/items").path,
+    "/secrets/{secret-name}/{secret-version}/items");
   assert.throws(() => run("/secrets/{secret-name}/{secret-version}",
     { clientDefaultValue: "" }), /unsupported optional path binding/);
   assert.throws(() => run("/secrets/{secret-name}/{secret-version}",
@@ -210,6 +253,33 @@ test("retains a terminal optional path segment and rejects ambiguous omission", 
     path: "/secrets/{secret-version}", methods: [numericVersion],
     bindings: [binding("path", "secretVersion", "secret-version", numericVersion)],
   }), /unsupported optional path binding/);
+});
+
+test("requires an explicit Rust minLength zero option for an optional wire path", () => {
+  const version = {
+    kind: "method", name: "keyVersion", type: { kind: "string" }, optional: false,
+    decorators: [{
+      name: "Azure.ClientGenerator.Core.@clientOption",
+      arguments: { name: "minLength", value: 0, scope: "rust" },
+    }],
+  };
+  const run = (method = version, location = "path") => operationModel({
+    path: location === "path" ? "/keys/{key-version}/decrypt" : "/keys/decrypt",
+    methods: [method],
+    bindings: [binding(location, "keyVersion", "key-version", method, { optional: true })],
+  });
+  assert.deepEqual(run().parameters[0], {
+    name: "keyVersion", wire_name: "key-version", location: "path",
+    type: { kind: "string" }, optional: false, constant: null,
+    client_owned: false, allow_empty: true,
+  });
+  assert.throws(() => run({ ...version, decorators: [] }),
+    /unsupported method parameter type, default, or optionality/);
+  assert.throws(() => run({ ...version, decorators: [{
+    ...version.decorators[0], arguments: { name: "minLength", value: 1, scope: "rust" },
+  }] }), /unsupported method parameter type, default, or optionality/);
+  assert.throws(() => run(version, "query"),
+    /unsupported method parameter type, default, or optionality/);
 });
 
 test("rejects missing, nested, ambiguous, and inconsistent method links", () => {
