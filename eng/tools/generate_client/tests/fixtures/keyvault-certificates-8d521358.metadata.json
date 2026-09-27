@@ -1,0 +1,8 @@
+{
+  "repo": "Azure/azure-rest-api-specs",
+  "commit": "8d521358db4a46b60acaa6aa4bfc26769e2ff6cc",
+  "directory": "specification/keyvault/data-plane/Certificates",
+  "tcgc_version": "0.68.0",
+  "schema_version": 2,
+  "model_sha256": "1eb3e5681b53080d019f9b083dc948280b924c102e043a7be7d796b06102cbba"
+}

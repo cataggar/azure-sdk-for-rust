@@ -1,0 +1,65 @@
+{
+  "schema_version": 2,
+  "clients": [{
+    "name": "WidgetClient",
+    "parent": null,
+    "cross_language_id": null,
+    "doc": "Manages widgets.",
+    "authentication": null,
+    "api_version": {"name": "apiVersion", "default": "2026-05-01-preview"},
+    "endpoint_name": "endpoint",
+    "operations": [{
+      "name": "createWidget",
+      "cross_language_id": null,
+      "doc": "Creates a widget.",
+      "http_method": "POST",
+      "path": "/widgets/{widget-name}/{version}",
+      "parameters": [
+        {"name": "widgetName", "wire_name": "widget-name", "location": "path",
+         "type": {"kind": "string"}, "optional": false, "constant": null, "client_owned": false},
+        {"name": "version", "wire_name": "version", "location": "path",
+         "type": {"kind": "string"}, "optional": true, "constant": null, "client_owned": false},
+        {"name": "apiVersion", "wire_name": "api-version", "location": "query",
+         "type": {"kind": "string"}, "optional": false, "constant": null, "client_owned": true},
+        {"name": "contentType", "wire_name": "content-type", "location": "header",
+         "type": {"kind": "string"}, "optional": false, "constant": "application/json", "client_owned": false}
+      ],
+      "body": {"name": "widget", "type": {"kind": "model", "name": "Widget"}, "optional": false},
+      "status_codes": [200],
+      "response_type": {"kind": "model", "name": "Widget"}
+    }],
+    "children": []
+  }],
+  "models": [{
+    "name": "Widget",
+    "cross_language_id": null,
+    "doc": "A widget.",
+    "fields": [
+      {
+        "name": "label",
+        "wire_name": "label",
+        "type": {"kind": "string"},
+        "optional": false,
+        "read_only": false,
+        "doc": null
+      },
+      {
+        "name": "payload",
+        "wire_name": "payload",
+        "type": {"kind": "bytes", "encoding": "base64url"},
+        "optional": true,
+        "read_only": false,
+        "doc": null
+      },
+      {
+        "name": "expires",
+        "wire_name": "exp",
+        "type": {"kind": "utcDateTime", "format": "unixTime", "wire_type": "int32"},
+        "optional": true,
+        "read_only": false,
+        "doc": null
+      }
+    ]
+  }],
+  "enums": []
+}
